@@ -1,0 +1,33 @@
+version: "3"
+
+vars:
+  ENV: develop
+  TF_DIR: infra/envs/{{.ENV}}
+  WEB_DIST: apps/web/dist
+
+tasks:
+  web:build:
+    desc: Production build of the React web app
+    cmds:
+      - npm run build
+
+  infra:plan:
+    desc: Terraform plan for the {{.ENV}} environment
+    dir: "{{.TF_DIR}}"
+    cmds:
+      - terraform init -input=false
+      - terraform plan
+
+  infra:apply:
+    desc: Terraform apply for the {{.ENV}} environment
+    dir: "{{.TF_DIR}}"
+    cmds:
+      - terraform init -input=false
+      - terraform apply
+
+  web:deploy:
+    desc: Build the web app and sync dist to the S3 bucket
+    deps:
+      - web:build
+    cmds:
+      - aws s3 sync {{.WEB_DIST}} s3://$(terraform -chdir={{.TF_DIR}} output -raw bucket_name) --delete

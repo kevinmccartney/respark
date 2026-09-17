@@ -23,13 +23,49 @@ This repository is organized as a monorepo so the web app, shared types, and fut
 
 ```plaintext
 respark/
-├── README.md          # You are here
-└── (apps & packages TBD)
+├── apps/
+│   └── web/                    # React web app (Vite)
+├── infra/
+│   ├── envs/develop/           # Terraform root (develop)
+│   └── modules/ui/             # S3 static website module
+├── package.json                # npm workspaces root
+├── Taskfile.yml                # [Task](https://taskfile.dev/) runner
+└── README.md
 ```
 
 ## Getting started
 
-> Setup instructions will be added once the initial app scaffold and package manager workspace are in place.
+Requires [Node.js](https://nodejs.org/) 20+ (22+ recommended for Vite 8).
+
+```bash
+npm install
+npm run dev
+```
+
+Open the URL shown in the terminal (default `http://localhost:5173`).
+
+| Command           | Description              |
+| ----------------- | ------------------------ |
+| `npm run dev`     | Start the web dev server |
+| `npm run build`   | Production build         |
+| `npm run preview` | Preview production build |
+
+### Task runner
+
+Common workflows use [Task](https://taskfile.dev/) from the repository root (install via `brew install go-task` or see the Task docs).
+
+| Task              | Description                                      |
+| ----------------- | ------------------------------------------------ |
+| `task web:build`  | Production build of the web app                  |
+| `task infra:plan` | `terraform init` + `plan` in `infra/envs/develop` |
+| `task infra:apply`| `terraform init` + `apply` in `infra/envs/develop` |
+| `task web:deploy` | Build + `aws s3 sync` to the develop UI bucket   |
+
+List all tasks with `task --list`.
+
+### AWS hosting (Terraform)
+
+S3 static website infrastructure lives in [`infra/envs/develop`](infra/envs/develop/README.md) (Terraform root). Use `task infra:apply` then `task web:deploy`, or follow the manual steps in that README.
 
 ## Contributing
 

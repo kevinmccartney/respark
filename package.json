@@ -1,0 +1,12 @@
+{
+  "name": "respark",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w web",
+    "preview": "npm run preview -w web"
+  }
+}
