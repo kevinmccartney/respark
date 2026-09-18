@@ -60,8 +60,8 @@ task db:migrate   # or restart the Compose API (migrate-on-boot)
 
 Current tables:
 
-- **`users`** — local identity owning every other foreign key. Clerk stays the auth provider; `clerk_user_id` is just an external reference, and a row is created on first authenticated request. `email` / `first_name` / `last_name` / `image_url` are a read-only cache of Clerk's copy kept fresh by webhooks — never write them from app code.
-- **`decks`** — `name` plus owner, cascading on user delete. Deck contents arrive once cards are modeled.
+- **`users`** / **`decks`** — in `public` for now (app-owned; will move to the `app` schema later).
+- **Pipeline schemas** — empty `raw`, `catalog`, `market`, `app`, plus `ops.ingestion_run` for ETL run tracking. See [`apps/etl/README.md`](../etl/README.md) and `task etl -- --help`.
 
 ## Clerk webhooks
 

@@ -15,6 +15,13 @@
       "when": 1789704020545,
       "tag": "0001_first_banshee",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789734461118,
+      "tag": "0002_lucky_steve_rogers",
+      "breakpoints": true
     }
   ]
 }

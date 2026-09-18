@@ -25,11 +25,12 @@ This repository is organized as a monorepo so the web app, shared types, and fut
 respark/
 ├── apps/
 │   ├── api/                    # NestJS API
+│   ├── etl/                    # MTG data pipeline CLI
 │   └── web/                    # React web app (Vite)
 ├── infra/
 │   ├── envs/develop/           # Terraform root (develop)
 │   └── modules/ui/             # S3 + CloudFront + HTTPS UI module
-├── docker-compose.yml          # Local API stack
+├── docker-compose.yml          # Local Postgres + API + web
 ├── package.json                # npm workspaces root
 ├── Taskfile.yml                # [Task](https://taskfile.dev/) runner
 └── README.md
@@ -79,6 +80,7 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 | `task infra:apply`      | `terraform init` + `apply` in `infra/envs/develop`                |
 | `task db:up`            | Start local Postgres only                                         |
 | `task db:migrate`       | Apply Drizzle migrations                                          |
+| `task etl -- <cmd>`     | MTG ETL CLI (`ping`, stubs for `scryfall`, …) — see `apps/etl`    |
 | `task db:tunnel`        | SSM tunnel to develop RDS (`localhost:15432`)                     |
 | `task db:url`           | Print develop `DATABASE_URL` from SSM (has password)              |
 | `task api:secrets:push` | Push `CLERK_SECRET_KEY` to SSM Parameter Store                    |

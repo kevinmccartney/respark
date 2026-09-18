@@ -79,6 +79,16 @@ tasks:
     cmds:
       - npm run db:studio -w api
 
+  etl:
+    desc: "Run the MTG ETL CLI (e.g. task etl -- ping | scryfall --limit 1000)"
+    cmds:
+      - npx tsx apps/etl/src/cli.ts {{.CLI_ARGS}}
+
+  etl:build:
+    desc: Compile the ETL CLI to apps/etl/dist
+    cmds:
+      - npm run build -w etl
+
   db:tunnel:
     desc: SSM port-forward localhost:15432 to develop RDS via the API EC2 instance
     env:
