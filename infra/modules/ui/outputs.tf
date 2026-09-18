@@ -1,5 +1,5 @@
 output "bucket_name" {
-  description = "Name of the S3 bucket hosting the static site."
+  description = "Name of the S3 bucket hosting static assets."
   value       = aws_s3_bucket.site.id
 }
 
@@ -8,17 +8,27 @@ output "bucket_arn" {
   value       = aws_s3_bucket.site.arn
 }
 
-output "website_endpoint" {
-  description = "S3 website endpoint URL (HTTP). Upload built assets, then open this URL."
-  value       = aws_s3_bucket_website_configuration.site.website_endpoint
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID (use for cache invalidations)."
+  value       = aws_cloudfront_distribution.site.id
 }
 
-output "website_domain" {
-  description = "S3 website endpoint hostname."
-  value       = aws_s3_bucket_website_configuration.site.website_domain
+output "cloudfront_domain_name" {
+  description = "CloudFront distribution domain name (*.cloudfront.net)."
+  value       = aws_cloudfront_distribution.site.domain_name
+}
+
+output "site_url" {
+  description = "HTTPS URL for the UI."
+  value       = "https://${var.domain_name}"
+}
+
+output "domain_name" {
+  description = "Custom domain name for the UI."
+  value       = var.domain_name
 }
 
 output "deploy_command" {
-  description = "Example command to sync the Vite build output to the bucket."
+  description = "Example command to sync the Vite build output to the bucket (run from repository root)."
   value       = "aws s3 sync apps/web/dist s3://${aws_s3_bucket.site.id} --delete"
 }

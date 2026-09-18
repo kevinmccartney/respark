@@ -27,7 +27,7 @@ respark/
 │   └── web/                    # React web app (Vite)
 ├── infra/
 │   ├── envs/develop/           # Terraform root (develop)
-│   └── modules/ui/             # S3 static website module
+│   └── modules/ui/             # S3 + CloudFront + HTTPS UI module
 ├── package.json                # npm workspaces root
 ├── Taskfile.yml                # [Task](https://taskfile.dev/) runner
 └── README.md
@@ -44,6 +44,8 @@ npm run dev
 
 Open the URL shown in the terminal (default `http://localhost:5173`).
 
+Authentication uses [Clerk](https://clerk.com/) in `apps/web`. After cloning, copy `apps/web/.env.example` to `apps/web/.env.local` and run `clerk env pull` from `apps/web` (requires the [Clerk CLI](https://clerk.com/docs/cli) and access to the Respark application).
+
 | Command           | Description              |
 | ----------------- | ------------------------ |
 | `npm run dev`     | Start the web dev server |
@@ -59,13 +61,13 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 | `task web:build`  | Production build of the web app                  |
 | `task infra:plan` | `terraform init` + `plan` in `infra/envs/develop` |
 | `task infra:apply`| `terraform init` + `apply` in `infra/envs/develop` |
-| `task web:deploy` | Build + `aws s3 sync` to the develop UI bucket   |
+| `task web:deploy` | Build, sync to S3, and invalidate CloudFront cache |
 
 List all tasks with `task --list`.
 
 ### AWS hosting (Terraform)
 
-S3 static website infrastructure lives in [`infra/envs/develop`](infra/envs/develop/README.md) (Terraform root). Use `task infra:apply` then `task web:deploy`, or follow the manual steps in that README.
+Develop UI (0.x) is served at **https://dev.respark.kevinmccartney.is** via [`infra/envs/develop`](infra/envs/develop/README.md) (S3, CloudFront, ACM, Route53). Run `task infra:apply` then `task web:deploy`.
 
 ## Contributing
 

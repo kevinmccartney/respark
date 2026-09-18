@@ -7,7 +7,7 @@ infra/
 ├── envs/
 │   └── develop/     # Terraform root for develop — run init/plan/apply here
 └── modules/
-    └── ui/          # S3 static website for the React app
+    └── ui/          # S3 + CloudFront + ACM + Route53 for the React app
 ```
 
-Add more environments (for example `staging`, `prod`) as sibling directories under `envs/`, each calling the same modules with different settings.
+**develop** uses `dev.respark.kevinmccartney.is`. Add **prod** (and other envs) as sibling directories under `envs/` when you ship 1.0, each calling the same modules with different `domain_name` values.

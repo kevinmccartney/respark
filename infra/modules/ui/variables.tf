@@ -1,5 +1,5 @@
 variable "aws_region" {
-  description = "AWS region for the S3 bucket and website endpoint."
+  description = "AWS region for the S3 bucket."
   type        = string
   default     = "us-east-1"
 }
@@ -11,7 +11,7 @@ variable "project" {
 }
 
 variable "environment" {
-  description = "Environment name (for example dev, staging, prod)."
+  description = "Environment name (for example develop, staging, prod)."
   type        = string
   default     = "dev"
 }
@@ -22,6 +22,16 @@ variable "bucket_name" {
   default     = null
 }
 
+variable "domain_name" {
+  description = "Public hostname for the UI (CloudFront alternate domain name)."
+  type        = string
+}
+
+variable "hosted_zone_name" {
+  description = "Route53 hosted zone name (with trailing dot implied by AWS API). Example: kevinmccartney.is"
+  type        = string
+}
+
 variable "index_document" {
   description = "Default object served for directory requests."
   type        = string
@@ -29,7 +39,13 @@ variable "index_document" {
 }
 
 variable "error_document" {
-  description = "Object served for 404 responses. Use index.html for client-side routed SPAs."
+  description = "Object served for SPA fallback via CloudFront custom error responses."
   type        = string
   default     = "index.html"
+}
+
+variable "cloudfront_price_class" {
+  description = "CloudFront price class for the distribution."
+  type        = string
+  default     = "PriceClass_100"
 }

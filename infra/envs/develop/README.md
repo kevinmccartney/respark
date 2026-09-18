@@ -1,6 +1,11 @@
 # develop environment
 
-Terraform root for the **develop** AWS environment. Run all Terraform commands from this directory.
+Terraform root for the **develop** AWS environment (0.x): S3 origin, CloudFront, ACM (HTTPS), and Route53 for `dev.respark.kevinmccartney.is`. Production (`respark.kevinmccartney.is` or similar) will get a separate env later.
+
+## Prerequisites
+
+- Route53 hosted zone for `kevinmccartney.is` in this AWS account
+- AWS credentials with permission to manage S3, CloudFront, ACM, and Route53
 
 ## Apply
 
@@ -9,34 +14,22 @@ task infra:plan
 task infra:apply
 ```
 
-Or manually:
+First apply may take several minutes while ACM DNS validation completes.
 
-```bash
-cd infra/envs/develop
-terraform init
-terraform plan
-terraform apply
-```
-
-Optional: copy `terraform.tfvars.example` to `terraform.tfvars` to set `bucket_name` or `aws_region`.
+Optional: copy `terraform.tfvars.example` to `terraform.tfvars` to override `domain_name`, `hosted_zone_name`, or `bucket_name`.
 
 ## Deploy the web app
 
-From the repository root:
+Upload assets to the private S3 bucket (CloudFront serves them):
 
 ```bash
 task web:deploy
 ```
 
-Or manually:
+Open the site at:
 
 ```bash
-npm run build
-aws s3 sync apps/web/dist s3://$(terraform -chdir=infra/envs/develop output -raw bucket_name) --delete
+terraform -chdir=infra/envs/develop output -raw site_url
 ```
 
-Site URL:
-
-```bash
-terraform -chdir=infra/envs/develop output website_endpoint
-```
+After deploy, you may need a CloudFront invalidation if you only changed cached assets; for many static deploys, syncing S3 and waiting for TTL is enough. Use `terraform output cloudfront_distribution_id` with `aws cloudfront create-invalidation` if needed.

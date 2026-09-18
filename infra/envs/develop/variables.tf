@@ -15,3 +15,15 @@ variable "bucket_name" {
   type        = string
   default     = null
 }
+
+variable "domain_name" {
+  description = "Public hostname for the develop UI (0.x pre-prod)."
+  type        = string
+  default     = "dev.respark.kevinmccartney.is"
+}
+
+variable "hosted_zone_name" {
+  description = "Route53 hosted zone for DNS and ACM validation."
+  type        = string
+  default     = "kevinmccartney.is"
+}

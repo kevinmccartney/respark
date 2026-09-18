@@ -1,23 +1,28 @@
-# S3 static website (`ui`)
+# UI module (S3 + CloudFront + ACM + Route53)
 
-Reusable module for hosting the respark web app on **S3 website hosting** (HTTP website endpoint).
+Hosts the respark web app on a custom domain with HTTPS:
 
-## Inputs / outputs
-
-See `variables.tf` and `outputs.tf`.
+- Private **S3** bucket (origin for CloudFront OAC)
+- **ACM** certificate (DNS validation, `us-east-1` provider)
+- **CloudFront** distribution (HTTPS, SPA error handling)
+- **Route53** alias records for the app hostname
 
 ## Usage
 
-Instantiate from an environment root, for example `infra/envs/develop`:
+Instantiate from an environment root (for example `infra/envs/develop`). Pass the default AWS provider and an `aws.us_east_1` alias for ACM:
 
 ```hcl
 module "ui" {
   source = "../../modules/ui"
 
-  aws_region  = var.aws_region
-  project     = var.project
-  environment = "develop"
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  domain_name      = "dev.respark.kevinmccartney.is"
+  hosted_zone_name = "kevinmccartney.is"
 }
 ```
 
-Do not run `terraform apply` from this directory; apply from an environment root under `infra/envs/`.
+Do not run `terraform apply` from this directory.

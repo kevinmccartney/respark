@@ -26,8 +26,9 @@ tasks:
       - terraform apply
 
   web:deploy:
-    desc: Build the web app and sync dist to the S3 bucket
+    desc: Build, sync dist to S3, and invalidate CloudFront cache
     deps:
       - web:build
     cmds:
       - aws s3 sync {{.WEB_DIST}} s3://$(terraform -chdir={{.TF_DIR}} output -raw bucket_name) --delete
+      - aws cloudfront create-invalidation --distribution-id $(terraform -chdir={{.TF_DIR}} output -raw cloudfront_distribution_id) --paths "/*"
