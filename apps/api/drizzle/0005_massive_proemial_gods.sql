@@ -1,0 +1,1 @@
+ALTER TABLE "catalog"."card" ALTER COLUMN "mana_value" SET DATA TYPE numeric;

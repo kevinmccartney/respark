@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { payloadHash } from "../../core/hashing.js";
 import type { Logger } from "../../core/logger.js";
+import { ProgressBar, tapByteStream } from "../../core/progress.js";
 import type { GlobalFlags } from "../../core/types.js";
 import { upsertCatalogRecords } from "../../repositories/catalog.js";
 import {
@@ -55,7 +56,7 @@ function parseSourceUpdatedAt(
 }
 
 /**
- * Download Scryfall bulk data → raw.scryfall_card + catalog.* (Phase 3).
+ * Download Scryfall bulk data → raw.scryfall_card + catalog.* (Phase 4 full import).
  */
 export async function runScryfallImport(
   pool: Pool,
@@ -86,12 +87,37 @@ export async function runScryfallImport(
   let recordsUnchanged = 0;
   let recordsFailed = 0;
   let downloadBytes = bulkByteSize(dataset);
+  let bytesRead = 0;
   let batch: BatchItem[] = [];
+
+  const useCardProgress = options.limit !== undefined;
+  const progress = new ProgressBar(
+    "Scryfall",
+    useCardProgress ? "cards" : "bytes",
+    logger,
+  );
+
+  const snapshot = () => ({
+    current: useCardProgress ? recordsSeen : bytesRead,
+    total: useCardProgress
+      ? (options.limit ?? null)
+      : (downloadBytes ?? null),
+    cards: recordsSeen,
+    inserted: recordsInserted,
+    updated: recordsUpdated,
+    unchanged: recordsUnchanged,
+    failed: recordsFailed,
+  });
+
+  const renderProgress = (force = false) => {
+    progress.update(snapshot(), force);
+  };
 
   const flush = async () => {
     if (batch.length === 0) return;
     if (options.dryRun) {
       batch = [];
+      renderProgress();
       return;
     }
 
@@ -122,6 +148,7 @@ export async function runScryfallImport(
     } finally {
       client.release();
       batch = [];
+      renderProgress(true);
     }
   };
 
@@ -129,7 +156,12 @@ export async function runScryfallImport(
     const { body, contentLength } = await openBulkDownload(dataset, logger);
     if (contentLength !== null) downloadBytes = contentLength;
 
-    for await (const raw of streamJsonlGzip(body)) {
+    const trackedBody = tapByteStream(body, (total) => {
+      bytesRead = total;
+      renderProgress();
+    });
+
+    for await (const raw of streamJsonlGzip(trackedBody)) {
       if (options.limit !== undefined && recordsSeen >= options.limit) {
         break;
       }
@@ -211,6 +243,7 @@ export async function runScryfallImport(
     }
 
     await flush();
+    progress.done(snapshot());
 
     const status =
       recordsFailed > 0 && recordsSeen > recordsFailed
@@ -252,6 +285,7 @@ export async function runScryfallImport(
       "Scryfall import finished (raw + catalog)",
     );
   } catch (err) {
+    progress.done(snapshot());
     const message = err instanceof Error ? err.message : String(err);
     await finishIngestionRun(pool, {
       runId,

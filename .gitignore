@@ -8,6 +8,10 @@ dist-ssr
 .DS_Store
 *.log
 
+# ETL sizing / reconciliation outputs (regenerate locally)
+reports/*
+!reports/.gitkeep
+
 # Terraform
 .terraform/
 *.tfstate

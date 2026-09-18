@@ -3,6 +3,7 @@ import { Command } from 'commander'
 import { createPool, loadEnv } from './core/db.js'
 import { createLogger } from './core/logger.js'
 import { ETL_SOURCES, type GlobalFlags } from './core/types.js'
+import { writeSizeReport } from './commands/report.js'
 import { runScryfallImport } from './sources/scryfall/importer.js'
 
 loadEnv()
@@ -85,7 +86,33 @@ for (const source of ETL_SOURCES) {
 }
 
 stub('all', 'Run every source pipeline')
-stub('report', 'Emit database size / ETL metrics report')
+
+program
+  .command('report')
+  .description('Emit database size / ETL metrics report to reports/etl-size-report.json')
+  .action(async () => {
+    const flags = flagsFrom(program)
+    const logger = createLogger(flags.verbose)
+    await withDb(async (pool) => {
+      const report = await writeSizeReport(pool, logger)
+      logger.info(
+        {
+          event: 'etl.report.summary',
+          database: report.database.pretty,
+          schemas: Object.fromEntries(
+            Object.entries(report.schemas).map(([k, v]) => [k, v.pretty]),
+          ),
+          largest: report.largestTables.slice(0, 5).map((t) => ({
+            name: `${t.schema}.${t.table}`,
+            rows: t.rows,
+            size: t.pretty,
+          })),
+        },
+        'Size report summary',
+      )
+    })
+  })
+
 stub('forecast', 'Emit capacity forecast from measured sizes')
 
 await program.parseAsync(process.argv)

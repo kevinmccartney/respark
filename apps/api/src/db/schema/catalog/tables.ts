@@ -23,7 +23,7 @@ export const cards = catalogSchema.table('card', {
   oracleId: uuid('oracle_id').notNull().unique(),
   name: text('name').notNull(),
   manaCost: text('mana_cost'),
-  manaValue: numeric('mana_value', { precision: 8, scale: 2 }),
+  manaValue: numeric('mana_value'),
   typeLine: text('type_line'),
   oracleText: text('oracle_text'),
   colors: text('colors').array(),

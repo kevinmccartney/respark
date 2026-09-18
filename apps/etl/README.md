@@ -1,6 +1,6 @@
 # respark ETL (MTG data pipeline)
 
-Phase 3: Scryfall bulk → `raw.scryfall_card` **and** `catalog.*` (card / set / printing / faces / identifiers).
+Phase 4: full Scryfall bulk → `raw.scryfall_card` + `catalog.*`, then size report.
 
 ## Setup
 
@@ -16,23 +16,29 @@ task db:migrate
 task etl -- --help
 task etl -- ping
 
-# Sample import (raw + catalog)
-task etl -- scryfall --limit 1000
+# Full import (raw + catalog) — no --limit
+task etl -- scryfall
 
 # Re-run should mostly count unchanged printings
-task etl -- scryfall --limit 1000
+task etl -- scryfall
 
+# Sample / dry-run helpers
+task etl -- scryfall --limit 1000
 task etl -- scryfall --limit 100 --dry-run
 task etl -- scryfall --limit 100 --no-store-raw   # catalog only
+
+# DB size + latest ingestion metrics → reports/etl-size-report.json
+task etl -- report
 ```
 
-Sources still stubbed: `mtgjson`, `justtcg`. Utilities stubbed: `all`, `report`, `forecast`.
+Sources still stubbed: `mtgjson`, `justtcg`. Utility stubbed: `all`, `forecast`.
 
 ## Layout
 
 ```text
 apps/etl/src/
   cli.ts
+  commands/           # report (size metrics)
   core/
   sources/scryfall/   # client, stream, schema, transformer, importer
   repositories/       # raw + catalog + ingestion_run (pg)
