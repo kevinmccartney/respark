@@ -12,7 +12,11 @@ import {
 } from '@nestjs/common'
 import { AdminRoleGuard } from '../auth/admin-role.guard'
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard'
-import { AdminEtlService } from './admin-etl.service'
+import {
+  AdminEtlService,
+  ENRICHMENT_JOB_IDS,
+  type EnrichmentJobId,
+} from './admin-etl.service'
 import { AdminService } from './admin.service'
 
 @Controller('admin')
@@ -23,46 +27,44 @@ export class AdminController {
     private readonly adminEtl: AdminEtlService,
   ) {}
 
-  @Post('etl-job')
+  @Post('etl-syncs')
   @HttpCode(202)
-  async startEtlJob(@Body() body: { source?: unknown }) {
-    const source = typeof body?.source === 'string' ? body.source.trim() : ''
-    if (!source) {
-      throw new BadRequestException('source is required')
-    }
-
-    return this.adminEtl.startJob(source)
+  async startEtlSync(
+    @Body() body: { catalog?: unknown; enrichmentJobs?: unknown },
+  ) {
+    const catalog = Boolean(body?.catalog)
+    const enrichmentJobs = parseEnrichmentJobs(body?.enrichmentJobs)
+    return this.adminEtl.startSync({ catalog, enrichmentJobs })
   }
 
-  @Get('ingestion-runs')
-  async listIngestionRuns(
+  @Get('etl-syncs')
+  async listEtlSyncs(
     @Query('limit') limitRaw?: string,
-    @Query('source') source?: string,
     @Query('status') status?: string,
   ) {
     return {
-      runs: await this.adminService.listIngestionRuns({
+      syncs: await this.adminService.listEtlSyncs({
         limit: parseLimit(limitRaw, 50, 200),
-        source: nonempty(source),
         status: nonempty(status),
       }),
     }
   }
 
-  @Get('ingestion-runs/:id')
-  async getIngestionRun(@Param('id', ParseUUIDPipe) id: string) {
+  @Get('etl-syncs/:id')
+  async getEtlSync(@Param('id', ParseUUIDPipe) id: string) {
     return {
-      run: await this.adminService.getIngestionRun(id),
+      sync: await this.adminService.getEtlSync(id),
     }
   }
 
-  @Get('ingestion-runs/:id/errors')
-  async listIngestionErrors(
+  @Get('etl-syncs/:id/jobs/:jobRunId/errors')
+  async listJobErrors(
     @Param('id', ParseUUIDPipe) id: string,
+    @Param('jobRunId', ParseUUIDPipe) jobRunId: string,
     @Query('limit') limitRaw?: string,
     @Query('offset') offsetRaw?: string,
   ) {
-    const result = await this.adminService.listIngestionErrors(id, {
+    const result = await this.adminService.listJobErrors(id, jobRunId, {
       limit: parseLimit(limitRaw, 50, 200),
       offset: parseOffset(offsetRaw),
     })
@@ -72,6 +74,55 @@ export class AdminController {
       total: result.total,
     }
   }
+
+  @Get('etl-syncs/:id/jobs/:jobRunId/reconciliation')
+  async getJobReconciliation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('jobRunId', ParseUUIDPipe) jobRunId: string,
+  ) {
+    return {
+      reconciliation: await this.adminService.getJobReconciliation(id, jobRunId),
+    }
+  }
+
+  @Get('etl-syncs/:id/jobs/:jobRunId/unmatched')
+  async listJobUnmatched(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('jobRunId', ParseUUIDPipe) jobRunId: string,
+    @Query('limit') limitRaw?: string,
+    @Query('offset') offsetRaw?: string,
+  ) {
+    const result = await this.adminService.listJobUnmatched(id, jobRunId, {
+      limit: parseLimit(limitRaw, 50, 200),
+      offset: parseOffset(offsetRaw),
+    })
+
+    return {
+      unmatched: result.unmatched,
+      total: result.total,
+    }
+  }
+}
+
+function parseEnrichmentJobs(raw: unknown): EnrichmentJobId[] {
+  if (raw === undefined || raw === null) return []
+  if (!Array.isArray(raw)) {
+    throw new BadRequestException('enrichmentJobs must be an array of strings')
+  }
+  const jobs: EnrichmentJobId[] = []
+  for (const item of raw) {
+    if (typeof item !== 'string') {
+      throw new BadRequestException('enrichmentJobs must be an array of strings')
+    }
+    const job = item.trim() as EnrichmentJobId
+    if (!(ENRICHMENT_JOB_IDS as readonly string[]).includes(job)) {
+      throw new BadRequestException(
+        `Unknown enrichment job "${item}". Expected: ${ENRICHMENT_JOB_IDS.join(', ')}`,
+      )
+    }
+    if (!jobs.includes(job)) jobs.push(job)
+  }
+  return jobs
 }
 
 function parseLimit(raw: string | undefined, fallback: number, max: number): number {

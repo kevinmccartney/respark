@@ -9,15 +9,14 @@ Initial sources:
 1. Scryfall
    - Primary source for cards, printings, sets, oracle data, images, legality, and related metadata.
    - Prefer Scryfall bulk data rather than per-card API calls.
+   - **Source of truth** for catalog identity.
 
 2. MTGJSON
-   - Supplemental source.
-   - Primarily used for cross-provider identifiers and data not conveniently available from Scryfall.
+   - Enrichment only (identifiers today; more datasets later including pricing candidates).
+   - Must never create or overwrite Scryfall-owned catalog fields.
+   - Runs after Catalog sync in the pipeline.
 
-3. JustTCG
-   - Market/pricing source.
-   - Implement after the catalog pipeline is stable.
-   - Store historical price observations separately from card metadata.
+JustTCG is **out of scope**. Pricing will be a future enrichment stage, not a third peer source.
 
 The pipeline must run identically:
 
@@ -39,19 +38,15 @@ Target architecture:
 ```text
 External Sources
     |
-    +-- Scryfall
-    +-- MTGJSON
-    +-- JustTCG
+    +-- Scryfall          (catalog source of truth)
+    +-- MTGJSON           (enrichment only)
     |
     v
 ETL Worker
     |
-    +-- download
-    +-- stage raw payloads
-    +-- normalize
-    +-- reconcile identities
-    +-- upsert canonical records
-    +-- collect metrics
+    +-- Sync (ops.etl_sync)
+        +-- Stage catalog → job catalog (Scryfall)
+        +-- Stage enrichment → job identifiers (MTGJSON), …
     |
     v
 PostgreSQL
@@ -556,7 +551,7 @@ Cross-provider IDs:
 MTGJSON + Scryfall
 
 Historical market prices:
-JustTCG
+Future MTGJSON (or other) enrichment stage — not JustTCG
 ```
 
 Never allow arbitrary "latest importer wins" behavior.
@@ -712,20 +707,30 @@ should fail the entire run.
 
 ---
 
-# 18. ETL Run Tracking
+# 18. ETL Sync / Stage / Job Tracking
 
 Create:
 
 ```text
-ops.ingestion_run
+ops.etl_sync
+ops.etl_job_run
 ```
 
-Suggested fields:
+**Sync** fields: status, include_catalog, include_enrichment, enrichment_jobs[], started_at, completed_at, error_message.
+
+**Job run** fields: sync_id, stage (`catalog`|`enrichment`), job (`catalog`|`identifiers`|…), status, metrics, source_version/url.
+
+Legacy `ops.ingestion_run` was renamed to `ops.etl_job_run`; child tables (`ingestion_error`, `ingestion_reconciliation`, `ingestion_unmatched`) still reference the job-run id via `run_id`.
+
+Suggested job-run metrics:
 
 ```text
 id UUID PK
 
-source TEXT
+sync_id UUID FK → etl_sync
+
+stage TEXT
+job TEXT
 
 status TEXT
 
@@ -758,7 +763,7 @@ partial_success
 failed
 ```
 
-Every execution of an ETL source must create a run.
+Every sync creates an `ops.etl_sync` row; each stage job creates an `ops.etl_job_run`.
 
 ---
 
@@ -1024,9 +1029,10 @@ For unmatched records, produce a machine-readable artifact:
 
 ---
 
-# 25. JustTCG / Pricing Pipeline
+# 25. Pricing Pipeline (deferred)
 
 Do not implement pricing until catalog identity reconciliation is working.
+JustTCG is not planned; prefer MTGJSON AllPrices (or similar) as an enrichment stage later.
 
 Create:
 
@@ -1278,6 +1284,7 @@ src/
       identifiers.ts
       prices.ts
       raw.ts
+      etlSyncs.ts
       ingestionRuns.ts
 
     reports/
@@ -1385,7 +1392,7 @@ Implement:
 Docker PostgreSQL
 migration runner
 schemas
-ops.ingestion_run
+ops.etl_sync / ops.etl_job_run
 CLI skeleton
 ```
 
@@ -1524,27 +1531,31 @@ Do not proceed to AWS until these results are available.
 
 ---
 
-## Phase 7 — JustTCG
+## Phase 7 — Pricing enrichment (deferred)
 
-Implement:
+JustTCG is **out of scope**. Pricing will land later as an **enrichment** stage
+(likely MTGJSON AllPrices or another provider), never as a catalog identity source.
 
-```text
-provider client
-batch fetching
-price normalization
-historical observations
-rate-limit handling
-```
-
-Start with a small subset.
-
-Example:
+Scryfall remains the sole source of truth for:
 
 ```text
-100 known printings
+oracle identity
+printings
+sets
+images
 ```
 
-Then expand.
+When pricing is added:
+
+```text
+attach observations to existing catalog.printing rows only
+
+never create printings from price feeds
+
+respect rate limits / retention modes from earlier sections
+```
+
+Start with a small subset of known printings, then expand.
 
 ---
 
@@ -1760,7 +1771,7 @@ Begin with:
 2. add Dockerized local PostgreSQL
 3. add migration tooling
 4. create `raw`, `catalog`, `market`, `ops`, and `app` schemas
-5. create `ops.ingestion_run`
+5. create `ops.etl_sync` / `ops.etl_job_run`
 6. create the ETL CLI skeleton
 7. implement Scryfall bulk metadata discovery
 8. implement a `--limit 1000` Scryfall raw import

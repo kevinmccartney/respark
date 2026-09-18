@@ -1,6 +1,16 @@
 # respark ETL (MTG data pipeline)
 
-Phase 4: full Scryfall bulk → `raw.scryfall_card` + `catalog.*`, then size report.
+Nomenclature:
+
+| Term | Meaning |
+| --- | --- |
+| **Sync** | One user-triggered pipeline execution (`ops.etl_sync`) |
+| **Stage** | Ordered phase: `catalog` \| `enrichment` |
+| **Job** | Work unit inside a stage (`catalog`, `identifiers`, …) |
+
+**Catalog stage** — job `catalog` (Scryfall catalog; source of truth).
+
+**Enrichment stage** — job `identifiers` today (Printing identifiers via MTGJSON). Never creates printings.
 
 ## Setup
 
@@ -16,32 +26,50 @@ task db:migrate
 task etl -- --help
 task etl -- ping
 
-# Full import (raw + catalog) — no --limit
-task etl -- scryfall
+# Catalog only
+task etl -- sync --catalog
+task etl -- sync --catalog --limit 1000
 
-# Re-run should mostly count unchanged printings
-task etl -- scryfall
+# Enrichment only (Printing identifiers) — requires existing catalog
+task etl -- sync --enrichment identifiers
+task etl -- sync --enrichment identifiers --limit 2000
+task etl -- sync --enrichment identifiers --demo-mismatches
 
-# Sample / dry-run helpers
-task etl -- scryfall --limit 1000
-task etl -- scryfall --limit 100 --dry-run
-task etl -- scryfall --limit 100 --no-store-raw   # catalog only
+# Both stages
+task etl -- sync --catalog --enrichment identifiers
+task etl -- sync --catalog --enrichment identifiers --limit 500
 
-# DB size + latest ingestion metrics → reports/etl-size-report.json
+# DB size → reports/etl-size-report.json
 task etl -- report
 ```
 
-Sources still stubbed: `mtgjson`, `justtcg`. Utility stubbed: `all`, `forecast`.
+Deprecated aliases (one release): `scryfall` → catalog; `mtgjson` → enrichment identifiers; `full` → both.
+
+### Reconciliation
+
+After the identifiers job completes, results are stored against that job run:
+
+- `ops.ingestion_reconciliation`
+- `ops.ingestion_unmatched`
+- Ambiguous detail → `ops.ingestion_error` (`stage = reconcile`)
+
+View in admin on `/syncs/:id`, or:
+
+- `GET /admin/etl-syncs/:id/jobs/:jobRunId/reconciliation`
+- `GET /admin/etl-syncs/:id/jobs/:jobRunId/unmatched`
+
+Utility still stubbed: `forecast`.
 
 ## Layout
 
 ```text
 apps/etl/src/
   cli.ts
-  commands/           # report (size metrics)
+  commands/           # sync, report
   core/
-  sources/scryfall/   # client, stream, schema, transformer, importer
-  repositories/       # raw + catalog + ingestion_run (pg)
+  sources/scryfall/   # catalog job
+  sources/mtgjson/    # identifiers enrichment job
+  repositories/
 ```
 
 DDL lives in API Drizzle migrations (`task db:migrate`).

@@ -2,12 +2,12 @@ import type { Pool } from "pg";
 import { payloadHash } from "../../core/hashing";
 import type { Logger } from "../../core/logger";
 import { ProgressBar, tapByteStream } from "../../core/progress";
-import type { GlobalFlags } from "../../core/types";
+import type { GlobalFlags, IngestionRunStatus, JobContext } from "../../core/types";
 import { upsertCatalogRecords } from "../../repositories/catalog";
 import {
-  finishIngestionRun,
+  finishJobRun,
   insertIngestionError,
-  startIngestionRun,
+  startJobRun,
 } from "../../repositories/ingestionRuns";
 import {
   upsertScryfallCards,
@@ -22,7 +22,9 @@ import { bulkByteSize, bulkDownloadUri, scryfallCardSchema } from "./schema";
 import { streamJsonlGzip } from "./stream";
 import { transformScryfallCard, type CanonicalRecord } from "./transformer";
 
-const SOURCE = "scryfall";
+const SOURCE = "catalog";
+const STAGE = "catalog";
+const JOB = "catalog";
 const DEFAULT_BATCH_SIZE = 500;
 
 export type ScryfallImportOptions = GlobalFlags & {
@@ -62,7 +64,8 @@ export async function runScryfallImport(
   pool: Pool,
   logger: Logger,
   flags: GlobalFlags,
-): Promise<void> {
+  ctx: JobContext,
+): Promise<IngestionRunStatus> {
   const options: ScryfallImportOptions = {
     ...flags,
     storeRaw: resolveStoreRaw(flags),
@@ -75,8 +78,10 @@ export async function runScryfallImport(
   const meta = await fetchBulkMetadata(logger);
   const dataset = selectBulkDataset(meta);
 
-  const runId = await startIngestionRun(pool, {
-    source: SOURCE,
+  const runId = await startJobRun(pool, {
+    syncId: ctx.syncId,
+    stage: STAGE,
+    job: JOB,
     sourceVersion: dataset.updated_at,
     sourceUrl: bulkDownloadUri(dataset),
   });
@@ -253,7 +258,7 @@ export async function runScryfallImport(
           ? "failed"
           : "success";
 
-    await finishIngestionRun(pool, {
+    await finishJobRun(pool, {
       runId,
       status,
       recordsSeen,
@@ -284,10 +289,11 @@ export async function runScryfallImport(
       },
       "Scryfall import finished (raw + catalog)",
     );
+    return status;
   } catch (err) {
     progress.done(snapshot());
     const message = err instanceof Error ? err.message : String(err);
-    await finishIngestionRun(pool, {
+    await finishJobRun(pool, {
       runId,
       status: "failed",
       recordsSeen,

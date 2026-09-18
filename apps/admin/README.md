@@ -1,6 +1,6 @@
 # respark admin
 
-Local ops dashboard for ETL ingestion runs. Uses the same Clerk application as `apps/web`; API routes under `/admin` require `publicMetadata.role === "admin"`.
+Local ops dashboard for ETL syncs. Uses the same Clerk application as `apps/web`; API routes under `/admin` require `publicMetadata.role === "admin"`.
 
 ## Setup
 
@@ -50,5 +50,5 @@ Add the admin origin to Clerk allowed origins / redirect URLs (same Clerk app as
 
 ## Screens
 
-- `/` — list of ingestion runs + **Run ETL** (source select → `POST /admin/etl-job`)
-- `/runs/:id` — run detail + paginated failed import rows
+- `/` — list of ETL syncs + **Start sync** (catalog / enrichment checkboxes → `POST /admin/etl-syncs`)
+- `/syncs/:id` — sync detail with stages/jobs, reconciliation, and failed rows

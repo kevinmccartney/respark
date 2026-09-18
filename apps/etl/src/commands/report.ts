@@ -149,11 +149,11 @@ export async function collectSizeReport(pool: Pool): Promise<SizeReport> {
     duration_ms: number | null;
     completed_at: Date | null;
   }>(
-    `select id, source, status,
+    `select id, stage || '/' || job as source, status,
             records_seen, records_inserted, records_updated,
             records_unchanged, records_failed,
             download_bytes, duration_ms, completed_at
-     from ops.ingestion_run
+     from ops.etl_job_run
      order by started_at desc
      limit 10`,
   );

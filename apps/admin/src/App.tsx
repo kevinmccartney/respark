@@ -1,8 +1,8 @@
 import { Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/AppShell.tsx'
 import { GuestOnly, RequireAuth } from './components/AuthGate.tsx'
-import { RunDetailPage } from './pages/RunDetailPage.tsx'
-import { RunsListPage } from './pages/RunsListPage.tsx'
+import { SyncDetailPage } from './pages/SyncDetailPage.tsx'
+import { SyncsListPage } from './pages/SyncsListPage.tsx'
 import { SignInPage } from './pages/SignInPage.tsx'
 
 export default function App() {
@@ -21,15 +21,15 @@ export default function App() {
           path="/"
           element={
             <RequireAuth>
-              <RunsListPage />
+              <SyncsListPage />
             </RequireAuth>
           }
         />
         <Route
-          path="/runs/:id"
+          path="/syncs/:id"
           element={
             <RequireAuth>
-              <RunDetailPage />
+              <SyncDetailPage />
             </RequireAuth>
           }
         />

@@ -1,8 +1,9 @@
 import { bigserial, jsonb, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { opsSchema } from './ingestion-run'
+import { opsSchema } from './ops-schema'
 
 /**
- * Per-record failures during an ETL run. One bad card should not abort the import.
+ * Per-record failures during an ETL job. One bad card should not abort the import.
+ * `stage` here is the processing step (validate/transform/reconcile), not sync stage.
  */
 export const ingestionErrors = opsSchema.table('ingestion_error', {
   id: bigserial('id', { mode: 'number' }).primaryKey(),

@@ -11,13 +11,15 @@ import { resolve } from 'node:path'
 import { eq } from 'drizzle-orm'
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino'
 import { DATABASE, type Database } from '../db/database.module'
-import { ingestionRuns } from '../db/schema'
+import { etlSyncs } from '../db/schema'
 
-/** Canonical pipeline ids (DB / CLI). */
-export const ETL_SOURCES = ['scryfall', 'mtgjson', 'justtcg'] as const
-export type EtlSourceId = (typeof ETL_SOURCES)[number]
+export const ENRICHMENT_JOB_IDS = ['identifiers'] as const
+export type EnrichmentJobId = (typeof ENRICHMENT_JOB_IDS)[number]
 
-const IMPLEMENTED_SOURCES = new Set<EtlSourceId>(['scryfall'])
+export type StartSyncInput = {
+  catalog: boolean
+  enrichmentJobs: EnrichmentJobId[]
+}
 
 @Injectable()
 export class AdminEtlService {
@@ -29,45 +31,55 @@ export class AdminEtlService {
   ) {}
 
   /**
-   * Accepts display names like "Scryfall" or canonical "scryfall".
-   * Spawns the ETL CLI in the background so the HTTP request returns immediately.
+   * Start an ETL sync via the CLI (`sync --catalog --enrichment …`).
+   * Spawns in the background so the HTTP request returns immediately.
    */
-  async startJob(sourceRaw: string): Promise<{ accepted: true; source: EtlSourceId }> {
-    const source = normalizeSource(sourceRaw)
-    if (!source) {
+  async startSync(
+    input: StartSyncInput,
+  ): Promise<{ accepted: true; catalog: boolean; enrichmentJobs: string[] }> {
+    if (!input.catalog && input.enrichmentJobs.length === 0) {
       throw new BadRequestException(
-        `Unknown source "${sourceRaw}". Expected one of: Scryfall, MTGJSON, JustTCG`,
+        'At least one of catalog or enrichmentJobs is required',
       )
     }
 
-    if (!IMPLEMENTED_SOURCES.has(source)) {
-      throw new BadRequestException(`ETL source "${source}" is not implemented yet`)
+    for (const job of input.enrichmentJobs) {
+      if (!ENRICHMENT_JOB_IDS.includes(job)) {
+        throw new BadRequestException(
+          `Unknown enrichment job "${job}". Expected: ${ENRICHMENT_JOB_IDS.join(', ')}`,
+        )
+      }
     }
 
     const [running] = await this.db
-      .select({ id: ingestionRuns.id })
-      .from(ingestionRuns)
-      .where(eq(ingestionRuns.status, 'running'))
+      .select({ id: etlSyncs.id })
+      .from(etlSyncs)
+      .where(eq(etlSyncs.status, 'running'))
       .limit(1)
 
     if (running) {
       throw new ConflictException(
-        `An ETL run is already in progress (${running.id}). Wait for it to finish.`,
+        `An ETL sync is already in progress (${running.id}). Wait for it to finish.`,
       )
     }
 
-    const { command, args, cwd } = resolveEtlLaunch(source)
+    const { command, args, cwd } = resolveEtlLaunch(input)
 
     this.logger.info(
-      { event: 'admin.etl_job.start', source, command, args, cwd },
-      'Starting ETL job',
+      {
+        event: 'admin.etl_sync.start',
+        catalog: input.catalog,
+        enrichmentJobs: input.enrichmentJobs,
+        command,
+        args,
+        cwd,
+      },
+      'Starting ETL sync',
     )
 
     try {
       const child = spawn(command, args, {
         cwd,
-        // Keep the child in the same process group so Docker/dev logs can attach;
-        // do not detach — detached + stdio ignore hid ECONNREFUSED failures.
         stdio: ['ignore', 'pipe', 'pipe'],
         env: {
           ...process.env,
@@ -76,13 +88,19 @@ export class AdminEtlService {
       })
 
       const pid = child.pid
-      this.logger.info({ event: 'admin.etl_job.spawned', source, pid }, 'ETL process spawned')
+      this.logger.info(
+        { event: 'admin.etl_sync.spawned', pid },
+        'ETL process spawned',
+      )
 
       const stderrTail: string[] = []
       child.stdout?.on('data', (buf: Buffer) => {
         const line = buf.toString('utf8').trimEnd()
         if (line) {
-          this.logger.info({ event: 'admin.etl_job.stdout', source, pid, line }, line)
+          this.logger.info(
+            { event: 'admin.etl_sync.stdout', pid, line },
+            line,
+          )
         }
       })
       child.stderr?.on('data', (buf: Buffer) => {
@@ -90,12 +108,15 @@ export class AdminEtlService {
         if (line) {
           stderrTail.push(line)
           if (stderrTail.length > 20) stderrTail.shift()
-          this.logger.warn({ event: 'admin.etl_job.stderr', source, pid, line }, line)
+          this.logger.warn(
+            { event: 'admin.etl_sync.stderr', pid, line },
+            line,
+          )
         }
       })
       child.on('error', (err) => {
         this.logger.error(
-          { event: 'admin.etl_job.spawn_error', source, pid, err },
+          { event: 'admin.etl_sync.spawn_error', pid, err },
           'Failed to spawn ETL process',
         )
       })
@@ -103,19 +124,20 @@ export class AdminEtlService {
         const level = code === 0 ? 'info' : 'error'
         this.logger[level](
           {
-            event: 'admin.etl_job.exit',
-            source,
+            event: 'admin.etl_sync.exit',
             pid,
             code,
             signal,
             stderr: code === 0 ? undefined : stderrTail.join('\n') || undefined,
           },
-          code === 0 ? 'ETL process exited successfully' : 'ETL process exited with error',
+          code === 0
+            ? 'ETL process exited successfully'
+            : 'ETL process exited with error',
         )
       })
     } catch (err) {
       this.logger.error(
-        { event: 'admin.etl_job.spawn_failed', source, err },
+        { event: 'admin.etl_sync.spawn_failed', err },
         'Could not start ETL process',
       )
       throw new ServiceUnavailableException(
@@ -123,28 +145,30 @@ export class AdminEtlService {
       )
     }
 
-    return { accepted: true, source }
+    return {
+      accepted: true,
+      catalog: input.catalog,
+      enrichmentJobs: input.enrichmentJobs,
+    }
   }
 }
 
-function normalizeSource(raw: string): EtlSourceId | null {
-  const key = raw.trim().toLowerCase()
-  if ((ETL_SOURCES as readonly string[]).includes(key)) {
-    return key as EtlSourceId
-  }
-  return null
-}
-
-function resolveEtlLaunch(source: EtlSourceId): {
+function resolveEtlLaunch(input: StartSyncInput): {
   command: string
   args: string[]
   cwd: string
 } {
+  const syncArgs = ['sync']
+  if (input.catalog) syncArgs.push('--catalog')
+  if (input.enrichmentJobs.length > 0) {
+    syncArgs.push('--enrichment', input.enrichmentJobs.join(','))
+  }
+
   if (process.env.ETL_COMMAND?.trim()) {
     const parts = process.env.ETL_COMMAND.trim().split(/\s+/)
     return {
       command: parts[0],
-      args: [...parts.slice(1), source],
+      args: [...parts.slice(1), ...syncArgs],
       cwd: process.env.ETL_REPO_ROOT?.trim() || process.cwd(),
     }
   }
@@ -152,16 +176,30 @@ function resolveEtlLaunch(source: EtlSourceId): {
   const repoRoot = findRepoRoot()
   const distCli = resolve(repoRoot, 'apps/etl/dist/cli.js')
   const srcCli = resolve(repoRoot, 'apps/etl/src/cli.ts')
+  const preferSource =
+    process.env.ETL_PREFER_SOURCE === 'true' ||
+    process.env.NODE_ENV !== 'production'
 
-  // Prefer compiled CLI when present; fall back to tsx for source-only checkouts.
+  if (preferSource && existsSync(srcCli)) {
+    return {
+      command: 'npx',
+      args: ['tsx', 'apps/etl/src/cli.ts', ...syncArgs],
+      cwd: repoRoot,
+    }
+  }
+
   if (existsSync(distCli)) {
-    return { command: process.execPath, args: [distCli, source], cwd: repoRoot }
+    return {
+      command: process.execPath,
+      args: [distCli, ...syncArgs],
+      cwd: repoRoot,
+    }
   }
 
   if (existsSync(srcCli)) {
     return {
       command: 'npx',
-      args: ['tsx', 'apps/etl/src/cli.ts', source],
+      args: ['tsx', 'apps/etl/src/cli.ts', ...syncArgs],
       cwd: repoRoot,
     }
   }
