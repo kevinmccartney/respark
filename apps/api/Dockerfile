@@ -15,6 +15,17 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY apps/api/package.json ./
 RUN npm install --omit=dev --no-audit --no-fund
+
+# RDS enforces TLS and signs certificates with its own root CA, which is not in
+# Node's default trust store. Bundling it keeps verification on.
+RUN apk add --no-cache ca-certificates curl \
+  && curl -fsSL -o /app/rds-global-bundle.pem \
+     https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
+  && apk del curl
+ENV DATABASE_CA_PATH=/app/rds-global-bundle.pem
 COPY --from=build /repo/apps/api/dist ./dist
+# Applied at startup when RUN_MIGRATIONS=true; drizzle-orm ships the migrator, so
+# drizzle-kit is not needed in the runtime image.
+COPY apps/api/drizzle ./drizzle
 EXPOSE 3000
 CMD ["node", "dist/main.js"]

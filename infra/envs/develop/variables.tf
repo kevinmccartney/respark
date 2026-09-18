@@ -33,3 +33,15 @@ variable "api_domain_name" {
   type        = string
   default     = "dev.api.respark.kevinmccartney.is"
 }
+
+variable "db_instance_class" {
+  description = "RDS instance class for the develop database."
+  type        = string
+  default     = "db.t4g.micro"
+}
+
+variable "db_allocated_storage" {
+  description = "Allocated storage in GiB for the develop database."
+  type        = number
+  default     = 20
+}

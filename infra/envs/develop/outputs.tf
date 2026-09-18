@@ -42,3 +42,13 @@ output "api_cloudfront_distribution_id" {
   description = "CloudFront distribution ID for the API."
   value       = module.api.cloudfront_distribution_id
 }
+
+output "db_endpoint" {
+  description = "Postgres endpoint (reachable only from the API security group)."
+  value       = module.db.endpoint
+}
+
+output "db_database_url_parameter" {
+  description = "SSM parameter holding the API connection string."
+  value       = module.db.database_url_parameter_name
+}

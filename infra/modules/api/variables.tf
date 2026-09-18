@@ -53,3 +53,10 @@ variable "log_retention_in_days" {
   type        = number
   default     = 30
 }
+
+# Passed as a plain path rather than read from the db module, so the two modules
+# stay acyclic: the db module needs this module's security group id.
+variable "parameter_prefix" {
+  description = "SSM Parameter Store prefix holding API secrets (database-url, clerk-secret-key)."
+  type        = string
+}

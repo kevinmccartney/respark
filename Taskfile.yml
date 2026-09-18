@@ -8,6 +8,7 @@ vars:
   API_DOCKERFILE: apps/api/Dockerfile
   API_IMAGE_TAG: latest
   AWS_REGION: us-east-1
+  COMPOSE_FILE: docker-compose.api.yml
 
 tasks:
   build:
@@ -25,6 +26,38 @@ tasks:
     desc: Compile the NestJS API
     cmds:
       - npm run build -w api
+
+  db:up:
+    desc: Start the local Postgres container and wait until it accepts connections
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} up -d --wait db
+
+  db:down:
+    desc: Stop the local Postgres container (data volume is preserved)
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} stop db
+
+  db:reset:
+    desc: Destroy the local containers and the Postgres data volume
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} down -v
+
+  db:generate:
+    desc: Generate a SQL migration from the Drizzle schema
+    cmds:
+      - npm run db:generate -w api
+
+  db:migrate:
+    desc: Apply pending migrations to the database in DATABASE_URL
+    deps:
+      - db:up
+    cmds:
+      - npm run db:migrate -w api
+
+  db:studio:
+    desc: Open Drizzle Studio against the local database
+    cmds:
+      - npm run db:studio -w api
 
   api:dev:
     desc: Run the API in watch mode on PORT (default {{.API_PORT}})
@@ -65,6 +98,13 @@ tasks:
         docker tag respark-api:{{.API_IMAGE_TAG}} "$REPO:{{.API_IMAGE_TAG}}"
         docker push "$REPO:{{.API_IMAGE_TAG}}"
 
+  api:secrets:push:
+    desc: Push CLERK_SECRET_KEY from apps/api/.env into SSM Parameter Store
+    env:
+      AWS_REGION: "{{.AWS_REGION}}"
+    cmds:
+      - bash scripts/push-api-secrets.sh
+
   api:deploy:ec2:
     desc: Pull latest image on the API EC2 instance via SSM and restart the container
     env:
@@ -95,9 +135,13 @@ tasks:
       - terraform apply
 
   web:deploy:
-    desc: Build, sync dist to S3, and invalidate CloudFront cache
-    deps:
-      - web:build
+    desc: Build against the deployed API, sync dist to S3, and invalidate CloudFront cache
     cmds:
+      # VITE_API_URL must come from Terraform; without it the bundle would fall back to localhost.
+      - |
+        set -euo pipefail
+        VITE_API_URL=$(terraform -chdir={{.TF_DIR}} output -raw api_url)
+        echo "Building web against $VITE_API_URL"
+        VITE_API_URL="$VITE_API_URL" npm run build:web
       - aws s3 sync {{.WEB_DIST}} s3://$(terraform -chdir={{.TF_DIR}} output -raw bucket_name) --delete
       - aws cloudfront create-invalidation --distribution-id $(terraform -chdir={{.TF_DIR}} output -raw cloudfront_distribution_id) --paths "/*"

@@ -2,8 +2,15 @@ const defaultApiBase = 'http://localhost:3000'
 
 export function apiBaseUrl(): string {
   const configured = import.meta.env.VITE_API_URL?.trim()
-  if (!configured) return defaultApiBase
-  return configured.replace(/\/$/, '')
+  if (configured) return configured.replace(/\/$/, '')
+
+  // Falling back to localhost in a deployed bundle silently points every user at
+  // their own machine, so treat a missing value as a build misconfiguration.
+  if (import.meta.env.PROD) {
+    throw new Error('Missing VITE_API_URL. Production builds must set the API origin.')
+  }
+
+  return defaultApiBase
 }
 
 export class ApiError extends Error {
@@ -45,8 +52,21 @@ export async function apiFetchJson<T>(
   const response = await apiFetch(path, getToken, init)
 
   if (!response.ok) {
-    throw new ApiError(response.statusText || 'Request failed', response.status)
+    throw new ApiError(await errorMessage(response), response.status)
   }
 
   return response.json() as Promise<T>
+}
+
+/** Nest error responses carry a `message` worth surfacing; fall back to the status text. */
+async function errorMessage(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as { message?: unknown }
+    if (typeof body.message === 'string' && body.message) return body.message
+    if (Array.isArray(body.message) && body.message.length) return String(body.message[0])
+  } catch {
+    // Response had no JSON body.
+  }
+
+  return response.statusText || 'Request failed'
 }

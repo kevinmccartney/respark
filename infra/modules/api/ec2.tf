@@ -35,6 +35,7 @@ locals {
     cloudwatch_log_group = aws_cloudwatch_log_group.api.name
     api_port             = var.api_port
     container_image_tag  = var.container_image_tag
+    parameter_prefix     = var.parameter_prefix
   })
 }
 

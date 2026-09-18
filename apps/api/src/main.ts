@@ -16,6 +16,7 @@ for (const file of ['.env', '.env.local']) {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true })
   app.useLogger(app.get(Logger))
+  app.enableShutdownHooks()
   app.enableCors({
     origin: true,
     methods: ['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE'],

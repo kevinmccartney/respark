@@ -27,3 +27,8 @@ output "cloudwatch_log_group_arn" {
   description = "CloudWatch log group ARN (for metric filters / alarms)."
   value       = aws_cloudwatch_log_group.api.arn
 }
+
+output "security_group_id" {
+  description = "Security group attached to the API instance (source for database access)."
+  value       = aws_security_group.api.id
+}

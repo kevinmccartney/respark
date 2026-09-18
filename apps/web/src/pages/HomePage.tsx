@@ -1,5 +1,6 @@
 import { useAuth, useUser } from "@clerk/react";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { SiteHeader } from "../components/SiteHeader.tsx";
 import { ApiError } from "../lib/api.ts";
 import { fetchDecks, type Deck } from "../lib/decks.ts";
@@ -56,12 +57,17 @@ export function HomePage() {
         </header>
 
         <section className="decks-panel" aria-labelledby="decks-heading">
-          <h2 id="decks-heading">Your decks</h2>
+          <div className="decks-panel-header">
+            <h2 id="decks-heading">Your decks</h2>
+            <Link to="/decks/new" className="auth-button">
+              New deck
+            </Link>
+          </div>
           {loading ? <p className="decks-muted">Loading decks…</p> : null}
           {error ? <p className="decks-error">{error}</p> : null}
           {!loading && !error && decks.length === 0 ? (
             <p className="decks-muted">
-              No decks yet — build your first list soon.
+              No decks yet — create your first one.
             </p>
           ) : null}
           {!loading && !error && decks.length > 0 ? (

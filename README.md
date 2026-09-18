@@ -73,13 +73,19 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 | `task api:start`   | Run compiled API (after `api:build`)               |
 | `task infra:plan`  | `terraform init` + `plan` in `infra/envs/develop`  |
 | `task infra:apply` | `terraform init` + `apply` in `infra/envs/develop` |
-| `task web:deploy`  | Build, sync to S3, and invalidate CloudFront cache |
+| `task db:up`       | Start local Postgres (see `apps/api/README.md`)    |
+| `task api:secrets:push` | Push `CLERK_SECRET_KEY` to SSM Parameter Store |
+| `task api:deploy`  | Build/push the API image and restart it on EC2     |
+| `task db:migrate`  | Apply Drizzle migrations                           |
+| `task web:deploy`  | Build against the deployed API, sync to S3, invalidate CloudFront |
 
 List all tasks with `task --list`.
 
 ### AWS hosting (Terraform)
 
 Develop UI (0.x) is served at **https://dev.respark.kevinmccartney.is** via [`infra/envs/develop`](infra/envs/develop/README.md) (S3, CloudFront, ACM, Route53). Run `task infra:apply` then `task web:deploy`.
+
+`task web:deploy` injects **`VITE_API_URL`** from the Terraform `api_url` output at build time. Build the web app any other way for deployment and the bundle will target `http://localhost:3000`, so each visitor would call their own machine — production builds now fail loudly instead.
 
 ## Contributing
 
