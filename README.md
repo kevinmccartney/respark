@@ -80,7 +80,7 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 | `task infra:apply`      | `terraform init` + `apply` in `infra/envs/develop`                |
 | `task db:up`            | Start local Postgres only                                         |
 | `task db:migrate`       | Apply Drizzle migrations                                          |
-| `task etl -- <cmd>`     | MTG ETL CLI (`ping`, stubs for `scryfall`, …) — see `apps/etl`    |
+| `task etl -- <cmd>`     | MTG ETL CLI (`scryfall --limit 1000`, `ping`, …) — see `apps/etl` |
 | `task db:tunnel`        | SSM tunnel to develop RDS (`localhost:15432`)                     |
 | `task db:url`           | Print develop `DATABASE_URL` from SSM (has password)              |
 | `task api:secrets:push` | Push `CLERK_SECRET_KEY` to SSM Parameter Store                    |

@@ -1,0 +1,86 @@
+import type { Pool, PoolClient } from 'pg'
+import type { IngestionRunStatus } from '../core/types.js'
+
+export type StartRunInput = {
+  source: string
+  sourceVersion?: string | null
+  sourceUrl?: string | null
+}
+
+export type FinishRunInput = {
+  runId: string
+  status: IngestionRunStatus
+  recordsSeen: number
+  recordsInserted: number
+  recordsUpdated: number
+  recordsUnchanged: number
+  recordsFailed: number
+  downloadBytes?: number | null
+  durationMs: number
+  errorMessage?: string | null
+}
+
+export async function startIngestionRun(pool: Pool, input: StartRunInput): Promise<string> {
+  const result = await pool.query<{ id: string }>(
+    `insert into ops.ingestion_run (source, status, source_version, source_url)
+     values ($1, 'running', $2, $3)
+     returning id`,
+    [input.source, input.sourceVersion ?? null, input.sourceUrl ?? null],
+  )
+  return result.rows[0].id
+}
+
+export async function finishIngestionRun(pool: Pool, input: FinishRunInput): Promise<void> {
+  await pool.query(
+    `update ops.ingestion_run set
+       status = $2,
+       completed_at = now(),
+       records_seen = $3,
+       records_inserted = $4,
+       records_updated = $5,
+       records_unchanged = $6,
+       records_failed = $7,
+       download_bytes = $8,
+       duration_ms = $9,
+       error_message = $10
+     where id = $1`,
+    [
+      input.runId,
+      input.status,
+      input.recordsSeen,
+      input.recordsInserted,
+      input.recordsUpdated,
+      input.recordsUnchanged,
+      input.recordsFailed,
+      input.downloadBytes ?? null,
+      input.durationMs,
+      input.errorMessage ?? null,
+    ],
+  )
+}
+
+export async function insertIngestionError(
+  client: Pool | PoolClient,
+  input: {
+    runId: string
+    source: string
+    externalId?: string | null
+    stage: string
+    errorMessage: string
+    payload?: unknown
+  },
+): Promise<void> {
+  await client.query(
+    `insert into ops.ingestion_error
+       (run_id, source, external_id, stage, error_message, payload)
+     values ($1, $2, $3, $4, $5, $6)`,
+    [
+      input.runId,
+      input.source,
+      input.externalId ?? null,
+      input.stage,
+      input.errorMessage,
+      input.payload === undefined ? null : JSON.stringify(input.payload),
+    ],
+  )
+}

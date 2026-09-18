@@ -1,31 +1,41 @@
 # respark ETL (MTG data pipeline)
 
-Phase 1 skeleton: CLI + DB connectivity. Scryfall import comes in Phase 2.
+Phase 2: Scryfall bulk → `raw.scryfall_card` (no catalog normalization yet).
+
+## Setup
+
+```bash
+cp apps/etl/.env.example apps/etl/.env   # DATABASE_URL for this package only
+task db:up
+task db:migrate
+```
 
 ## Commands
 
-All entry points go through [Task](https://taskfile.dev/) from the repo root (not `npm run etl`):
-
 ```bash
-task db:up
-task db:migrate
-
 task etl -- --help
-task etl -- ping                 # SELECT 1 against DATABASE_URL
-task etl -- scryfall --limit 1000   # stub until Phase 2
-task etl -- justtcg                 # JustTCG prices (later phase)
+task etl -- ping
+
+# Sample import (acceptance: 1000 rows in raw.scryfall_card + ops.ingestion_run)
+task etl -- scryfall --limit 1000
+
+# Re-run should mostly count unchanged
+task etl -- scryfall --limit 1000
+
+task etl -- scryfall --limit 100 --dry-run
+task etl -- scryfall --limit 100 --no-store-raw
 ```
 
-`DATABASE_URL` comes from `apps/etl/.env` only (this package does not load `apps/api` env files — they deploy separately). Same local Postgres host/credentials as the API is fine; duplicate the URL into `apps/etl/.env`.
+Sources still stubbed: `mtgjson`, `justtcg`. Utilities stubbed: `all`, `report`, `forecast`.
 
 ## Layout
 
 ```text
 apps/etl/src/
-  cli.ts           # commander entry
-  core/db.ts       # env + pg pool
-  core/logger.ts
-  core/types.ts
+  cli.ts
+  core/           # db, logger, hashing, types
+  sources/scryfall/
+  repositories/   # raw + ingestion_run SQL (pg, not Drizzle)
 ```
 
-Pipeline DDL (`raw` / `catalog` / `market` / `ops` / `app` schemas and `ops.ingestion_run`) lives in the shared API Drizzle migrations — run `task db:migrate`.
+DDL for `raw.*` / `ops.*` lives in API Drizzle migrations (`task db:migrate`).
