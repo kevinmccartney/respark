@@ -1,6 +1,8 @@
 # Copy to terraform.tfvars and adjust as needed.
 #
-# aws_region       = "us-east-1"
-# domain_name      = "dev.respark.kevinmccartney.is"
-# hosted_zone_name = "kevinmccartney.is"
-# bucket_name      = "respark-develop-web-example"
+# aws_region         = "us-east-1"
+# domain_name        = "dev.respark.kevinmccartney.is"
+# admin_domain_name  = "dev.admin.respark.kevinmccartney.is"
+# hosted_zone_name   = "kevinmccartney.is"
+# bucket_name        = "respark-develop-web-example"
+# admin_bucket_name  = "respark-develop-admin-example"

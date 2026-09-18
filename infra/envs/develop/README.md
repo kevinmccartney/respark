@@ -9,7 +9,8 @@ Terraform root for the **develop** AWS environment (0.x): S3 origin, CloudFront,
 
 ## Modules
 
-- **`ui`** — S3 + CloudFront + ACM + Route53 for the web app
+- **`ui`** — S3 + CloudFront + ACM + Route53 for the web app (`component = "web"`)
+- **`admin`** — same `ui` module for the admin dashboard (`component = "admin"`)
 - **`api`** — ECR, EC2, CloudFront, ACM, DNS, CloudWatch Logs
 - **`db`** — RDS Postgres, private to the API security group, with the connection string in SSM Parameter Store
 
@@ -22,9 +23,15 @@ task infra:plan
 task infra:apply
 ```
 
+Or apply infra and deploy API + web + admin in one shot:
+
+```bash
+task deploy
+```
+
 First apply may take several minutes while ACM DNS validation completes. Creating the RDS instance takes roughly 5-10 minutes.
 
-Optional: copy `terraform.tfvars.example` to `terraform.tfvars` to override `domain_name`, `hosted_zone_name`, or `bucket_name`.
+Optional: copy `terraform.tfvars.example` to `terraform.tfvars` to override `domain_name`, `admin_domain_name`, `hosted_zone_name`, or bucket names.
 
 ## Deploy the API
 
@@ -53,4 +60,22 @@ Open the site at:
 terraform -chdir=infra/envs/develop output -raw site_url
 ```
 
-After deploy, you may need a CloudFront invalidation if you only changed cached assets; for many static deploys, syncing S3 and waiting for TTL is enough. Use `terraform output cloudfront_distribution_id` with `aws cloudfront create-invalidation` if needed.
+## Deploy the admin app
+
+Same pattern as web; builds with `VITE_API_URL` from Terraform and syncs to the admin bucket:
+
+```bash
+task admin:deploy
+```
+
+Open:
+
+```bash
+terraform -chdir=infra/envs/develop output -raw admin_site_url
+```
+
+Default hostname: `https://dev.admin.respark.kevinmccartney.is`.
+
+In the [Clerk Dashboard](https://dashboard.clerk.com/), add that origin to **Allowed origins** / redirect URLs for the shared Clerk application (same publishable key as web).
+
+After deploy, you may need a CloudFront invalidation if you only changed cached assets; for many static deploys, syncing S3 and waiting for TTL is enough. `task web:deploy` / `task admin:deploy` already create an invalidation.

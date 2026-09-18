@@ -30,5 +30,5 @@ output "domain_name" {
 
 output "deploy_command" {
   description = "Example command to sync the Vite build output to the bucket (run from repository root)."
-  value       = "aws s3 sync apps/web/dist s3://${aws_s3_bucket.site.id} --delete"
+  value       = "aws s3 sync apps/${var.component}/dist s3://${aws_s3_bucket.site.id} --delete"
 }

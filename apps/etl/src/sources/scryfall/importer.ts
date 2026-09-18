@@ -1,26 +1,26 @@
 import type { Pool } from "pg";
-import { payloadHash } from "../../core/hashing.js";
-import type { Logger } from "../../core/logger.js";
-import { ProgressBar, tapByteStream } from "../../core/progress.js";
-import type { GlobalFlags } from "../../core/types.js";
-import { upsertCatalogRecords } from "../../repositories/catalog.js";
+import { payloadHash } from "../../core/hashing";
+import type { Logger } from "../../core/logger";
+import { ProgressBar, tapByteStream } from "../../core/progress";
+import type { GlobalFlags } from "../../core/types";
+import { upsertCatalogRecords } from "../../repositories/catalog";
 import {
   finishIngestionRun,
   insertIngestionError,
   startIngestionRun,
-} from "../../repositories/ingestionRuns.js";
+} from "../../repositories/ingestionRuns";
 import {
   upsertScryfallCards,
   type RawScryfallUpsert,
-} from "../../repositories/rawScryfall.js";
+} from "../../repositories/rawScryfall";
 import {
   fetchBulkMetadata,
   openBulkDownload,
   selectBulkDataset,
-} from "./client.js";
-import { bulkByteSize, bulkDownloadUri, scryfallCardSchema } from "./schema.js";
-import { streamJsonlGzip } from "./stream.js";
-import { transformScryfallCard, type CanonicalRecord } from "./transformer.js";
+} from "./client";
+import { bulkByteSize, bulkDownloadUri, scryfallCardSchema } from "./schema";
+import { streamJsonlGzip } from "./stream";
+import { transformScryfallCard, type CanonicalRecord } from "./transformer";
 
 const SOURCE = "scryfall";
 const DEFAULT_BATCH_SIZE = 500;

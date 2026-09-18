@@ -16,6 +16,12 @@ variable "environment" {
   default     = "dev"
 }
 
+variable "component" {
+  description = "Short name for this static site (web, admin). Used in default bucket naming and tags."
+  type        = string
+  default     = "web"
+}
+
 variable "bucket_name" {
   description = "Globally unique S3 bucket name. Leave empty to generate one from project and environment."
   type        = string

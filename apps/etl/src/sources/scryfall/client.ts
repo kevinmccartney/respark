@@ -1,10 +1,10 @@
-import type { Logger } from "../../core/logger.js";
+import type { Logger } from "../../core/logger";
 import {
   bulkByteSize,
   bulkDataListSchema,
   bulkDownloadUri,
   type BulkDataItem,
-} from "./schema.js";
+} from "./schema";
 
 const BULK_DATA_URL = "https://api.scryfall.com/bulk-data";
 

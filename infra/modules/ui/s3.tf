@@ -11,12 +11,13 @@ data "aws_route53_zone" "site" {
 locals {
   bucket_name = coalesce(
     var.bucket_name,
-    "${var.project}-${var.environment}-web-${random_id.bucket_suffix[0].hex}"
+    "${var.project}-${var.environment}-${var.component}-${random_id.bucket_suffix[0].hex}"
   )
 
   common_tags = {
     Project     = var.project
     Environment = var.environment
+    Component   = var.component
     ManagedBy   = "terraform"
   }
 }

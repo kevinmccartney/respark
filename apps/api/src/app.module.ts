@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common'
 import { LoggerModule } from 'nestjs-pino'
 import type { AuthenticatedRequest } from './auth/clerk-auth.guard'
+import { AdminModule } from './admin/admin.module'
 import { AuthModule } from './auth/auth.module'
 import { DatabaseModule } from './db/database.module'
 import { DecksModule } from './decks/decks.module'
@@ -38,6 +39,7 @@ const isProduction = process.env.NODE_ENV === 'production'
     }),
     DatabaseModule,
     AuthModule,
+    AdminModule,
     HealthModule,
     UsersModule,
     DecksModule,

@@ -12,7 +12,7 @@ resource "aws_cloudfront_distribution" "site" {
   default_root_object = var.index_document
   aliases             = [var.domain_name]
   price_class         = var.cloudfront_price_class
-  comment             = "${var.project} ${var.environment} UI"
+  comment             = "${var.project} ${var.environment} ${var.component}"
 
   origin {
     domain_name              = aws_s3_bucket.site.bucket_regional_domain_name

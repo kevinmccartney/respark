@@ -11,15 +11,27 @@ variable "project" {
 }
 
 variable "bucket_name" {
-  description = "Optional fixed S3 bucket name for the UI (globally unique)."
+  description = "Optional fixed S3 bucket name for the web UI (globally unique)."
   type        = string
   default     = null
 }
 
 variable "domain_name" {
-  description = "Public hostname for the develop UI (0.x pre-prod)."
+  description = "Public hostname for the develop web UI (0.x pre-prod)."
   type        = string
   default     = "dev.respark.kevinmccartney.is"
+}
+
+variable "admin_bucket_name" {
+  description = "Optional fixed S3 bucket name for the admin UI (globally unique)."
+  type        = string
+  default     = null
+}
+
+variable "admin_domain_name" {
+  description = "Public hostname for the develop admin UI."
+  type        = string
+  default     = "dev.admin.respark.kevinmccartney.is"
 }
 
 variable "hosted_zone_name" {

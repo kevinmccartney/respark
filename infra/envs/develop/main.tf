@@ -18,9 +18,27 @@ module "ui" {
   aws_region       = var.aws_region
   project          = var.project
   environment      = local.environment
+  component        = "web"
   bucket_name      = var.bucket_name
   hosted_zone_name = var.hosted_zone_name
   domain_name      = var.domain_name
+}
+
+module "admin" {
+  source = "../../modules/ui"
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  aws_region       = var.aws_region
+  project          = var.project
+  environment      = local.environment
+  component        = "admin"
+  bucket_name      = var.admin_bucket_name
+  hosted_zone_name = var.hosted_zone_name
+  domain_name      = var.admin_domain_name
 }
 
 module "api" {

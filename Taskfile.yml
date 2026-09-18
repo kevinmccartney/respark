@@ -4,6 +4,7 @@ vars:
   ENV: develop
   TF_DIR: infra/envs/{{.ENV}}
   WEB_DIST: apps/web/dist
+  ADMIN_DIST: apps/admin/dist
   API_PORT: "3000"
   API_DOCKERFILE: apps/api/Dockerfile
   API_IMAGE_TAG: latest
@@ -38,9 +39,9 @@ tasks:
       - docker compose -f {{.COMPOSE_FILE}} down
 
   docker:logs:
-    desc: Follow local API + web container logs
+    desc: Follow local API + web + admin container logs
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} logs -f api web
+      - docker compose -f {{.COMPOSE_FILE}} logs -f api web admin
 
   docker:ps:
     desc: Show local Compose service status
@@ -117,6 +118,11 @@ tasks:
     cmds:
       - npm run start:dev -w api
 
+  admin:dev:
+    desc: Run the admin Vite app on port 4000
+    cmds:
+      - npm run dev -w admin
+
   api:debug:
     desc: Run the API with Node inspector on 9229 (or use VS Code "API debug (launch)")
     env:
@@ -185,6 +191,14 @@ tasks:
       - terraform init -input=false
       - terraform apply
 
+  deploy:
+    desc: Apply Terraform for {{.ENV}}, then deploy API, web, and admin
+    cmds:
+      - task: infra:apply
+      - task: api:deploy
+      - task: web:deploy
+      - task: admin:deploy
+
   web:deploy:
     desc: Build against the deployed API, sync dist to S3, and invalidate CloudFront cache
     cmds:
@@ -196,3 +210,14 @@ tasks:
         VITE_API_URL="$VITE_API_URL" npm run build:web
       - aws s3 sync {{.WEB_DIST}} s3://$(terraform -chdir={{.TF_DIR}} output -raw bucket_name) --delete
       - aws cloudfront create-invalidation --distribution-id $(terraform -chdir={{.TF_DIR}} output -raw cloudfront_distribution_id) --paths "/*"
+
+  admin:deploy:
+    desc: Build admin against the deployed API, sync dist to S3, and invalidate CloudFront cache
+    cmds:
+      - |
+        set -euo pipefail
+        VITE_API_URL=$(terraform -chdir={{.TF_DIR}} output -raw api_url)
+        echo "Building admin against $VITE_API_URL"
+        VITE_API_URL="$VITE_API_URL" npm run build:admin
+      - aws s3 sync {{.ADMIN_DIST}} s3://$(terraform -chdir={{.TF_DIR}} output -raw admin_bucket_name) --delete
+      - aws cloudfront create-invalidation --distribution-id $(terraform -chdir={{.TF_DIR}} output -raw admin_cloudfront_distribution_id) --paths "/*"

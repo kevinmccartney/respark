@@ -122,19 +122,24 @@ export function transformScryfallCard(raw: unknown): CanonicalRecord | null {
   const card = asRecord(raw)
   if (!card) return null
 
-  const oracleId = asString(card.oracle_id)
   const scryfallId = asString(card.id)
   const setCode = asString(card.set)
   const setName = asString(card.set_name)
   const collectorNumber = asString(card.collector_number)
   const name = asString(card.name)
 
+  const imageUris = asRecord(card.image_uris)
+  const facesRaw = Array.isArray(card.card_faces) ? card.card_faces : null
+
+  // Reversible / some multi-face layouts omit top-level oracle_id and only put it
+  // on each face (often the same id). Fall back so those printings still catalog.
+  const oracleId =
+    asString(card.oracle_id) ??
+    (facesRaw?.[0] ? asString(asRecord(facesRaw[0])?.oracle_id) : null)
+
   if (!oracleId || !scryfallId || !setCode || !setName || !collectorNumber || !name) {
     return null
   }
-
-  const imageUris = asRecord(card.image_uris)
-  const facesRaw = Array.isArray(card.card_faces) ? card.card_faces : null
 
   const faces: CanonicalFace[] = facesRaw
     ? facesRaw.flatMap((face, index) => {

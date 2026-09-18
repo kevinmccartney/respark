@@ -2,23 +2,25 @@
 
 ## Local dev (Docker Compose)
 
-Preferred path: Postgres + API + web in Compose.
+Preferred path: Postgres + API + web + admin in Compose.
 
 1. Copy `apps/api/.env.example` → `apps/api/.env` and set `CLERK_SECRET_KEY` (and optionally `CLERK_WEBHOOK_SIGNING_SECRET`).
 2. Copy `apps/web/.env.example` → `apps/web/.env.local` and set `VITE_CLERK_PUBLISHABLE_KEY`.
+3. Copy `apps/admin/.env.example` → `apps/admin/.env.local` and use the same publishable key (admin users need `publicMetadata.role === "admin"`).
 
 ```bash
 # from repo root
-task docker:up      # builds Dockerfiles, starts db + api + web, migrates on boot
-task docker:logs    # follow API + web logs
+task docker:up      # builds Dockerfiles, starts db + api + web + admin, migrates on boot
+task docker:logs    # follow API + web + admin logs
 ```
 
 - Web: http://localhost:5173  
+- Admin: http://localhost:4000  
 - API: http://localhost:3000  
 
-Compose overrides the API `DATABASE_URL` to `postgres://respark:respark@db:5432/respark` so the container reaches Postgres on the Compose network (your `.env` can keep `localhost` for host-side tools like Drizzle Studio). The web container gets `VITE_API_URL=http://localhost:3000` because the browser runs on your machine, not inside the Compose network.
+Compose overrides the API `DATABASE_URL` to `postgres://respark:respark@db:5432/respark` so the container reaches Postgres on the Compose network (your `.env` can keep `localhost` for host-side tools like Drizzle Studio). The web and admin containers get `VITE_API_URL=http://localhost:3000` because the browser runs on your machine, not inside the Compose network.
 
-`RUN_MIGRATIONS=true` is set on the API service, so a fresh DB volume gets schema on first boot. `apps/api/src` and `apps/web/src` are bind-mounted; Nest/Vite reload on save. API inspector is on **9229** (`start:debug`).
+`RUN_MIGRATIONS=true` is set on the API service, so a fresh DB volume gets schema on first boot. `apps/api/src`, `apps/web/src`, and `apps/admin/src` are bind-mounted; Nest/Vite reload on save. API inspector is on **9229** (`start:debug`).
 
 ```bash
 task docker:down    # stop stack, keep DB volume

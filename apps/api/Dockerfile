@@ -5,27 +5,36 @@ FROM node:22-alpine AS build
 WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
-RUN npm ci --workspace=api
+COPY apps/etl/package.json apps/etl/
+RUN npm ci --workspace=api --workspace=etl
 COPY apps/api/tsconfig.json apps/api/tsconfig.build.json apps/api/nest-cli.json apps/api/
 COPY apps/api/src apps/api/src
-RUN npm run build -w api
+COPY apps/etl/tsconfig.json apps/etl/
+COPY apps/etl/src apps/etl/src
+RUN npm run build -w api && npm run build -w etl
 
 FROM node:22-alpine AS runtime
-WORKDIR /app
+WORKDIR /repo
 ENV NODE_ENV=production
-COPY apps/api/package.json ./
-RUN npm install --omit=dev --no-audit --no-fund
+ENV ETL_REPO_ROOT=/repo
+COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/
+COPY apps/etl/package.json apps/etl/
+RUN npm ci --omit=dev --workspace=api --workspace=etl --no-audit --no-fund
 
 # RDS enforces TLS and signs certificates with its own root CA, which is not in
 # Node's default trust store. Bundling it keeps verification on.
 RUN apk add --no-cache ca-certificates curl \
-  && curl -fsSL -o /app/rds-global-bundle.pem \
+  && curl -fsSL -o /repo/rds-global-bundle.pem \
      https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
   && apk del curl
-ENV DATABASE_CA_PATH=/app/rds-global-bundle.pem
-COPY --from=build /repo/apps/api/dist ./dist
+ENV DATABASE_CA_PATH=/repo/rds-global-bundle.pem
+
+COPY --from=build /repo/apps/api/dist ./apps/api/dist
+COPY --from=build /repo/apps/etl/dist ./apps/etl/dist
 # Applied at startup when RUN_MIGRATIONS=true; drizzle-orm ships the migrator, so
 # drizzle-kit is not needed in the runtime image.
-COPY apps/api/drizzle ./drizzle
+COPY apps/api/drizzle ./apps/api/drizzle
+WORKDIR /repo/apps/api
 EXPOSE 3000
 CMD ["node", "dist/main.js"]

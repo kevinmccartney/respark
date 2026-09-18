@@ -1,5 +1,5 @@
 import type { PoolClient } from 'pg'
-import type { CanonicalRecord } from '../sources/scryfall/transformer.js'
+import type { CanonicalRecord } from '../sources/scryfall/transformer'
 
 export type CatalogUpsertResult = {
   inserted: number

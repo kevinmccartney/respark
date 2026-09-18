@@ -1,5 +1,5 @@
 import type { Pool, PoolClient } from 'pg'
-import type { IngestionRunStatus } from '../core/types.js'
+import type { IngestionRunStatus } from '../core/types'
 
 export type StartRunInput = {
   source: string

@@ -7,9 +7,11 @@
   "scripts": {
     "dev": "npm run dev -w web",
     "dev:api": "npm run start:dev -w api",
+    "dev:admin": "npm run dev -w admin",
     "build": "npm run build -w web && npm run build -w api",
     "build:web": "npm run build -w web",
     "build:api": "npm run build -w api",
+    "build:admin": "npm run build -w admin",
     "preview": "npm run preview -w web"
   }
 }

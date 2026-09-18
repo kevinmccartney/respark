@@ -1,21 +1,41 @@
 output "bucket_name" {
-  description = "S3 bucket for static assets."
+  description = "S3 bucket for web static assets."
   value       = module.ui.bucket_name
 }
 
 output "site_url" {
-  description = "HTTPS URL for the UI."
+  description = "HTTPS URL for the web UI."
   value       = module.ui.site_url
 }
 
 output "cloudfront_distribution_id" {
-  description = "CloudFront distribution ID for the UI."
+  description = "CloudFront distribution ID for the web UI."
   value       = module.ui.cloudfront_distribution_id
 }
 
 output "deploy_command" {
-  description = "Sync Vite build output to the bucket (run from repository root)."
+  description = "Sync web Vite build output to the bucket (run from repository root)."
   value       = module.ui.deploy_command
+}
+
+output "admin_bucket_name" {
+  description = "S3 bucket for admin static assets."
+  value       = module.admin.bucket_name
+}
+
+output "admin_site_url" {
+  description = "HTTPS URL for the admin UI."
+  value       = module.admin.site_url
+}
+
+output "admin_cloudfront_distribution_id" {
+  description = "CloudFront distribution ID for the admin UI."
+  value       = module.admin.cloudfront_distribution_id
+}
+
+output "admin_deploy_command" {
+  description = "Sync admin Vite build output to the bucket (run from repository root)."
+  value       = module.admin.deploy_command
 }
 
 output "api_url" {

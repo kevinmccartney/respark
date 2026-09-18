@@ -1,7 +1,7 @@
-# Local development stack — Postgres + API + web (watch mode).
+# Local development stack — Postgres + API + web + admin (watch mode).
 #
 #   task docker:up      # build + start
-#   task docker:logs    # follow API + web logs
+#   task docker:logs    # follow API + web + admin logs
 #   task docker:down    # stop (keeps the DB volume)
 
 services:
@@ -43,9 +43,11 @@ services:
       DATABASE_URL: postgres://respark:respark@db:5432/respark
       # Apply drizzle/ on boot so a fresh volume is usable immediately
       RUN_MIGRATIONS: "true"
+      ETL_REPO_ROOT: /repo
     volumes:
       - ./apps/api/src:/repo/apps/api/src
       - ./apps/api/drizzle:/repo/apps/api/drizzle
+      - ./apps/etl:/repo/apps/etl
     depends_on:
       db:
         condition: service_healthy
@@ -69,6 +71,27 @@ services:
       - ./apps/web/src:/repo/apps/web/src
       - ./apps/web/index.html:/repo/apps/web/index.html
       - ./apps/web/vite.config.ts:/repo/apps/web/vite.config.ts
+    depends_on:
+      - api
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile.dev
+    ports:
+      - "${ADMIN_PORT:-4000}:4000"
+    env_file:
+      - path: apps/admin/.env
+        required: false
+      - path: apps/admin/.env.local
+        required: false
+    environment:
+      # Browser talks to the published API port on the host, not the Compose service name.
+      VITE_API_URL: http://localhost:${PORT:-3000}
+    volumes:
+      - ./apps/admin/src:/repo/apps/admin/src
+      - ./apps/admin/index.html:/repo/apps/admin/index.html
+      - ./apps/admin/vite.config.ts:/repo/apps/admin/vite.config.ts
     depends_on:
       - api
 
