@@ -1,8 +1,26 @@
 import { useAuth } from '@clerk/react'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { ApiError } from '../lib/api.ts'
-import { formatDuration, formatNumber, formatTimestamp, statusClass } from '../lib/format.ts'
+import { formatDuration, formatNumber, formatTimestamp, statusBadgeProps } from '../lib/format.ts'
 import {
   ETL_JOB_SOURCES,
   fetchIngestionRuns,
@@ -56,7 +74,6 @@ export function RunsListPage() {
     try {
       const result = await startEtlJob(getToken, source)
       setStartMessage(`Started ${result.source} job — refresh in a moment for the new run.`)
-      // Brief delay so the CLI can insert the running row.
       await new Promise((r) => setTimeout(r, 800))
       await loadRuns()
     } catch (err) {
@@ -68,79 +85,81 @@ export function RunsListPage() {
   }
 
   return (
-    <main className="admin-main">
-      <header className="page-header page-header-with-actions">
+    <main className="mx-auto max-w-6xl px-5 py-5">
+      <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1>Ingestion runs</h1>
-          <p className="muted">Recent ETL pipeline executions</p>
+          <h1 className="font-heading text-2xl tracking-tight">Ingestion runs</h1>
+          <p className="mt-1 text-muted-foreground">Recent ETL pipeline executions</p>
         </div>
         <form
-          className="etl-start-form"
+          className="flex items-center gap-2"
           onSubmit={(e) => {
             e.preventDefault()
             void onStartRun()
           }}
         >
-          <label className="etl-start-label">
-            <span className="visually-hidden">Source</span>
-            <select
-              className="etl-source-select"
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-              disabled={starting || forbidden}
-            >
-              {ETL_JOB_SOURCES.map((s) => (
-                <option key={s.value} value={s.value} disabled={!s.implemented}>
-                  {s.value}
-                  {!s.implemented ? ' (soon)' : ''}
-                </option>
-              ))}
-            </select>
+          <label className="sr-only" htmlFor="etl-source">
+            Source
           </label>
-          <button
-            type="submit"
-            className="auth-button auth-button-primary"
+          <Select
+            value={source}
+            onValueChange={(value) => {
+              if (value) setSource(value)
+            }}
             disabled={starting || forbidden}
           >
+            <SelectTrigger id="etl-source" className="min-w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ETL_JOB_SOURCES.map((s) => (
+                <SelectItem key={s.value} value={s.value} disabled={!s.implemented}>
+                  {s.value}
+                  {!s.implemented ? ' (soon)' : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button type="submit" disabled={starting || forbidden}>
             {starting ? 'Starting…' : 'Run ETL'}
-          </button>
+          </Button>
         </form>
       </header>
 
       {startMessage ? (
-        <p className="muted" role="status">
+        <p className="mb-3 text-muted-foreground" role="status">
           {startMessage}
         </p>
       ) : null}
 
-      {loading ? <p className="muted">Loading…</p> : null}
+      {loading ? <p className="text-muted-foreground">Loading…</p> : null}
       {error ? (
-        <p className={forbidden ? 'error-banner' : 'error-text'} role="alert">
-          {error}
-        </p>
+        <Alert variant={forbidden ? 'destructive' : 'default'} className="mb-3">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       ) : null}
 
       {!loading && !error ? (
         runs.length === 0 ? (
-          <p className="muted">No ingestion runs yet.</p>
+          <p className="text-muted-foreground">No ingestion runs yet.</p>
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Status</th>
-                  <th>Source</th>
-                  <th>Started</th>
-                  <th>Duration</th>
-                  <th>Seen</th>
-                  <th>Failed</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="rounded-xl bg-card ring-1 ring-foreground/10">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Started</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Seen</TableHead>
+                  <TableHead>Failed</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {runs.map((run) => (
-                  <tr
+                  <TableRow
                     key={run.id}
-                    className="clickable-row"
+                    className="cursor-pointer"
                     tabIndex={0}
                     role="link"
                     onClick={() => navigate(`/runs/${run.id}`)}
@@ -151,20 +170,20 @@ export function RunsListPage() {
                       }
                     }}
                   >
-                    <td>
-                      <span className={statusClass(run.status)}>{run.status}</span>
-                    </td>
-                    <td>{run.source}</td>
-                    <td>{formatTimestamp(run.startedAt)}</td>
-                    <td>{formatDuration(run.durationMs)}</td>
-                    <td>{formatNumber(run.recordsSeen)}</td>
-                    <td className={run.recordsFailed > 0 ? 'cell-warn' : undefined}>
+                    <TableCell>
+                      <Badge {...statusBadgeProps(run.status)}>{run.status}</Badge>
+                    </TableCell>
+                    <TableCell>{run.source}</TableCell>
+                    <TableCell>{formatTimestamp(run.startedAt)}</TableCell>
+                    <TableCell>{formatDuration(run.durationMs)}</TableCell>
+                    <TableCell>{formatNumber(run.recordsSeen)}</TableCell>
+                    <TableCell className={run.recordsFailed > 0 ? 'font-semibold text-destructive' : undefined}>
                       {formatNumber(run.recordsFailed)}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )
       ) : null}

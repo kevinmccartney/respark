@@ -3,8 +3,8 @@ import { ApiHealthFooter } from './ApiHealthFooter.tsx'
 
 export function AppShell() {
   return (
-    <div className="app-shell">
-      <div className="app-shell-body">
+    <div className="flex min-h-svh flex-col">
+      <div className="flex flex-1 flex-col">
         <Outlet />
       </div>
       <ApiHealthFooter />

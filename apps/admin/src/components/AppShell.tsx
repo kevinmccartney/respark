@@ -3,9 +3,9 @@ import { AdminHeader } from './AdminHeader.tsx'
 
 export function AppShell() {
   return (
-    <div className="app-shell">
+    <div className="flex min-h-svh flex-col bg-muted/40">
       <AdminHeader />
-      <div className="app-shell-body">
+      <div className="flex-1">
         <Outlet />
       </div>
     </div>

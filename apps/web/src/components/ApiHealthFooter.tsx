@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
 import { apiBaseUrl } from '../lib/api.ts'
 
 type HealthState = 'checking' | 'ok' | 'error'
@@ -52,14 +53,15 @@ export function ApiHealthFooter() {
         : 'API unavailable'
 
   return (
-    <footer className="site-footer">
-      <span
-        className={`api-health api-health-${state}`}
+    <footer className="border-t bg-card px-5 py-2 text-center">
+      <Badge
+        variant={state === 'error' ? 'destructive' : state === 'ok' ? 'secondary' : 'outline'}
         role="status"
         aria-live="polite"
+        className={state === 'ok' ? 'bg-emerald-100 text-emerald-800' : undefined}
       >
         {label}
-      </span>
+      </Badge>
     </footer>
   )
 }

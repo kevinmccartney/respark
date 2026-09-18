@@ -1,5 +1,6 @@
 import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react'
 import { Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 
 type SiteHeaderProps = {
   showAuthActions?: boolean
@@ -7,22 +8,20 @@ type SiteHeaderProps = {
 
 export function SiteHeader({ showAuthActions = true }: SiteHeaderProps) {
   return (
-    <header className="site-header">
-      <Link to="/" className="site-brand">
+    <header className="flex items-center justify-between gap-4 border-b bg-card px-5 py-3">
+      <Link to="/" className="font-heading text-base font-semibold tracking-tight">
         respark
       </Link>
       {showAuthActions ? (
-        <nav className="site-auth" aria-label="Account">
+        <nav className="flex items-center gap-2" aria-label="Account">
           <Show when="signed-out">
             <SignInButton mode="modal">
-              <button type="button" className="auth-button">
+              <Button type="button" variant="outline">
                 Sign in
-              </button>
+              </Button>
             </SignInButton>
             <SignUpButton mode="modal">
-              <button type="button" className="auth-button auth-button-primary">
-                Sign up
-              </button>
+              <Button type="button">Sign up</Button>
             </SignUpButton>
           </Show>
           <Show when="signed-in">

@@ -1,89 +1,102 @@
-import { useAuth, useUser } from "@clerk/react";
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { SiteHeader } from "../components/SiteHeader.tsx";
-import { ApiError } from "../lib/api.ts";
-import { fetchDecks, type Deck } from "../lib/decks.ts";
+import { useAuth, useUser } from '@clerk/react'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { SiteHeader } from '../components/SiteHeader.tsx'
+import { ApiError } from '../lib/api.ts'
+import { fetchDecks, type Deck } from '../lib/decks.ts'
 
 export function HomePage() {
-  const { getToken } = useAuth();
-  const { user } = useUser();
-  const firstName = user?.firstName?.trim();
-  const greeting = firstName ? `Welcome back, ${firstName}` : "Welcome back";
+  const { getToken } = useAuth()
+  const { user } = useUser()
+  const firstName = user?.firstName?.trim()
+  const greeting = firstName ? `Welcome back, ${firstName}` : 'Welcome back'
 
-  const [decks, setDecks] = useState<Deck[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [decks, setDecks] = useState<Deck[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const controller = new AbortController();
+    const controller = new AbortController()
 
     async function loadDecks() {
-      setLoading(true);
-      setError(null);
+      setLoading(true)
+      setError(null)
       try {
-        const list = await fetchDecks(getToken);
+        const list = await fetchDecks(getToken)
         if (!controller.signal.aborted) {
-          setDecks(list);
+          setDecks(list)
         }
       } catch (err) {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted) return
         if (err instanceof ApiError) {
-          setError(err.message);
+          setError(err.message)
         } else {
-          setError("Could not load decks");
+          setError('Could not load decks')
         }
       } finally {
         if (!controller.signal.aborted) {
-          setLoading(false);
+          setLoading(false)
         }
       }
     }
 
-    void loadDecks();
+    void loadDecks()
 
-    return () => controller.abort();
-  }, [getToken]);
+    return () => controller.abort()
+  }, [getToken])
 
   return (
     <>
       <SiteHeader />
-      <main className="home-main">
-        <header className="home-intro">
-          <h1>{greeting}</h1>
-          <p className="home-subtitle">
+      <main className="flex flex-1 flex-col items-center gap-8 px-6 py-12 text-center">
+        <header className="max-w-lg">
+          <h1 className="font-heading text-3xl tracking-tight">{greeting}</h1>
+          <p className="mt-2 leading-relaxed text-muted-foreground">
             Your decks sync from the API when you&apos;re signed in.
           </p>
         </header>
 
-        <section className="decks-panel" aria-labelledby="decks-heading">
-          <div className="decks-panel-header">
-            <h2 id="decks-heading">Your decks</h2>
-            <Link to="/decks/new" className="auth-button">
-              New deck
-            </Link>
-          </div>
-          {loading ? <p className="decks-muted">Loading decks…</p> : null}
-          {error ? <p className="decks-error">{error}</p> : null}
-          {!loading && !error && decks.length === 0 ? (
-            <p className="decks-muted">
-              No decks yet — create your first one.
-            </p>
-          ) : null}
-          {!loading && !error && decks.length > 0 ? (
-            <ul className="deck-list">
-              {decks.map((deck) => (
-                <li key={deck.id}>
-                  <span className="deck-name">{deck.name}</span>
-                  <time className="deck-updated" dateTime={deck.updatedAt}>
-                    {new Date(deck.updatedAt).toLocaleDateString()}
-                  </time>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </section>
+        <Card className="w-full max-w-md text-left" aria-labelledby="decks-heading">
+          <CardHeader>
+            <CardTitle id="decks-heading">Your decks</CardTitle>
+            <CardAction>
+              <Button render={<Link to="/decks/new" />}>New deck</Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {loading ? <p className="text-muted-foreground">Loading decks…</p> : null}
+            {error ? (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            {!loading && !error && decks.length === 0 ? (
+              <p className="text-muted-foreground">No decks yet — create your first one.</p>
+            ) : null}
+            {!loading && !error && decks.length > 0 ? (
+              <ul className="divide-y">
+                {decks.map((deck) => (
+                  <li key={deck.id} className="flex justify-between gap-4 py-2">
+                    <span className="font-medium">{deck.name}</span>
+                    <time className="text-sm text-muted-foreground" dateTime={deck.updatedAt}>
+                      {new Date(deck.updatedAt).toLocaleDateString()}
+                    </time>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </CardContent>
+        </Card>
       </main>
     </>
-  );
+  )
 }

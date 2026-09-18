@@ -6,7 +6,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth()
 
   if (!isLoaded) {
-    return <div className="page-loading" aria-live="polite" />
+    return <div className="min-h-svh" aria-live="polite" />
   }
 
   if (!isSignedIn) {
@@ -20,7 +20,7 @@ export function GuestOnly({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth()
 
   if (!isLoaded) {
-    return <div className="page-loading" aria-live="polite" />
+    return <div className="min-h-svh" aria-live="polite" />
   }
 
   if (isSignedIn) {

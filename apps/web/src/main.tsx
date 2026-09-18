@@ -13,7 +13,25 @@ if (!publishableKey) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ClerkProvider publishableKey={publishableKey} afterSignOutUrl="/">
+    <ClerkProvider
+      publishableKey={publishableKey}
+      afterSignOutUrl="/"
+      appearance={{
+        variables: {
+          colorPrimary: 'var(--primary)',
+          colorPrimaryForeground: 'var(--primary-foreground)',
+          colorForeground: 'var(--foreground)',
+          colorBackground: 'var(--background)',
+          colorMuted: 'var(--muted)',
+          colorMutedForeground: 'var(--muted-foreground)',
+          colorInput: 'var(--background)',
+          colorInputForeground: 'var(--foreground)',
+          colorBorder: 'var(--border)',
+          borderRadius: 'var(--radius)',
+          fontFamily: 'var(--font-sans)',
+        },
+      }}
+    >
       <BrowserRouter>
         <App />
       </BrowserRouter>

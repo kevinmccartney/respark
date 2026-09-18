@@ -19,17 +19,28 @@ export function formatNumber(n: number): string {
   return n.toLocaleString()
 }
 
-export function statusClass(status: string): string {
+export type StatusBadgeProps = {
+  variant: 'secondary' | 'destructive' | 'outline'
+  className?: string
+}
+
+export function statusBadgeProps(status: string): StatusBadgeProps {
   switch (status) {
     case 'success':
-      return 'status-chip status-success'
+      return { variant: 'secondary', className: 'bg-emerald-100 text-emerald-800' }
     case 'partial_success':
-      return 'status-chip status-partial'
+      return {
+        variant: 'outline',
+        className: 'border-amber-200 bg-amber-100 text-amber-900',
+      }
     case 'failed':
-      return 'status-chip status-failed'
+      return { variant: 'destructive' }
     case 'running':
-      return 'status-chip status-running'
+      return {
+        variant: 'outline',
+        className: 'border-blue-200 bg-blue-100 text-blue-800',
+      }
     default:
-      return 'status-chip'
+      return { variant: 'outline' }
   }
 }
