@@ -70,7 +70,7 @@ program
 
 program
   .command('scryfall')
-  .description('Ingest Scryfall bulk data into raw.scryfall_card')
+  .description('Ingest Scryfall bulk data into raw.scryfall_card and catalog.*')
   .action(async () => {
     const flags = flagsFrom(program)
     const logger = createLogger(flags.verbose)

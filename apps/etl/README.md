@@ -1,6 +1,6 @@
 # respark ETL (MTG data pipeline)
 
-Phase 2: Scryfall bulk → `raw.scryfall_card` (no catalog normalization yet).
+Phase 3: Scryfall bulk → `raw.scryfall_card` **and** `catalog.*` (card / set / printing / faces / identifiers).
 
 ## Setup
 
@@ -16,14 +16,14 @@ task db:migrate
 task etl -- --help
 task etl -- ping
 
-# Sample import (acceptance: 1000 rows in raw.scryfall_card + ops.ingestion_run)
+# Sample import (raw + catalog)
 task etl -- scryfall --limit 1000
 
-# Re-run should mostly count unchanged
+# Re-run should mostly count unchanged printings
 task etl -- scryfall --limit 1000
 
 task etl -- scryfall --limit 100 --dry-run
-task etl -- scryfall --limit 100 --no-store-raw
+task etl -- scryfall --limit 100 --no-store-raw   # catalog only
 ```
 
 Sources still stubbed: `mtgjson`, `justtcg`. Utilities stubbed: `all`, `report`, `forecast`.
@@ -33,9 +33,9 @@ Sources still stubbed: `mtgjson`, `justtcg`. Utilities stubbed: `all`, `report`,
 ```text
 apps/etl/src/
   cli.ts
-  core/           # db, logger, hashing, types
-  sources/scryfall/
-  repositories/   # raw + ingestion_run SQL (pg, not Drizzle)
+  core/
+  sources/scryfall/   # client, stream, schema, transformer, importer
+  repositories/       # raw + catalog + ingestion_run (pg)
 ```
 
-DDL for `raw.*` / `ops.*` lives in API Drizzle migrations (`task db:migrate`).
+DDL lives in API Drizzle migrations (`task db:migrate`).
