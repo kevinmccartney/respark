@@ -8,7 +8,7 @@ vars:
   API_DOCKERFILE: apps/api/Dockerfile
   API_IMAGE_TAG: latest
   AWS_REGION: us-east-1
-  COMPOSE_FILE: docker-compose.api.yml
+  COMPOSE_FILE: docker-compose.yml
 
 tasks:
   build:
@@ -27,6 +27,26 @@ tasks:
     cmds:
       - npm run build -w api
 
+  docker:up:
+    desc: Start local app stack via Docker Compose
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} up -d --build --wait
+
+  docker:down:
+    desc: Stop the local Compose stack (DB volume is preserved)
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} down
+
+  docker:logs:
+    desc: Follow local API + web container logs
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} logs -f api web
+
+  docker:ps:
+    desc: Show local Compose service status
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} ps
+
   db:up:
     desc: Start the local Postgres container and wait until it accepts connections
     cmds:
@@ -38,7 +58,7 @@ tasks:
       - docker compose -f {{.COMPOSE_FILE}} stop db
 
   db:reset:
-    desc: Destroy the local containers and the Postgres data volume
+    desc: Destroy the local Compose stack and the Postgres data volume
     cmds:
       - docker compose -f {{.COMPOSE_FILE}} down -v
 

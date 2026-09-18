@@ -1,12 +1,35 @@
 # respark API (NestJS)
 
-## Local dev (Node)
+## Local dev (Docker Compose)
 
-1. Copy `.env.example` → `.env` or `.env.local` in this directory.
-2. Set `CLERK_SECRET_KEY` and optionally `PORT` (default **3000**). `DATABASE_URL` already points at the local Postgres container.
+Preferred path: Postgres + API + web in Compose.
+
+1. Copy `apps/api/.env.example` → `apps/api/.env` and set `CLERK_SECRET_KEY` (and optionally `CLERK_WEBHOOK_SIGNING_SECRET`).
+2. Copy `apps/web/.env.example` → `apps/web/.env.local` and set `VITE_CLERK_PUBLISHABLE_KEY`.
 
 ```bash
 # from repo root
+task docker:up      # builds Dockerfiles, starts db + api + web, migrates on boot
+task docker:logs    # follow API + web logs
+```
+
+- Web: http://localhost:5173  
+- API: http://localhost:3000  
+
+Compose overrides the API `DATABASE_URL` to `postgres://respark:respark@db:5432/respark` so the container reaches Postgres on the Compose network (your `.env` can keep `localhost` for host-side tools like Drizzle Studio). The web container gets `VITE_API_URL=http://localhost:3000` because the browser runs on your machine, not inside the Compose network.
+
+`RUN_MIGRATIONS=true` is set on the API service, so a fresh DB volume gets schema on first boot. `apps/api/src` and `apps/web/src` are bind-mounted; Nest/Vite reload on save. API inspector is on **9229** (`start:debug`).
+
+```bash
+task docker:down    # stop stack, keep DB volume
+task db:reset       # wipe volume too
+```
+
+## Local dev (Node on the host)
+
+Same env files as above. Run only Postgres in Compose, API with Nest on the host:
+
+```bash
 task db:up && task db:migrate
 task api:dev
 # or
@@ -19,20 +42,20 @@ Logs are **JSON** in production (`NODE_ENV=production`). Local dev uses pretty-p
 
 ## Database (Postgres + Drizzle)
 
-Local Postgres runs in the `db` service of `docker-compose.api.yml` (the `pgvector` image, so embeddings are possible later without swapping images). The API connects via **`DATABASE_URL`**.
+Local Postgres is the `db` service in `docker-compose.yml` (the `pgvector` image, so embeddings are possible later without swapping images). The API connects via **`DATABASE_URL`**.
 
 ```bash
-task db:up        # start Postgres
-task db:migrate   # apply pending migrations
+task db:up        # start Postgres only
+task db:migrate   # apply pending migrations (host → localhost:5432)
 task db:studio    # browse data in Drizzle Studio
-task db:reset     # destroy the container and its data volume
+task db:reset     # destroy the Compose stack and its data volume
 ```
 
 Schema lives in `src/db/schema/` (one file per domain) and generated SQL in `drizzle/`. After changing the schema:
 
 ```bash
 task db:generate  # writes a new migration to drizzle/
-task db:migrate
+task db:migrate   # or restart the Compose API (migrate-on-boot)
 ```
 
 Current tables:
@@ -65,22 +88,13 @@ clerk webhooks listen --token "$(clerk webhooks token)" --forward-to http://loca
 
 ### Migrations in deployed environments
 
-Deployed containers run with **`RUN_MIGRATIONS=true`** and apply pending migrations on boot (the `drizzle/` folder ships in the image; `drizzle-orm` includes the migrator, so `drizzle-kit` is not installed at runtime). This is safe for the current single instance — revisit if the API ever scales out. Locally the flag is unset, so `task db:migrate` stays the explicit step.
+Deployed containers run with **`RUN_MIGRATIONS=true`** and apply pending migrations on boot (the `drizzle/` folder ships in the image; `drizzle-orm` includes the migrator, so `drizzle-kit` is not installed at runtime). This is safe for the current single instance — revisit if the API ever scales out. Local Compose sets the same flag; host-side `task api:dev` leaves it unset so `task db:migrate` stays the explicit step.
 
 ## VS Code debug
 
-1. Open **Run and Debug**.
-2. Choose **API: debug (launch)** — starts watch mode with inspector on **9229** and opens the integrated terminal.
+**Compose API:** set breakpoints and use **API: attach (port 9229)** — Compose already runs `start:debug`.
 
-Or run `task api:debug` / `npm run start:debug -w api`, set breakpoints, and use **API: attach (port 9229)**.
-
-## Docker (optional)
-
-```bash
-docker compose -f docker-compose.api.yml up --build
-```
-
-See comments in `docker-compose.api.yml` for exposing **9229** and running with `--inspect` when you want attach debugging in a container.
+**Host API:** **Run and Debug → API: debug (launch)**, or `task api:debug` then attach.
 
 ## Deployed (EC2)
 

@@ -1,0 +1,76 @@
+# Local development stack — Postgres + API + web (watch mode).
+#
+#   task docker:up      # build + start
+#   task docker:logs    # follow API + web logs
+#   task docker:down    # stop (keeps the DB volume)
+
+services:
+  db:
+    # pgvector image so embeddings can be added later without swapping images
+    image: pgvector/pgvector:pg17
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: respark
+      POSTGRES_USER: respark
+      POSTGRES_PASSWORD: respark
+    volumes:
+      - respark-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U respark -d respark"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.dev
+    ports:
+      - "${PORT:-3000}:3000"
+      # Nest --debug listens here; attach with VS Code "API: attach (port 9229)"
+      - "9229:9229"
+    env_file:
+      - path: apps/api/.env
+        required: false
+      - path: apps/api/.env.local
+        required: false
+    environment:
+      PORT: "3000"
+      NODE_ENV: development
+      LOG_LEVEL: "${LOG_LEVEL:-debug}"
+      # Compose network hostname — overrides localhost from apps/api/.env
+      DATABASE_URL: postgres://respark:respark@db:5432/respark
+      # Apply drizzle/ on boot so a fresh volume is usable immediately
+      RUN_MIGRATIONS: "true"
+    volumes:
+      - ./apps/api/src:/repo/apps/api/src
+      - ./apps/api/drizzle:/repo/apps/api/drizzle
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["npm", "run", "start:debug"]
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.dev
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    env_file:
+      - path: apps/web/.env
+        required: false
+      - path: apps/web/.env.local
+        required: false
+    environment:
+      # Browser talks to the published API port on the host, not the Compose service name.
+      VITE_API_URL: http://localhost:${PORT:-3000}
+    volumes:
+      - ./apps/web/src:/repo/apps/web/src
+      - ./apps/web/index.html:/repo/apps/web/index.html
+      - ./apps/web/vite.config.ts:/repo/apps/web/vite.config.ts
+    depends_on:
+      - api
+
+volumes:
+  respark-db:

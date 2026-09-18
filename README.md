@@ -29,6 +29,7 @@ respark/
 ├── infra/
 │   ├── envs/develop/           # Terraform root (develop)
 │   └── modules/ui/             # S3 + CloudFront + HTTPS UI module
+├── docker-compose.yml          # Local API stack
 ├── package.json                # npm workspaces root
 ├── Taskfile.yml                # [Task](https://taskfile.dev/) runner
 └── README.md
@@ -68,12 +69,15 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 | `task build`            | Production build web + API                                        |
 | `task web:build`        | Production build of the web app                                   |
 | `task api:build`        | Compile the NestJS API                                            |
-| `task api:dev`          | API watch mode (`PORT`, default 3000)                             |
-| `task api:debug`        | API watch + inspector on 9229                                     |
+| `task docker:up`        | Start local Postgres + API + web (Compose watch mode)             |
+| `task docker:down`      | Stop the local Compose stack (keeps DB volume)                    |
+| `task docker:logs`      | Follow local API + web container logs                             |
+| `task api:dev`          | API watch mode on the host (`PORT`, default 3000)                 |
+| `task api:debug`        | Host API watch + inspector on 9229                                |
 | `task api:start`        | Run compiled API (after `api:build`)                              |
 | `task infra:plan`       | `terraform init` + `plan` in `infra/envs/develop`                 |
 | `task infra:apply`      | `terraform init` + `apply` in `infra/envs/develop`                |
-| `task db:up`            | Start local Postgres (see `apps/api/README.md`)                   |
+| `task db:up`            | Start local Postgres only                                         |
 | `task db:migrate`       | Apply Drizzle migrations                                          |
 | `task db:tunnel`        | SSM tunnel to develop RDS (`localhost:15432`)                     |
 | `task db:url`           | Print develop `DATABASE_URL` from SSM (has password)              |
@@ -82,6 +86,8 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 | `task web:deploy`       | Build against the deployed API, sync to S3, invalidate CloudFront |
 
 List all tasks with `task --list`.
+
+Local Docker stack: `task docker:up` brings up Postgres, API (:3000), and web (:5173). Details in [`apps/api/README.md`](apps/api/README.md).
 
 #### Connect a local Postgres client to develop RDS
 
