@@ -27,3 +27,9 @@ variable "hosted_zone_name" {
   type        = string
   default     = "kevinmccartney.is"
 }
+
+variable "api_domain_name" {
+  description = "Public hostname for the develop API."
+  type        = string
+  default     = "dev.api.respark.kevinmccartney.is"
+}

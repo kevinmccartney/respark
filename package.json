@@ -6,7 +6,10 @@
   ],
   "scripts": {
     "dev": "npm run dev -w web",
-    "build": "npm run build -w web",
+    "dev:api": "npm run start:dev -w api",
+    "build": "npm run build -w web && npm run build -w api",
+    "build:web": "npm run build -w web",
+    "build:api": "npm run build -w api",
     "preview": "npm run preview -w web"
   }
 }

@@ -24,6 +24,7 @@ This repository is organized as a monorepo so the web app, shared types, and fut
 ```plaintext
 respark/
 ├── apps/
+│   ├── api/                    # NestJS API
 │   └── web/                    # React web app (Vite)
 ├── infra/
 │   ├── envs/develop/           # Terraform root (develop)
@@ -46,22 +47,27 @@ Open the URL shown in the terminal (default `http://localhost:5173`).
 
 Authentication uses [Clerk](https://clerk.com/) in `apps/web`. After cloning, copy `apps/web/.env.example` to `apps/web/.env.local` and run `clerk env pull` from `apps/web` (requires the [Clerk CLI](https://clerk.com/docs/cli) and access to the Respark application).
 
-| Command           | Description              |
-| ----------------- | ------------------------ |
-| `npm run dev`     | Start the web dev server |
-| `npm run build`   | Production build         |
-| `npm run preview` | Preview production build |
+| Command           | Description                             |
+| ----------------- | --------------------------------------- |
+| `npm run dev`     | Start the web dev server                |
+| `npm run dev:api` | Start the API in watch mode (port 3000) |
+| `npm run build`   | Production build (web + API)            |
+| `npm run preview` | Preview production build                |
 
 ### Task runner
 
 Common workflows use [Task](https://taskfile.dev/) from the repository root (install via `brew install go-task` or see the Task docs).
 
-| Task              | Description                                      |
-| ----------------- | ------------------------------------------------ |
-| `task web:build`  | Production build of the web app                  |
-| `task infra:plan` | `terraform init` + `plan` in `infra/envs/develop` |
-| `task infra:apply`| `terraform init` + `apply` in `infra/envs/develop` |
-| `task web:deploy` | Build, sync to S3, and invalidate CloudFront cache |
+| Task               | Description                                        |
+| ------------------ | -------------------------------------------------- |
+| `task build`       | Production build web + API                         |
+| `task web:build`   | Production build of the web app                    |
+| `task api:build`   | Compile the NestJS API                             |
+| `task api:dev`     | API watch mode (http://localhost:3000)             |
+| `task api:start`   | Run compiled API (after `api:build`)               |
+| `task infra:plan`  | `terraform init` + `plan` in `infra/envs/develop`  |
+| `task infra:apply` | `terraform init` + `apply` in `infra/envs/develop` |
+| `task web:deploy`  | Build, sync to S3, and invalidate CloudFront cache |
 
 List all tasks with `task --list`.
 

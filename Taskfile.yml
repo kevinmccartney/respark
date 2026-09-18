@@ -4,12 +4,72 @@ vars:
   ENV: develop
   TF_DIR: infra/envs/{{.ENV}}
   WEB_DIST: apps/web/dist
+  API_PORT: "3000"
+  API_DOCKERFILE: apps/api/Dockerfile
+  API_IMAGE_TAG: latest
+  AWS_REGION: us-east-1
 
 tasks:
+  build:
+    desc: Production build web app and API
+    deps:
+      - web:build
+      - api:build
+
   web:build:
     desc: Production build of the React web app
     cmds:
-      - npm run build
+      - npm run build:web
+
+  api:build:
+    desc: Compile the NestJS API
+    cmds:
+      - npm run build -w api
+
+  api:dev:
+    desc: Run the API in watch mode (default port {{.API_PORT}})
+    cmds:
+      - npm run start:dev -w api
+
+  api:start:
+    desc: Run the compiled API (requires api:build)
+    deps:
+      - api:build
+    cmds:
+      - npm run start:prod -w api
+
+  api:docker:build:
+    desc: Build the API container image (linux/arm64 for Graviton)
+    cmds:
+      - docker build --platform linux/arm64 -f {{.API_DOCKERFILE}} -t respark-api:{{.API_IMAGE_TAG}} .
+
+  api:docker:push:
+    desc: Build and push the API image to ECR (requires infra applied)
+    deps:
+      - api:docker:build
+    cmds:
+      - |
+        set -euo pipefail
+        REPO=$(terraform -chdir={{.TF_DIR}} output -raw api_ecr_repository_url)
+        REGISTRY="${REPO%%/*}"
+        aws ecr get-login-password --region {{.AWS_REGION}} | docker login --username AWS --password-stdin "$REGISTRY"
+        docker tag respark-api:{{.API_IMAGE_TAG}} "$REPO:{{.API_IMAGE_TAG}}"
+        docker push "$REPO:{{.API_IMAGE_TAG}}"
+
+  api:deploy:ec2:
+    desc: Pull latest image on the API EC2 instance via SSM and restart the container
+    env:
+      IMAGE_TAG: "{{.API_IMAGE_TAG}}"
+      AWS_REGION: "{{.AWS_REGION}}"
+    cmds:
+      - bash scripts/redeploy-api-ec2.sh
+
+  api:deploy:
+    desc: Push API image to ECR and restart on EC2
+    deps:
+      - api:docker:push
+    cmds:
+      - task: api:deploy:ec2
 
   infra:plan:
     desc: Terraform plan for the {{.ENV}} environment
