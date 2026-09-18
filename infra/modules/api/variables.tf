@@ -47,3 +47,9 @@ variable "api_port" {
   type        = number
   default     = 3000
 }
+
+variable "log_retention_in_days" {
+  description = "CloudWatch Logs retention for API container stdout."
+  type        = number
+  default     = 30
+}

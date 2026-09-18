@@ -45,12 +45,17 @@ npm run dev
 
 Open the URL shown in the terminal (default `http://localhost:5173`).
 
-Authentication uses [Clerk](https://clerk.com/) in `apps/web`. After cloning, copy `apps/web/.env.example` to `apps/web/.env.local` and run `clerk env pull` from `apps/web` (requires the [Clerk CLI](https://clerk.com/docs/cli) and access to the Respark application).
+Authentication uses [Clerk](https://clerk.com/) in `apps/web`. After cloning:
+
+- **Web:** copy `apps/web/.env.example` → `apps/web/.env.local` and set `VITE_CLERK_PUBLISHABLE_KEY` (`clerk env pull` from `apps/web` fills this; do not use the secret key in the web app).
+- **API:** copy `apps/api/.env.example` → `apps/api/.env` and set `CLERK_SECRET_KEY` (copy from Dashboard or from web `.env.local` after `clerk env pull` — keep it out of the Vite bundle).
 
 | Command           | Description                             |
 | ----------------- | --------------------------------------- |
 | `npm run dev`     | Start the web dev server                |
-| `npm run dev:api` | Start the API in watch mode (port 3000) |
+| `npm run dev:api` | Start the API in watch mode (`PORT`, default 3000) |
+
+Local API details: [`apps/api/README.md`](apps/api/README.md). Debug in VS Code: **Run and Debug → API: debug (launch)**.
 | `npm run build`   | Production build (web + API)            |
 | `npm run preview` | Preview production build                |
 
@@ -63,7 +68,8 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 | `task build`       | Production build web + API                         |
 | `task web:build`   | Production build of the web app                    |
 | `task api:build`   | Compile the NestJS API                             |
-| `task api:dev`     | API watch mode (http://localhost:3000)             |
+| `task api:dev`     | API watch mode (`PORT`, default 3000)              |
+| `task api:debug`   | API watch + inspector on 9229                      |
 | `task api:start`   | Run compiled API (after `api:build`)               |
 | `task infra:plan`  | `terraform init` + `plan` in `infra/envs/develop`  |
 | `task infra:apply` | `terraform init` + `apply` in `infra/envs/develop` |

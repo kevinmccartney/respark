@@ -1,11 +1,5 @@
 import { useEffect, useState } from 'react'
-
-const defaultApiBase = 'http://localhost:3000'
-
-function apiBaseUrl(): string {
-  const configured = import.meta.env.VITE_API_URL?.trim()
-  return configured || defaultApiBase
-}
+import { apiBaseUrl } from '../lib/api.ts'
 
 type HealthState = 'checking' | 'ok' | 'error'
 

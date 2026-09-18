@@ -6,10 +6,8 @@ resource "aws_instance" "api" {
   iam_instance_profile   = aws_iam_instance_profile.ec2.name
 
   user_data = templatefile("${path.module}/user_data.sh.tpl", {
-    aws_region          = var.aws_region
-    ecr_repository_url  = aws_ecr_repository.api.repository_url
-    container_image_tag = var.container_image_tag
-    api_port            = var.api_port
+    deploy_api_script    = local.deploy_api_script
+    cloudwatch_log_group = aws_cloudwatch_log_group.api.name
   })
 
   user_data_replace_on_change = true
@@ -28,7 +26,16 @@ resource "aws_instance" "api" {
     Name = "${local.name_prefix}-ec2"
   })
 
-  depends_on = [aws_ecr_repository.api]
+  depends_on = [aws_ecr_repository.api, aws_cloudwatch_log_group.api]
+}
+
+locals {
+  deploy_api_script = templatefile("${path.module}/deploy-api-container.sh.tpl", {
+    aws_region           = var.aws_region
+    cloudwatch_log_group = aws_cloudwatch_log_group.api.name
+    api_port             = var.api_port
+    container_image_tag  = var.container_image_tag
+  })
 }
 
 resource "aws_eip" "api" {

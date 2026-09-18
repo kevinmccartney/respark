@@ -154,12 +154,16 @@ a {
 
 .home-main {
   flex: 1;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 0.75rem;
-  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  padding: 2rem 1.5rem 3rem;
   text-align: center;
+}
+
+.home-intro {
+  max-width: 32rem;
 }
 
 .home-main h1 {
@@ -169,8 +173,61 @@ a {
 }
 
 .home-subtitle {
-  margin: 0;
-  max-width: 28rem;
+  margin: 0.5rem 0 0;
   color: #4b5563;
   line-height: 1.55;
+}
+
+.decks-panel {
+  width: min(100%, 28rem);
+  text-align: left;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.decks-panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
+}
+
+.decks-muted {
+  margin: 0;
+  color: #6b7280;
+}
+
+.decks-error {
+  margin: 0;
+  color: #b91c1c;
+}
+
+.deck-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.deck-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.deck-list li:last-child {
+  border-bottom: none;
+}
+
+.deck-name {
+  font-weight: 500;
+}
+
+.deck-updated {
+  font-size: 0.875rem;
+  color: #6b7280;
 }

@@ -17,3 +17,13 @@ output "instance_id" {
   description = "EC2 instance ID (for SSM redeploy)."
   value       = aws_instance.api.id
 }
+
+output "cloudwatch_log_group_name" {
+  description = "CloudWatch log group for API container stdout (JSON from Pino)."
+  value       = aws_cloudwatch_log_group.api.name
+}
+
+output "cloudwatch_log_group_arn" {
+  description = "CloudWatch log group ARN (for metric filters / alarms)."
+  value       = aws_cloudwatch_log_group.api.arn
+}

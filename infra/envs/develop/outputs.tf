@@ -33,6 +33,11 @@ output "api_instance_id" {
   value       = module.api.instance_id
 }
 
+output "api_cloudwatch_log_group" {
+  description = "CloudWatch Logs group for API container stdout."
+  value       = module.api.cloudwatch_log_group_name
+}
+
 output "api_cloudfront_distribution_id" {
   description = "CloudFront distribution ID for the API."
   value       = module.api.cloudfront_distribution_id

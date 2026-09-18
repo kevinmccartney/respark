@@ -21,9 +21,10 @@ data "aws_ami" "amazon_linux_2023" {
   most_recent = true
   owners      = ["amazon"]
 
+  # Standard AL2023 only (not *-minimal-*); minimal AMIs omit SSM Agent and break Run Command redeploy.
   filter {
     name   = "name"
-    values = ["al2023-ami-*-kernel-*-arm64"]
+    values = ["al2023-ami-2023.*-kernel-*-arm64"]
   }
 
   filter {

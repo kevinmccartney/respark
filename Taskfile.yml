@@ -27,9 +27,18 @@ tasks:
       - npm run build -w api
 
   api:dev:
-    desc: Run the API in watch mode (default port {{.API_PORT}})
+    desc: Run the API in watch mode on PORT (default {{.API_PORT}})
+    env:
+      PORT: "{{.API_PORT}}"
     cmds:
       - npm run start:dev -w api
+
+  api:debug:
+    desc: Run the API with Node inspector on 9229 (or use VS Code "API debug (launch)")
+    env:
+      PORT: "{{.API_PORT}}"
+    cmds:
+      - npm run start:debug -w api
 
   api:start:
     desc: Run the compiled API (requires api:build)

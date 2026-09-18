@@ -1,14 +1,42 @@
+import { config } from 'dotenv'
+import { existsSync } from 'fs'
+import { resolve } from 'path'
 import { NestFactory } from '@nestjs/core'
+import { Logger } from 'nestjs-pino'
 import { AppModule } from './app.module'
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
-  app.enableCors({
-    origin: true,
-    methods: ['GET', 'HEAD', 'OPTIONS'],
-  })
-  const port = Number(process.env.PORT) || 3000
-  await app.listen(port)
+const apiRoot = resolve(__dirname, '..')
+for (const file of ['.env', '.env.local']) {
+  const path = resolve(apiRoot, file)
+  if (existsSync(path)) {
+    config({ path, override: true })
+  }
 }
 
-bootstrap()
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule, { bufferLogs: true })
+  app.useLogger(app.get(Logger))
+  app.enableCors({
+    origin: true,
+    methods: ['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Authorization', 'Content-Type'],
+  })
+  const port = Number(process.env.PORT) || 3000
+  await app.listen(port, '0.0.0.0')
+
+  const logger = app.get(Logger)
+  logger.log(
+    {
+      event: 'server.started',
+      port,
+      nodeEnv: process.env.NODE_ENV ?? 'development',
+      logLevel: process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+    },
+    'API listening',
+  )
+}
+
+bootstrap().catch((err) => {
+  console.error(err)
+  process.exit(1)
+})
