@@ -37,8 +37,31 @@ task db:migrate
 
 Current tables:
 
-- **`users`** — local identity owning every other foreign key. Clerk stays the auth provider; `clerk_user_id` is just an external reference, and a row is created on first authenticated request.
+- **`users`** — local identity owning every other foreign key. Clerk stays the auth provider; `clerk_user_id` is just an external reference, and a row is created on first authenticated request. `email` / `first_name` / `last_name` / `image_url` are a read-only cache of Clerk's copy kept fresh by webhooks — never write them from app code.
 - **`decks`** — `name` plus owner, cascading on user delete. Deck contents arrive once cards are modeled.
+
+## Clerk webhooks
+
+**`POST /webhooks/clerk`** syncs the profile cache. It is deliberately public — Clerk authenticates with a Svix signature, not a bearer token, so `ClerkAuthGuard` is not applied. Verification uses `verifyWebhook` from `@clerk/backend/webhooks` and needs **`CLERK_WEBHOOK_SIGNING_SECRET`**; the app boots with `rawBody: true` because the signature covers the exact request bytes.
+
+Handled events: `user.created` and `user.updated` upsert the profile, `user.deleted` sets `deleted_at`. Anything else is logged and acknowledged.
+
+Two things keep redelivery safe, since Svix retries and does not guarantee ordering:
+
+- Writes are upserts keyed on `clerk_user_id`, so replays are idempotent.
+- A sync is skipped when the event's `updated_at` is older than the stored `clerk_updated_at`, so a delayed event cannot clobber newer data.
+
+Deletes are **soft** — decks survive, and a mistaken or replayed `user.deleted` is recoverable. Purging is a deliberate, separate operation.
+
+Webhooks are eventually consistent, so nothing in the request path waits on them: `UsersService.resolveLocalId` still creates the row on first authenticated request, and the webhook fills in the profile when it lands.
+
+Responses: `200` on any verified event, `400` on a bad signature, `503` when the signing secret is unset (so Svix retries once it is configured instead of dropping the event).
+
+Test locally with the Clerk CLI tunnel, then add the printed relay URL as an endpoint in the Clerk dashboard:
+
+```bash
+clerk webhooks listen --token "$(clerk webhooks token)" --forward-to http://localhost:3000/webhooks/clerk
+```
 
 ### Migrations in deployed environments
 
@@ -67,8 +90,9 @@ Secrets live in **SSM Parameter Store** and are read by the instance role at dep
 
 - **`/respark/develop/api/database-url`** — written by Terraform, which generates the password
 - **`/respark/develop/api/clerk-secret-key`** — pushed with `task api:secrets:push` from `apps/api/.env`, so it stays out of Terraform state
+- **`/respark/develop/api/clerk-webhook-signing-secret`** — same push, but optional: it only exists after you create the webhook endpoint in the Clerk dashboard. Until then `/webhooks/clerk` returns 503 and the rest of the API is unaffected.
 
-Run `task api:secrets:push` once (and again whenever the Clerk key rotates), then `task api:deploy`.
+Run `task api:secrets:push` once (and again whenever a Clerk key rotates), then `task api:deploy`.
 
 RDS enforces TLS, so the image bundles the Amazon RDS root CA and connects with certificate verification on (`DATABASE_CA_PATH`). Locally that variable is unset and the connection is plaintext to the Docker container.
 
@@ -77,7 +101,7 @@ terraform -chdir=infra/envs/develop output -raw db_endpoint
 terraform -chdir=infra/envs/develop output -raw db_database_url_parameter
 ```
 
-Postgres is **not publicly accessible** — its security group only accepts 5432 from the API instance security group. For psql access, port-forward through the EC2 box with SSM (needs `ssm:StartSession` on your IAM user).
+Postgres is **not publicly accessible** — its security group only accepts 5432 from the API instance security group. For a local client, use **`task db:tunnel`** (SSM port-forward to `localhost:15432`; needs the Session Manager plugin and `ssm:StartSession`). User/database are both `respark`; the password is the Terraform-generated value inside the SSM `database-url` parameter. See the root README Task section for the full flow.
 
 Container **stdout/stderr** (Pino JSON) goes to CloudWatch Logs via Docker’s **`awslogs`** driver.
 

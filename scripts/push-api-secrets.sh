@@ -23,14 +23,26 @@ fi
 DATABASE_URL_PARAM="$(terraform -chdir="$TF_DIR" output -raw db_database_url_parameter)"
 PREFIX="${DATABASE_URL_PARAM%/database-url}"
 
-aws ssm put-parameter \
-  --name "${PREFIX}/clerk-secret-key" \
-  --description "Clerk secret key for the API" \
-  --type SecureString \
-  --value "$CLERK_SECRET_KEY" \
-  --overwrite \
-  --region "$AWS_REGION" \
-  --output text > /dev/null
+put_secret() {
+  aws ssm put-parameter \
+    --name "${PREFIX}/$1" \
+    --description "$2" \
+    --type SecureString \
+    --value "$3" \
+    --overwrite \
+    --region "$AWS_REGION" \
+    --output text > /dev/null
 
-echo "Wrote ${PREFIX}/clerk-secret-key"
+  echo "Wrote ${PREFIX}/$1"
+}
+
+put_secret clerk-secret-key "Clerk secret key for the API" "$CLERK_SECRET_KEY"
+
+# Optional: only exists once the webhook endpoint is created in the Clerk dashboard.
+if [[ -n "${CLERK_WEBHOOK_SIGNING_SECRET:-}" ]]; then
+  put_secret clerk-webhook-signing-secret "Clerk webhook signing secret" "$CLERK_WEBHOOK_SIGNING_SECRET"
+else
+  echo "Skipped clerk-webhook-signing-secret (unset in apps/api/.env); /webhooks/clerk will 503."
+fi
+
 echo "Run 'task api:deploy' to restart the container with it."

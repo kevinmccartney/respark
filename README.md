@@ -50,36 +50,59 @@ Authentication uses [Clerk](https://clerk.com/) in `apps/web`. After cloning:
 - **Web:** copy `apps/web/.env.example` → `apps/web/.env.local` and set `VITE_CLERK_PUBLISHABLE_KEY` (`clerk env pull` from `apps/web` fills this; do not use the secret key in the web app).
 - **API:** copy `apps/api/.env.example` → `apps/api/.env` and set `CLERK_SECRET_KEY` (copy from Dashboard or from web `.env.local` after `clerk env pull` — keep it out of the Vite bundle).
 
-| Command           | Description                             |
-| ----------------- | --------------------------------------- |
-| `npm run dev`     | Start the web dev server                |
+| Command           | Description                                        |
+| ----------------- | -------------------------------------------------- |
+| `npm run dev`     | Start the web dev server                           |
 | `npm run dev:api` | Start the API in watch mode (`PORT`, default 3000) |
 
 Local API details: [`apps/api/README.md`](apps/api/README.md). Debug in VS Code: **Run and Debug → API: debug (launch)**.
-| `npm run build`   | Production build (web + API)            |
-| `npm run preview` | Preview production build                |
+| `npm run build` | Production build (web + API) |
+| `npm run preview` | Preview production build |
 
 ### Task runner
 
 Common workflows use [Task](https://taskfile.dev/) from the repository root (install via `brew install go-task` or see the Task docs).
 
-| Task               | Description                                        |
-| ------------------ | -------------------------------------------------- |
-| `task build`       | Production build web + API                         |
-| `task web:build`   | Production build of the web app                    |
-| `task api:build`   | Compile the NestJS API                             |
-| `task api:dev`     | API watch mode (`PORT`, default 3000)              |
-| `task api:debug`   | API watch + inspector on 9229                      |
-| `task api:start`   | Run compiled API (after `api:build`)               |
-| `task infra:plan`  | `terraform init` + `plan` in `infra/envs/develop`  |
-| `task infra:apply` | `terraform init` + `apply` in `infra/envs/develop` |
-| `task db:up`       | Start local Postgres (see `apps/api/README.md`)    |
-| `task api:secrets:push` | Push `CLERK_SECRET_KEY` to SSM Parameter Store |
-| `task api:deploy`  | Build/push the API image and restart it on EC2     |
-| `task db:migrate`  | Apply Drizzle migrations                           |
-| `task web:deploy`  | Build against the deployed API, sync to S3, invalidate CloudFront |
+| Task                    | Description                                                       |
+| ----------------------- | ----------------------------------------------------------------- |
+| `task build`            | Production build web + API                                        |
+| `task web:build`        | Production build of the web app                                   |
+| `task api:build`        | Compile the NestJS API                                            |
+| `task api:dev`          | API watch mode (`PORT`, default 3000)                             |
+| `task api:debug`        | API watch + inspector on 9229                                     |
+| `task api:start`        | Run compiled API (after `api:build`)                              |
+| `task infra:plan`       | `terraform init` + `plan` in `infra/envs/develop`                 |
+| `task infra:apply`      | `terraform init` + `apply` in `infra/envs/develop`                |
+| `task db:up`            | Start local Postgres (see `apps/api/README.md`)                   |
+| `task db:migrate`       | Apply Drizzle migrations                                          |
+| `task db:tunnel`        | SSM tunnel to develop RDS (`localhost:15432`)                     |
+| `task db:url`           | Print develop `DATABASE_URL` from SSM (has password)              |
+| `task api:secrets:push` | Push `CLERK_SECRET_KEY` to SSM Parameter Store                    |
+| `task api:deploy`       | Build/push the API image and restart it on EC2                    |
+| `task web:deploy`       | Build against the deployed API, sync to S3, invalidate CloudFront |
 
 List all tasks with `task --list`.
+
+#### Connect a local Postgres client to develop RDS
+
+RDS is **not** public. Use `task db:tunnel` — it opens an SSM port-forward through the API EC2 instance so `127.0.0.1:15432` reaches Postgres without opening the security group.
+
+Requires the [Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) and `ssm:StartSession` on your IAM user.
+
+**Credentials** (develop defaults):
+
+| Field    | Value                                                                                  |
+| -------- | -------------------------------------------------------------------------------------- |
+| User     | `respark`                                                                              |
+| Database | `respark`                                                                              |
+| Password | Random, generated by Terraform — read from SSM (`…/api/database-url`), never committed |
+
+```bash
+task db:tunnel   # leave running
+task db:url      # postgres://respark:<password>@<rds-host>:5432/respark
+```
+
+For a GUI client: host `127.0.0.1`, port `15432`, user `respark`, SSL require, password from `task db:url`.
 
 ### AWS hosting (Terraform)
 

@@ -6,6 +6,7 @@ import { DatabaseModule } from './db/database.module'
 import { DecksModule } from './decks/decks.module'
 import { HealthModule } from './health/health.module'
 import { UsersModule } from './users/users.module'
+import { WebhooksModule } from './webhooks/webhooks.module'
 
 const isProduction = process.env.NODE_ENV === 'production'
 
@@ -40,6 +41,7 @@ const isProduction = process.env.NODE_ENV === 'production'
     HealthModule,
     UsersModule,
     DecksModule,
+    WebhooksModule,
   ],
 })
 export class AppModule {}

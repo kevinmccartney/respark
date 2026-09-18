@@ -59,6 +59,27 @@ tasks:
     cmds:
       - npm run db:studio -w api
 
+  db:tunnel:
+    desc: SSM port-forward localhost:15432 to develop RDS via the API EC2 instance
+    env:
+      AWS_REGION: "{{.AWS_REGION}}"
+    cmds:
+      - bash scripts/db-tunnel.sh
+
+  db:url:
+    desc: Print the develop RDS DATABASE_URL from SSM (contains the password)
+    env:
+      AWS_REGION: "{{.AWS_REGION}}"
+    cmds:
+      - |
+        set -euo pipefail
+        aws ssm get-parameter \
+          --name "$(terraform -chdir={{.TF_DIR}} output -raw db_database_url_parameter)" \
+          --with-decryption \
+          --region "{{.AWS_REGION}}" \
+          --query Parameter.Value \
+          --output text
+
   api:dev:
     desc: Run the API in watch mode on PORT (default {{.API_PORT}})
     env:

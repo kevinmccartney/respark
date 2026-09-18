@@ -14,7 +14,8 @@ for (const file of ['.env', '.env.local']) {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true })
+  // rawBody keeps the exact bytes Clerk signed available for webhook verification.
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true })
   app.useLogger(app.get(Logger))
   app.enableShutdownHooks()
   app.enableCors({

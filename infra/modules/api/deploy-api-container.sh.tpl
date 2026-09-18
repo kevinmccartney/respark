@@ -27,7 +27,10 @@ read_parameter() {
 # Read by the instance role; secrets never leave the VPC.
 DATABASE_URL="$(read_parameter '${parameter_prefix}/database-url')"
 CLERK_SECRET_KEY="$(read_parameter '${parameter_prefix}/clerk-secret-key')"
-export DATABASE_URL CLERK_SECRET_KEY
+# Optional: the endpoint has to exist in the Clerk dashboard before this is available,
+# so a missing value degrades the webhook route rather than blocking the whole deploy.
+CLERK_WEBHOOK_SIGNING_SECRET="$(read_parameter '${parameter_prefix}/clerk-webhook-signing-secret' || true)"
+export DATABASE_URL CLERK_SECRET_KEY CLERK_WEBHOOK_SIGNING_SECRET
 
 aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$${REPO%%/*}"
 
@@ -40,6 +43,7 @@ docker run -d \
   -p 80:"$API_PORT" \
   -e NODE_ENV=production \
   -e CLERK_SECRET_KEY \
+  -e CLERK_WEBHOOK_SIGNING_SECRET \
   -e DATABASE_URL \
   -e RUN_MIGRATIONS=true \
   --log-driver awslogs \
