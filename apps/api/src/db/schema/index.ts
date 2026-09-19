@@ -5,6 +5,7 @@ export * from './pipeline-schemas';
 export * from './ops/ops-schema';
 export * from './ops/etl-sync';
 export * from './ops/etl-job-run';
+export * from './ops/etl-sync-log';
 export * from './ops/ingestion-error';
 export * from './ops/ingestion-reconciliation';
 export * from './ops/ingestion-unmatched';

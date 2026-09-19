@@ -6,12 +6,21 @@ type LiveLogPanelProps = {
 };
 
 export const LiveLogPanel = ({ logs }: LiveLogPanelProps) => {
-  if (logs.length === 0) return null;
+  if (logs.length === 0) {
+    return (
+      <section className="mt-6" aria-labelledby="live-log-heading">
+        <h2 id="live-log-heading" className="mb-3 font-heading text-lg">
+          Log
+        </h2>
+        <p className="text-sm text-muted-foreground">No log lines for this sync.</p>
+      </section>
+    );
+  }
 
   return (
     <section className="mt-6" aria-labelledby="live-log-heading">
       <h2 id="live-log-heading" className="mb-3 font-heading text-lg">
-        Live log
+        Log
       </h2>
       <div className="max-h-48 overflow-auto rounded-xl bg-muted p-3 font-mono text-xs text-foreground ring-1 ring-foreground/10">
         {logs.map((line) => (

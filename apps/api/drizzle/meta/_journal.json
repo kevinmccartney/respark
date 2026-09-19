@@ -120,6 +120,13 @@
       "when": 1789777000000,
       "tag": "0016_deck_card_sideboard",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1789855614456,
+      "tag": "0017_living_power_pack",
+      "breakpoints": true
     }
   ]
 }

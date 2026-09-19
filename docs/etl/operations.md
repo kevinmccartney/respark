@@ -50,6 +50,7 @@ API:
 | `POST` | `/admin/etl-syncs`                                   | `{ catalog, enrichmentJobs? }` → 202 |
 | `GET`  | `/admin/etl-syncs`                                   | List                                 |
 | `GET`  | `/admin/etl-syncs/:id`                               | Sync + nested stages/jobs            |
+| `GET`  | `/admin/etl-syncs/:id/logs`                          | Persisted notable log lines          |
 | `GET`  | `/admin/etl-syncs/:id/jobs/:jobRunId/errors`         | Paginated                            |
 | `GET`  | `/admin/etl-syncs/:id/jobs/:jobRunId/reconciliation` | Identifiers job                      |
 | `GET`  | `/admin/etl-syncs/:id/jobs/:jobRunId/unmatched`      | Identifiers job                      |

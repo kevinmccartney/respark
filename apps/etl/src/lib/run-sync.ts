@@ -2,6 +2,7 @@ import type { Pool } from 'pg';
 import type { Logger } from '../core/logger';
 import { emitSyncEvent, type SyncEventHandler } from '../core/stream-events';
 import type { GlobalFlags, IngestionRunStatus } from '../core/types';
+import { insertEtlSyncLog, syncLogFromEvent } from '../repositories/etlSyncLogs';
 import { finishEtlSync, rollupSyncStatus, startEtlSync } from '../repositories/etlSyncs';
 import { runMtgjsonImport } from '../sources/mtgjson/importer';
 import { runScryfallImport } from '../sources/scryfall/importer';
@@ -36,7 +37,6 @@ export const runEtlSync = async (
     throw new Error('sync requires --catalog and/or --enrichment <job>');
   }
 
-  const onEvent = hooks.onEvent;
   const startedAt = new Date().toISOString();
 
   const syncId = await startEtlSync(pool, {
@@ -44,6 +44,23 @@ export const runEtlSync = async (
     includeEnrichment: options.enrichmentJobs.length > 0,
     enrichmentJobs: options.enrichmentJobs,
   });
+
+  const onEvent: SyncEventHandler = (event) => {
+    const row = syncLogFromEvent(event);
+    if (row) {
+      void insertEtlSyncLog(pool, row).catch((err) => {
+        logger.warn(
+          {
+            event: 'etl.sync.log_persist_failed',
+            syncId,
+            err: err instanceof Error ? err.message : String(err),
+          },
+          'Failed to persist sync log',
+        );
+      });
+    }
+    hooks.onEvent?.(event);
+  };
 
   emitSyncEvent(onEvent, {
     type: 'sync.started',

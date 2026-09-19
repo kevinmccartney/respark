@@ -27,6 +27,8 @@ Important event types:
 
 The CLI does not require a stream protocol; it uses normal pino + stderr progress. The API always passes `onEvent` and publishes into `EtlSyncEventsService`.
 
+Notable events (`job.log`, `job.started`, `job.completed`, `sync.completed`) are also written to `ops.etl_sync_log` so the admin detail page can show the log after the run. `job.progress` is not stored.
+
 ## WebSocket
 
 - Path: `/admin/etl-syncs/ws?token=<Clerk JWT>`
@@ -37,8 +39,8 @@ The CLI does not require a stream protocol; it uses normal pino + stderr progres
 Admin pages:
 
 - List subscribes to `list` (new rows, status, light progress).
-- Detail subscribes to `sync` for that id (metrics, log, errors, unmatched).
+- Detail loads `GET /admin/etl-syncs/:id/logs`, then subscribes to `sync` for that id (metrics, live log append, errors, unmatched).
 
 ## CLI break-glass
 
-Syncs started with `task etl -- sync …` still write `ops.etl_sync`. A Postgres `NOTIFY` trigger publishes list-oriented sync events so the admin table can refresh without the in-process lib path. Detail richness (live log / streamed unmatched) is API-started only.
+Syncs started with `task etl -- sync …` still write `ops.etl_sync` and `ops.etl_sync_log`. A Postgres `NOTIFY` trigger publishes list-oriented sync events so the admin table can refresh without the in-process lib path. Live WebSocket richness (progress / streamed unmatched) is API-started only; the persisted log is available for both paths.

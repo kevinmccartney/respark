@@ -19,6 +19,7 @@ import {
 } from '@/lib/sync-state.ts';
 import {
   fetchEtlSync,
+  fetchEtlSyncLogs,
   loadJobArtifacts,
   fetchJobErrors,
   fetchJobUnmatched,
@@ -59,7 +60,6 @@ export const useSyncDetail = (id: string | undefined) => {
   const selectedJobIdRef = useRef<string | null>(null);
   const errorsOffsetRef = useRef(0);
   const unmatchedOffsetRef = useRef(0);
-  const logSeqRef = useRef(0);
   const liveRowIdRef = useRef(-1);
 
   const setSelectedJob = (jobId: string | null) => {
@@ -75,6 +75,7 @@ export const useSyncDetail = (id: string | undefined) => {
       setLoading(true);
       setError(null);
       setForbidden(false);
+      setLiveLogs([]);
       setOffset(0);
       setUnmatchedOffset(0);
       errorsOffsetRef.current = 0;
@@ -90,13 +91,28 @@ export const useSyncDetail = (id: string | undefined) => {
         const jobId = preferred?.id ?? null;
         setSelectedJob(jobId);
 
-        if (preferred) {
-          const artifacts = await loadJobArtifacts(getToken, id!, preferred, {
-            limit: PAGE_SIZE,
-            offset: 0,
-            unmatchedOffset: 0,
-          });
-          if (controller.signal.aborted) return;
+        const [logPage, artifacts] = await Promise.all([
+          fetchEtlSyncLogs(getToken, id!, { limit: 200 }),
+          preferred
+            ? loadJobArtifacts(getToken, id!, preferred, {
+                limit: PAGE_SIZE,
+                offset: 0,
+                unmatchedOffset: 0,
+              })
+            : Promise.resolve(null),
+        ]);
+        if (controller.signal.aborted) return;
+
+        setLiveLogs(
+          logPage.logs.map((row) => ({
+            id: row.id,
+            level: row.level,
+            message: row.message,
+            at: row.createdAt,
+          })),
+        );
+
+        if (artifacts) {
           setErrors(artifacts.errors);
           setTotalErrors(artifacts.totalErrors);
           setReconciliation(artifacts.reconciliation);
@@ -125,19 +141,21 @@ export const useSyncDetail = (id: string | undefined) => {
     if (!id || forbidden) return;
 
     const appendLog = (level: LogLevel, message: string) => {
-      logSeqRef.current += 1;
-      const lineId = logSeqRef.current;
-      setLiveLogs((prev) =>
-        [
+      setLiveLogs((prev) => {
+        if (prev.some((line) => line.level === level && line.message === message)) {
+          return prev;
+        }
+        liveRowIdRef.current -= 1;
+        return [
           ...prev,
           {
-            id: lineId,
+            id: liveRowIdRef.current,
             level,
             message,
             at: new Date().toISOString(),
           },
-        ].slice(-200),
-      );
+        ].slice(-200);
+      });
     };
 
     const upsertJob = (job: Partial<EtlJobRun> & { id: string; stage: string; job: string }) => {
@@ -162,6 +180,10 @@ export const useSyncDetail = (id: string | undefined) => {
         );
         if (event.type === 'sync.completed') {
           setProgressByJobId({});
+          appendLog(
+            event.status === 'failed' ? 'error' : 'info',
+            `ETL sync finished (${event.status})`,
+          );
         }
         return;
       }

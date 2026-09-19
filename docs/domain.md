@@ -96,6 +96,10 @@ One user- or CLI-triggered run. Records which stages ran (`include_catalog`, `in
 
 One job inside a sync (today: `catalog`/`catalog`, `enrichment`/`identifiers`). Counters, source URL/version, duration. Admin list/detail and the live WebSocket are keyed off these rows.
 
+### Sync log (`ops.etl_sync_log`)
+
+Notable messages for the admin log panel after a run (`job.log`, job start/complete, sync complete). Progress ticks are not stored.
+
 ### Ingestion error (`ops.ingestion_error`)
 
 Per-record failure so one bad card does not abort the job. `stage` here is the **processing step** (validate / transform / reconcile), not the sync stage. `run_id` is the job run; there is no formal FK in Drizzle today.

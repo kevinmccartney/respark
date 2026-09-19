@@ -1,4 +1,4 @@
-import { isoDateTimeSchema, queryIntSchema, uuidSchema } from './primitives.js';
+import { isoDateTimeSchema, logLevelSchema, queryIntSchema, uuidSchema } from './primitives.js';
 import { z } from 'zod';
 
 export const ingestionRunStatusSchema = z.enum(['running', 'success', 'partial_success', 'failed']);
@@ -131,6 +131,29 @@ export const jobUnmatchedResponseSchema = z.object({
 });
 
 export type JobUnmatchedResponse = z.infer<typeof jobUnmatchedResponseSchema>;
+
+export const etlSyncLogSchema = z.object({
+  id: z.number(),
+  syncId: uuidSchema,
+  jobRunId: uuidSchema.nullable(),
+  stage: z.string().nullable(),
+  job: z.string().nullable(),
+  level: logLevelSchema,
+  message: z.string(),
+  fields: z.unknown().nullable(),
+  createdAt: isoDateTimeSchema,
+});
+
+export type EtlSyncLog = z.infer<typeof etlSyncLogSchema>;
+
+export const etlSyncLogsResponseSchema = z.object({
+  logs: z.array(etlSyncLogSchema),
+  total: z.number(),
+});
+
+export type EtlSyncLogsResponse = z.infer<typeof etlSyncLogsResponseSchema>;
+
+export const SYNC_LOG_DEFAULT_LIMIT = 200;
 
 export const startEtlSyncBodySchema = z
   .object({

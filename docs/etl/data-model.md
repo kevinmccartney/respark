@@ -38,6 +38,16 @@ One row per job inside a sync.
 | metrics                         | `records_*`, `download_bytes`, `duration_ms`         |
 | `source_version` / `source_url` | Provider bulk metadata                               |
 
+### `ops.etl_sync_log`
+
+Notable messages for the admin log panel (`job.log`, job start/complete, sync complete). Not progress ticks.
+
+| Column                         | Notes                                  |
+| ------------------------------ | -------------------------------------- |
+| `sync_id`                      | FK → `etl_sync` (CASCADE)              |
+| `job_run_id`                   | Optional FK → `etl_job_run` (SET NULL) |
+| `level` / `message` / `fields` | Same shape as a `job.log` event        |
+
 ### `ops.ingestion_error`
 
 Per-record failures (validate/transform/reconcile). `run_id` points at the **job run**. Column `stage` here is the processing step, not the sync stage.

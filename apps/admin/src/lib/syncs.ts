@@ -1,5 +1,6 @@
 import { apiFetchJson, type GetToken } from './api.ts';
 import {
+  etlSyncLogsResponseSchema,
   etlSyncResponseSchema,
   etlSyncsResponseSchema,
   jobErrorsResponseSchema,
@@ -8,6 +9,7 @@ import {
   startEtlSyncResponseSchema,
   type EtlJobRun,
   type EtlSync,
+  type EtlSyncLog,
   type IngestionError,
   type IngestionReconciliation,
   type IngestionUnmatched,
@@ -53,6 +55,18 @@ export const fetchEtlSyncs = async (
 export const fetchEtlSync = async (getToken: GetToken, id: string): Promise<EtlSync> => {
   const body = await apiFetchJson(`/admin/etl-syncs/${id}`, getToken, etlSyncResponseSchema);
   return body.sync;
+};
+
+export const fetchEtlSyncLogs = async (
+  getToken: GetToken,
+  syncId: string,
+  opts?: { limit?: number; offset?: number },
+): Promise<{ logs: EtlSyncLog[]; total: number }> => {
+  const path = withQuery(`/admin/etl-syncs/${syncId}/logs`, {
+    limit: opts?.limit ?? 200,
+    offset: opts?.offset,
+  });
+  return apiFetchJson(path, getToken, etlSyncLogsResponseSchema);
 };
 
 export const fetchJobErrors = async (

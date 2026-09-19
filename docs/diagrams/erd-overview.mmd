@@ -7,6 +7,7 @@ erDiagram
   catalog_printing ||--o{ catalog_card_face : "has faces"
   catalog_printing ||--o{ catalog_printing_identifier : "external ids"
   ops_etl_sync ||--o{ ops_etl_job_run : "runs jobs"
+  ops_etl_sync ||--o{ ops_etl_sync_log : "logs"
   ops_etl_job_run ||--o| ops_ingestion_reconciliation : "summarizes"
   ops_etl_job_run ||--o{ ops_ingestion_unmatched : "samples"
   ops_etl_job_run ||--o{ ops_ingestion_error : "records failures"

@@ -4,11 +4,13 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { DATABASE, type Database } from '../db/database.module';
 import {
   etlJobRuns,
+  etlSyncLogs,
   etlSyncs,
   ingestionErrors,
   ingestionReconciliations,
   ingestionUnmatched,
   type EtlJobRunRow,
+  type EtlSyncLogRow,
   type EtlSyncRow,
   type IngestionErrorRow,
   type IngestionReconciliationRow,
@@ -18,11 +20,13 @@ import {
   ingestionRunStatusSchema,
   type EtlJobRun,
   type EtlSync,
+  type EtlSyncLog,
   type IngestionError,
   type IngestionReconciliation,
   type IngestionRunStatus,
   type IngestionUnmatched,
 } from 'schemas/etl-sync';
+import { logLevelSchema } from 'schemas/primitives';
 
 @Injectable()
 export class AdminService {
@@ -88,6 +92,41 @@ export class AdminService {
       .orderBy(asc(etlJobRuns.startedAt));
 
     return toEtlSync(row, jobs);
+  }
+
+  async listEtlSyncLogs(
+    syncId: string,
+    input: { limit: number; offset: number },
+  ): Promise<{ logs: EtlSyncLog[]; total: number }> {
+    await this.getEtlSync(syncId);
+
+    const where = eq(etlSyncLogs.syncId, syncId);
+    const [totalRow] = await this.db.select({ total: count() }).from(etlSyncLogs).where(where);
+
+    const rows = await this.db
+      .select()
+      .from(etlSyncLogs)
+      .where(where)
+      .orderBy(asc(etlSyncLogs.id))
+      .limit(input.limit)
+      .offset(input.offset);
+
+    this.logger.info(
+      {
+        event: 'admin.etl_sync_logs.list',
+        syncId,
+        limit: input.limit,
+        offset: input.offset,
+        total: totalRow.total,
+        count: rows.length,
+      },
+      'Listed sync logs',
+    );
+
+    return {
+      logs: rows.map(toEtlSyncLog),
+      total: totalRow.total,
+    };
   }
 
   async getJobRun(syncId: string, jobRunId: string): Promise<EtlJobRun> {
@@ -248,6 +287,18 @@ const toEtlSync = (row: EtlSyncRow, jobs: EtlJobRunRow[]): EtlSync => {
     stages,
   };
 };
+
+const toEtlSyncLog = (row: EtlSyncLogRow): EtlSyncLog => ({
+  id: row.id,
+  syncId: row.syncId,
+  jobRunId: row.jobRunId,
+  stage: row.stage,
+  job: row.job,
+  level: logLevelSchema.parse(row.level),
+  message: row.message,
+  fields: row.fields,
+  createdAt: row.createdAt.toISOString(),
+});
 
 const toEtlJobRun = (row: EtlJobRunRow): EtlJobRun => ({
   id: row.id,

@@ -1,6 +1,7 @@
 import { Body, Controller, Get, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ADMIN_LIST_DEFAULT_LIMIT,
+  SYNC_LOG_DEFAULT_LIMIT,
   adminListQuerySchema,
   startEtlSyncBodySchema,
   type AdminListQuery,
@@ -41,6 +42,22 @@ export class AdminController {
   async getEtlSync(@Param('id', zodPipe(uuidSchema)) id: string) {
     return {
       sync: await this.adminService.getEtlSync(id),
+    };
+  }
+
+  @Get('etl-syncs/:id/logs')
+  async listEtlSyncLogs(
+    @Param('id', zodPipe(uuidSchema)) id: string,
+    @Query(zodPipe(adminListQuerySchema)) query: AdminListQuery,
+  ) {
+    const result = await this.adminService.listEtlSyncLogs(id, {
+      limit: query.limit ?? SYNC_LOG_DEFAULT_LIMIT,
+      offset: query.offset ?? 0,
+    });
+
+    return {
+      logs: result.logs,
+      total: result.total,
     };
   }
 

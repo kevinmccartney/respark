@@ -1,5 +1,7 @@
 erDiagram
   ops_etl_sync ||--o{ ops_etl_job_run : "sync_id CASCADE"
+  ops_etl_sync ||--o{ ops_etl_sync_log : "sync_id CASCADE"
+  ops_etl_job_run ||--o{ ops_etl_sync_log : "job_run_id"
   ops_etl_job_run ||--o| ops_ingestion_reconciliation : "run_id CASCADE"
   ops_etl_job_run ||--o{ ops_ingestion_unmatched : "run_id CASCADE"
   ops_etl_job_run ||--o{ ops_ingestion_error : "run_id logical"
@@ -13,6 +15,15 @@ erDiagram
     timestamptz started_at
     timestamptz completed_at
     text error_message
+  }
+
+  ops_etl_sync_log {
+    bigint id PK
+    uuid sync_id FK
+    uuid job_run_id FK
+    text level
+    text message
+    jsonb fields
   }
 
   ops_etl_job_run {
