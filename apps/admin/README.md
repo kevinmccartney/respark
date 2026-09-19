@@ -50,5 +50,7 @@ Add the admin origin to Clerk allowed origins / redirect URLs (same Clerk app as
 
 ## Screens
 
-- `/` — list of ETL syncs + **Start sync** (catalog / enrichment checkboxes → `POST /admin/etl-syncs`)
-- `/syncs/:id` — sync detail with stages/jobs, reconciliation, and failed rows
+- `/` — list of ETL syncs + **Start sync** (catalog / enrichment → `POST /admin/etl-syncs`); live via WebSocket
+- `/syncs/:id` — sync detail with stages/jobs, live log, reconciliation, failed rows
+
+WebSocket: `ws://<api>/admin/etl-syncs/ws?token=<clerk_jwt>` (admin role required). Subscribe with `{ "event": "subscribe", "data": { "channel": "list" } }` or `{ "channel": "sync", "syncId": "…" }`.

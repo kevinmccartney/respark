@@ -12,6 +12,24 @@ Nomenclature:
 
 **Enrichment stage** — job `identifiers` today (Printing identifiers via MTGJSON). Never creates printings.
 
+## Library vs CLI
+
+Business logic lives in the **etl lib** (`runEtlSync` from package `etl`). Callers supply an optional `onEvent` sink for live progress.
+
+| Interface | Role |
+| --- | --- |
+| **API** | Imports the lib in-process; forwards events over WebSocket to admin |
+| **CLI** | TTY / report adapter for break-glass DB maintenance |
+
+```bash
+# CLI report mode (human logs + progress bar)
+task etl -- sync --catalog --limit 10
+task etl -- sync --enrichment identifiers --limit 50
+task etl -- sync --catalog --enrichment identifiers
+```
+
+Deprecated aliases: `scryfall` / `mtgjson` / `full`.
+
 ## Setup
 
 ```bash
@@ -20,32 +38,7 @@ task db:up
 task db:migrate
 ```
 
-## Commands
-
-```bash
-task etl -- --help
-task etl -- ping
-
-# Catalog only
-task etl -- sync --catalog
-task etl -- sync --catalog --limit 1000
-
-# Enrichment only (Printing identifiers) — requires existing catalog
-task etl -- sync --enrichment identifiers
-task etl -- sync --enrichment identifiers --limit 2000
-task etl -- sync --enrichment identifiers --demo-mismatches
-
-# Both stages
-task etl -- sync --catalog --enrichment identifiers
-task etl -- sync --catalog --enrichment identifiers --limit 500
-
-# DB size → reports/etl-size-report.json
-task etl -- report
-```
-
-Deprecated aliases (one release): `scryfall` → catalog; `mtgjson` → enrichment identifiers; `full` → both.
-
-### Reconciliation
+## Reconciliation
 
 After the identifiers job completes, results are stored against that job run:
 
@@ -53,22 +46,18 @@ After the identifiers job completes, results are stored against that job run:
 - `ops.ingestion_unmatched`
 - Ambiguous detail → `ops.ingestion_error` (`stage = reconcile`)
 
-View in admin on `/syncs/:id`, or:
-
-- `GET /admin/etl-syncs/:id/jobs/:jobRunId/reconciliation`
-- `GET /admin/etl-syncs/:id/jobs/:jobRunId/unmatched`
-
-Utility still stubbed: `forecast`.
+View in admin on `/syncs/:id` (live while a sync runs via WebSocket).
 
 ## Layout
 
 ```text
 apps/etl/src/
-  cli.ts
-  commands/           # sync, report
-  core/
-  sources/scryfall/   # catalog job
-  sources/mtgjson/    # identifiers enrichment job
+  index.ts            # package exports (lib)
+  cli.ts              # TTY interface
+  lib/run-sync.ts     # orchestration
+  core/stream-events.ts
+  sources/scryfall/
+  sources/mtgjson/
   repositories/
 ```
 

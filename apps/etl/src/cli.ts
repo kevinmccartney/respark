@@ -8,7 +8,7 @@ import {
   parseEnrichmentJobs,
   runEtlSync,
   type EnrichmentJobId,
-} from './commands/sync'
+} from './lib/run-sync'
 
 loadEnv()
 

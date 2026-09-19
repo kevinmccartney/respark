@@ -13,7 +13,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ApiError } from '../lib/api.ts'
+import { connectEtlSyncWs } from '../lib/etl-ws.ts'
 import { formatDuration, formatTimestamp, statusBadgeProps } from '../lib/format.ts'
+import type { SyncEvent } from '../lib/sync-events.ts'
 import {
   fetchEtlSyncs,
   isForbidden,
@@ -27,6 +29,9 @@ export function SyncsListPage() {
   const { getToken } = useAuth()
   const navigate = useNavigate()
   const [syncs, setSyncs] = useState<EtlSync[]>([])
+  const [progressBySync, setProgressBySync] = useState<
+    Record<string, { percent: number | null; job: string }>
+  >({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [forbidden, setForbidden] = useState(false)
@@ -34,6 +39,7 @@ export function SyncsListPage() {
   const [includeEnrichment, setIncludeEnrichment] = useState(false)
   const [starting, setStarting] = useState(false)
   const [startMessage, setStartMessage] = useState<string | null>(null)
+  const [live, setLive] = useState(false)
 
   const enrichmentOnly = includeEnrichment && !includeCatalog
 
@@ -70,6 +76,92 @@ export function SyncsListPage() {
     return () => controller.abort()
   }, [loadSyncs])
 
+  useEffect(() => {
+    if (forbidden) return
+
+    const applyEvent = (event: SyncEvent) => {
+      if (event.type === 'sync.started') {
+        const s = event.sync
+        setSyncs((prev) => {
+          if (prev.some((x) => x.id === s.id)) {
+            return prev.map((x) =>
+              x.id === s.id
+                ? {
+                    ...x,
+                    status: s.status,
+                    includeCatalog: s.includeCatalog,
+                    includeEnrichment: s.includeEnrichment,
+                    enrichmentJobs: s.enrichmentJobs,
+                    startedAt: s.startedAt,
+                    completedAt: s.completedAt,
+                    errorMessage: s.errorMessage,
+                  }
+                : x,
+            )
+          }
+          const row: EtlSync = {
+            id: s.id,
+            status: s.status,
+            includeCatalog: s.includeCatalog,
+            includeEnrichment: s.includeEnrichment,
+            enrichmentJobs: s.enrichmentJobs,
+            startedAt: s.startedAt,
+            completedAt: s.completedAt,
+            errorMessage: s.errorMessage,
+            createdAt: s.startedAt,
+            stages: [],
+          }
+          return [row, ...prev].slice(0, 100)
+        })
+        return
+      }
+
+      if (event.type === 'sync.updated' || event.type === 'sync.completed') {
+        setSyncs((prev) =>
+          prev.map((x) =>
+            x.id === event.syncId
+              ? {
+                  ...x,
+                  status: event.status,
+                  completedAt: event.completedAt,
+                  errorMessage: event.errorMessage,
+                }
+              : x,
+          ),
+        )
+        if (event.type === 'sync.completed') {
+          setProgressBySync((prev) => {
+            const next = { ...prev }
+            delete next[event.syncId]
+            return next
+          })
+        }
+        return
+      }
+
+      if (event.type === 'job.progress') {
+        setProgressBySync((prev) => ({
+          ...prev,
+          [event.syncId]: {
+            percent: event.progress.percent,
+            job: event.job,
+          },
+        }))
+      }
+    }
+
+    const ws = connectEtlSyncWs(getToken, {
+      onOpen: () => {
+        setLive(true)
+        ws.subscribeList()
+      },
+      onClose: () => setLive(false),
+      onEvent: applyEvent,
+    })
+
+    return () => ws.close()
+  }, [getToken, forbidden])
+
   async function onStartSync() {
     if (!includeCatalog && !includeEnrichment) {
       setStartMessage('Select Catalog and/or Enrichment')
@@ -82,9 +174,7 @@ export function SyncsListPage() {
         catalog: includeCatalog,
         enrichmentJobs: includeEnrichment ? ['identifiers'] : [],
       })
-      setStartMessage('Sync started — refresh in a moment for the new row.')
-      await new Promise((r) => setTimeout(r, 800))
-      await loadSyncs()
+      setStartMessage('Sync started — live updates will appear below.')
     } catch (err) {
       if (err instanceof ApiError) setStartMessage(err.message)
       else setStartMessage('Could not start ETL sync')
@@ -100,6 +190,9 @@ export function SyncsListPage() {
           <h1 className="font-heading text-2xl tracking-tight">ETL syncs</h1>
           <p className="mt-1 text-muted-foreground">
             Pipeline executions (catalog + enrichment stages)
+            {live ? (
+              <span className="ml-2 text-xs text-emerald-700">· live</span>
+            ) : null}
           </p>
         </div>
         <form
@@ -166,37 +259,48 @@ export function SyncsListPage() {
                 <TableRow>
                   <TableHead>Status</TableHead>
                   <TableHead>Stages</TableHead>
+                  <TableHead>Progress</TableHead>
                   <TableHead>Started</TableHead>
                   <TableHead>Duration</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {syncs.map((sync) => (
-                  <TableRow
-                    key={sync.id}
-                    className="cursor-pointer"
-                    tabIndex={0}
-                    role="link"
-                    onClick={() => navigate(`/syncs/${sync.id}`)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        navigate(`/syncs/${sync.id}`)
-                      }
-                    }}
-                  >
-                    <TableCell>
-                      <Badge {...statusBadgeProps(sync.status)}>
-                        {sync.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{syncStagesLabel(sync)}</TableCell>
-                    <TableCell>{formatTimestamp(sync.startedAt)}</TableCell>
-                    <TableCell>
-                      {formatDuration(syncDurationMs(sync))}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {syncs.map((sync) => {
+                  const prog = progressBySync[sync.id]
+                  return (
+                    <TableRow
+                      key={sync.id}
+                      className="cursor-pointer"
+                      tabIndex={0}
+                      role="link"
+                      onClick={() => navigate(`/syncs/${sync.id}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          navigate(`/syncs/${sync.id}`)
+                        }
+                      }}
+                    >
+                      <TableCell>
+                        <Badge {...statusBadgeProps(sync.status)}>
+                          {sync.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{syncStagesLabel(sync)}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {prog
+                          ? prog.percent != null
+                            ? `${prog.job} ${prog.percent}%`
+                            : `${prog.job}…`
+                          : '—'}
+                      </TableCell>
+                      <TableCell>{formatTimestamp(sync.startedAt)}</TableCell>
+                      <TableCell>
+                        {formatDuration(syncDurationMs(sync))}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </div>

@@ -14,10 +14,9 @@ import { AdminRoleGuard } from '../auth/admin-role.guard'
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard'
 import {
   AdminEtlService,
-  ENRICHMENT_JOB_IDS,
-  type EnrichmentJobId,
 } from './admin-etl.service'
 import { AdminService } from './admin.service'
+import { ENRICHMENT_JOB_IDS, type EnrichmentJobId } from 'etl'
 
 @Controller('admin')
 @UseGuards(ClerkAuthGuard, AdminRoleGuard)

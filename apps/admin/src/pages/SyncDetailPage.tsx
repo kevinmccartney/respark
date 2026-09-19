@@ -1,5 +1,5 @@
 import { useAuth } from '@clerk/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -35,12 +35,14 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ApiError } from '../lib/api.ts'
+import { connectEtlSyncWs } from '../lib/etl-ws.ts'
 import {
   formatDuration,
   formatNumber,
   formatTimestamp,
   statusBadgeProps,
 } from '../lib/format.ts'
+import type { SyncEvent } from '../lib/sync-events.ts'
 import {
   fetchEtlSync,
   fetchJobErrors,
@@ -59,6 +61,13 @@ import {
 } from '../lib/syncs.ts'
 
 const PAGE_SIZE = 50
+
+type LiveLog = {
+  id: number
+  level: string
+  message: string
+  at: string
+}
 
 export function SyncDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -80,6 +89,9 @@ export function SyncDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [forbidden, setForbidden] = useState(false)
   const [expandedPayload, setExpandedPayload] = useState<number | null>(null)
+  const [liveLogs, setLiveLogs] = useState<LiveLog[]>([])
+  const [live, setLive] = useState(false)
+  const logSeqRef = useRef(0)
 
   useEffect(() => {
     if (!id) return
@@ -151,6 +163,189 @@ export function SyncDetailPage() {
     void load()
     return () => controller.abort()
   }, [getToken, id])
+
+  useEffect(() => {
+    if (!id || forbidden) return
+
+    const upsertJob = (job: Partial<EtlJobRun> & { id: string; stage: string; job: string }) => {
+      setSync((prev) => {
+        if (!prev) return prev
+        const stages = [...prev.stages]
+        let stageIdx = stages.findIndex((s) => s.stage === job.stage)
+        if (stageIdx < 0) {
+          stages.push({ stage: job.stage, jobs: [] })
+          stageIdx = stages.length - 1
+        }
+        const jobs = [...stages[stageIdx].jobs]
+        const jobIdx = jobs.findIndex((j) => j.id === job.id)
+        if (jobIdx >= 0) {
+          jobs[jobIdx] = { ...jobs[jobIdx], ...job }
+        } else {
+          jobs.push({
+            id: job.id,
+            syncId: prev.id,
+            stage: job.stage,
+            job: job.job,
+            status: job.status ?? 'running',
+            startedAt: job.startedAt ?? new Date().toISOString(),
+            completedAt: job.completedAt ?? null,
+            sourceVersion: null,
+            sourceUrl: null,
+            recordsSeen: job.recordsSeen ?? 0,
+            recordsInserted: job.recordsInserted ?? 0,
+            recordsUpdated: job.recordsUpdated ?? 0,
+            recordsUnchanged: job.recordsUnchanged ?? 0,
+            recordsFailed: job.recordsFailed ?? 0,
+            downloadBytes: job.downloadBytes ?? null,
+            durationMs: job.durationMs ?? null,
+            errorMessage: job.errorMessage ?? null,
+          })
+        }
+        stages[stageIdx] = { ...stages[stageIdx], jobs }
+        return { ...prev, stages }
+      })
+      setSelectedJobId((curr) => curr ?? job.id)
+    }
+
+    const appendLog = (level: string, message: string) => {
+      logSeqRef.current += 1
+      const lineId = logSeqRef.current
+      setLiveLogs((prev) =>
+        [
+          ...prev,
+          {
+            id: lineId,
+            level,
+            message,
+            at: new Date().toISOString(),
+          },
+        ].slice(-200),
+      )
+    }
+
+    const applyEvent = (event: SyncEvent) => {
+      const syncId =
+        event.type === 'sync.started'
+          ? event.sync.id
+          : 'syncId' in event
+            ? event.syncId
+            : null
+      if (syncId !== id) return
+
+      if (event.type === 'sync.updated' || event.type === 'sync.completed') {
+        setSync((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: event.status,
+                completedAt: event.completedAt,
+                errorMessage: event.errorMessage,
+              }
+            : prev,
+        )
+        return
+      }
+
+      if (event.type === 'job.started') {
+        upsertJob({
+          id: event.jobRunId,
+          stage: event.stage,
+          job: event.job,
+          status: event.status,
+          startedAt: event.startedAt,
+        })
+        appendLog('info', `Job started: ${event.stage}/${event.job}`)
+        return
+      }
+
+      if (event.type === 'job.completed') {
+        upsertJob({
+          id: event.jobRunId,
+          stage: event.stage,
+          job: event.job,
+          status: event.status,
+          completedAt: event.completedAt,
+          errorMessage: event.errorMessage,
+          ...event.metrics,
+        })
+        appendLog(
+          event.status === 'failed' ? 'error' : 'info',
+          `Job completed: ${event.stage}/${event.job} (${event.status})`,
+        )
+        return
+      }
+
+      if (event.type === 'job.progress') {
+        upsertJob({
+          id: event.jobRunId,
+          stage: event.stage,
+          job: event.job,
+          recordsSeen: event.progress.cards,
+          recordsInserted: event.progress.inserted,
+          recordsUpdated: event.progress.updated,
+          recordsUnchanged: event.progress.unchanged,
+          recordsFailed: event.progress.failed,
+        })
+        return
+      }
+
+      if (event.type === 'job.log') {
+        appendLog(event.level, event.message)
+        return
+      }
+
+      if (event.type === 'job.error') {
+        setTotalErrors((n) => n + 1)
+        setErrors((prev) => {
+          if (selectedJobId && event.jobRunId !== selectedJobId) return prev
+          const row: IngestionError = {
+            id: -Date.now(),
+            runId: event.jobRunId,
+            source: event.error.source,
+            externalId: event.error.externalId,
+            stage: event.error.stage,
+            errorMessage: event.error.errorMessage,
+            payload: event.error.payload ?? null,
+            createdAt: new Date().toISOString(),
+          }
+          return [row, ...prev].slice(0, PAGE_SIZE)
+        })
+        appendLog('error', event.error.errorMessage)
+        return
+      }
+
+      if (event.type === 'job.unmatched') {
+        setTotalUnmatched((n) => n + 1)
+        setUnmatched((prev) => {
+          if (selectedJobId && event.jobRunId !== selectedJobId) return prev
+          const row: IngestionUnmatched = {
+            id: -Date.now(),
+            runId: event.jobRunId,
+            externalId: event.unmatched.externalId,
+            name: event.unmatched.name,
+            setCode: event.unmatched.setCode,
+            collectorNumber: event.unmatched.collectorNumber,
+            language: event.unmatched.language,
+            scryfallId: event.unmatched.scryfallId,
+            reason: event.unmatched.reason,
+            createdAt: new Date().toISOString(),
+          }
+          return [...prev, row].slice(0, PAGE_SIZE)
+        })
+      }
+    }
+
+    const ws = connectEtlSyncWs(getToken, {
+      onOpen: () => {
+        setLive(true)
+        ws.subscribeSync(id)
+      },
+      onClose: () => setLive(false),
+      onEvent: applyEvent,
+    })
+
+    return () => ws.close()
+  }, [getToken, id, forbidden, selectedJobId])
 
   async function selectJob(job: EtlJobRun) {
     if (!id) return
@@ -265,6 +460,9 @@ export function SyncDetailPage() {
                 {syncStagesLabel(sync)}
               </h1>
               <Badge {...statusBadgeProps(sync.status)}>{sync.status}</Badge>
+              {live ? (
+                <span className="text-xs text-emerald-700">live</span>
+              ) : null}
             </div>
             <p className="mt-1 font-mono text-sm text-muted-foreground">
               {sync.id}
@@ -304,6 +502,35 @@ export function SyncDetailPage() {
                   </pre>
                 </AlertDescription>
               </Alert>
+            </section>
+          ) : null}
+
+          {liveLogs.length > 0 ? (
+            <section className="mt-6" aria-labelledby="live-log-heading">
+              <h2 id="live-log-heading" className="mb-3 font-heading text-lg">
+                Live log
+              </h2>
+              <div className="max-h-48 overflow-auto rounded-xl bg-zinc-950 p-3 font-mono text-xs text-zinc-100 ring-1 ring-foreground/10">
+                {liveLogs.map((line) => (
+                  <div key={line.id} className="whitespace-pre-wrap break-words">
+                    <span className="text-zinc-500">
+                      [{formatTimestamp(line.at)}]
+                    </span>{' '}
+                    <span
+                      className={
+                        line.level === 'error'
+                          ? 'text-red-400'
+                          : line.level === 'warn'
+                            ? 'text-amber-300'
+                            : 'text-zinc-300'
+                      }
+                    >
+                      {line.level}
+                    </span>{' '}
+                    {line.message}
+                  </div>
+                ))}
+              </div>
             </section>
           ) : null}
 

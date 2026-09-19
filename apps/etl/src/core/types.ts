@@ -1,3 +1,5 @@
+import type { SyncEventHandler } from './stream-events'
+
 /** Sync stages. */
 export type SyncStage = 'catalog' | 'enrichment'
 
@@ -21,7 +23,8 @@ export type GlobalFlags = {
   demoMismatches?: boolean
 }
 
-/** Parent sync id for a job run. */
+/** Parent sync id for a job run, plus optional live event sink. */
 export type JobContext = {
   syncId: string
+  onEvent?: SyncEventHandler
 }

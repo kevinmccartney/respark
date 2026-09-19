@@ -2,6 +2,7 @@ import { config } from 'dotenv'
 import { existsSync } from 'fs'
 import { resolve } from 'path'
 import { NestFactory } from '@nestjs/core'
+import { WsAdapter } from '@nestjs/platform-ws'
 import { Logger } from 'nestjs-pino'
 import { AppModule } from './app.module'
 
@@ -16,6 +17,7 @@ for (const file of ['.env', '.env.local']) {
 async function bootstrap() {
   // rawBody keeps the exact bytes Clerk signed available for webhook verification.
   const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true })
+  app.useWebSocketAdapter(new WsAdapter(app))
   app.useLogger(app.get(Logger))
   app.enableShutdownHooks()
   app.enableCors({

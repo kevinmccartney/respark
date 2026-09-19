@@ -63,7 +63,7 @@ task db:migrate   # or restart the Compose API (migrate-on-boot)
 Current tables:
 
 - **`users`** / **`decks`** — in `public` for now (app-owned; will move to the `app` schema later).
-- **Pipeline schemas** — `raw`, `catalog`, `market`, `app`, plus `ops.etl_sync` / `ops.etl_job_run` for ETL sync tracking. See [`apps/etl/README.md`](../etl/README.md) and `task etl -- --help`.
+- **Pipeline schemas** — `raw`, `catalog`, `market`, `app`, plus `ops.etl_sync` / `ops.etl_job_run` for ETL sync tracking. Admin starts syncs in-process via the `etl` lib and streams events on `/admin/etl-syncs/ws`. See [`apps/etl/README.md`](../etl/README.md) and `task etl -- --help`.
 
 ## Clerk webhooks
 

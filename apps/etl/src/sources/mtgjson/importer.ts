@@ -2,6 +2,7 @@ import type { Pool } from 'pg'
 import { payloadHash } from '../../core/hashing'
 import type { Logger } from '../../core/logger'
 import { ProgressBar, tapByteStream } from '../../core/progress'
+import { emitSyncEvent } from '../../core/stream-events'
 import type { GlobalFlags, IngestionRunStatus, JobContext } from '../../core/types'
 import {
   finishJobRun,
@@ -82,6 +83,16 @@ export async function runMtgjsonImport(
     sourceUrl: meta.downloadUrl,
   })
 
+  emitSyncEvent(ctx.onEvent, {
+    type: 'job.started',
+    syncId: ctx.syncId,
+    jobRunId: runId,
+    stage: STAGE,
+    job: JOB,
+    status: 'running',
+    startedAt: new Date().toISOString(),
+  })
+
   let recordsSeen = 0
   let recordsFailed = 0
   let downloadBytes: number | null = null
@@ -100,7 +111,7 @@ export async function runMtgjsonImport(
   const unmatchedSamples: UnmatchedRecord[] = []
   const MAX_UNMATCHED_SAMPLES = 5_000
 
-  // Catalog accounting for ops.ingestion_run:
+  // Catalog accounting for ops.etl_job_run:
   // inserted = identifiers newly written, updated = matched printings, unchanged unused
   let recordsInserted = 0
   let recordsUpdated = 0
@@ -111,7 +122,44 @@ export async function runMtgjsonImport(
     'MTGJSON',
     useCardProgress ? 'cards' : 'bytes',
     logger,
+    process.stderr,
+    (snap) => {
+      emitSyncEvent(ctx.onEvent, {
+        type: 'job.progress',
+        syncId: ctx.syncId,
+        jobRunId: runId,
+        stage: STAGE,
+        job: JOB,
+        progress: {
+          current: snap.current,
+          total: snap.total,
+          cards: snap.cards,
+          inserted: snap.inserted,
+          updated: snap.updated,
+          unchanged: snap.unchanged,
+          failed: snap.failed,
+          percent: snap.percent,
+        },
+      })
+    },
   )
+
+  const emitUnmatched = (row: UnmatchedRecord) => {
+    emitSyncEvent(ctx.onEvent, {
+      type: 'job.unmatched',
+      syncId: ctx.syncId,
+      jobRunId: runId,
+      unmatched: {
+        externalId: row.mtgjsonUuid,
+        name: row.name,
+        setCode: row.setCode,
+        collectorNumber: row.collectorNumber,
+        language: row.language,
+        scryfallId: row.scryfallId,
+        reason: row.reason,
+      },
+    })
+  }
 
   const snapshot = () => ({
     current: useCardProgress ? recordsSeen : bytesRead,
@@ -135,7 +183,7 @@ export async function runMtgjsonImport(
           else {
             stats.unmatched += 1
             if (unmatchedSamples.length < MAX_UNMATCHED_SAMPLES) {
-              unmatchedSamples.push({
+              const row = {
                 mtgjsonUuid: item.enrichment.mtgjsonUuid,
                 name: item.enrichment.name,
                 setCode: item.enrichment.setCode,
@@ -143,7 +191,9 @@ export async function runMtgjsonImport(
                 language: item.enrichment.language,
                 scryfallId: item.enrichment.scryfallId,
                 reason: result.reason,
-              })
+              }
+              unmatchedSamples.push(row)
+              emitUnmatched(row)
             }
           }
         }
@@ -195,10 +245,27 @@ export async function runMtgjsonImport(
               scryfallId: item.enrichment.scryfallId,
             },
           })
+          emitSyncEvent(ctx.onEvent, {
+            type: 'job.error',
+            syncId: ctx.syncId,
+            jobRunId: runId,
+            error: {
+              source: SOURCE,
+              externalId: item.enrichment.mtgjsonUuid,
+              stage: 'reconcile',
+              errorMessage: result.reason,
+              payload: {
+                name: item.enrichment.name,
+                setCode: item.enrichment.setCode,
+                number: item.enrichment.collectorNumber,
+                scryfallId: item.enrichment.scryfallId,
+              },
+            },
+          })
         } else {
           stats.unmatched += 1
           if (unmatchedSamples.length < MAX_UNMATCHED_SAMPLES) {
-            unmatchedSamples.push({
+            const row = {
               mtgjsonUuid: item.enrichment.mtgjsonUuid,
               name: item.enrichment.name,
               setCode: item.enrichment.setCode,
@@ -206,7 +273,9 @@ export async function runMtgjsonImport(
               language: item.enrichment.language,
               scryfallId: item.enrichment.scryfallId,
               reason: result.reason,
-            })
+            }
+            unmatchedSamples.push(row)
+            emitUnmatched(row)
           }
         }
       }
@@ -291,6 +360,18 @@ export async function runMtgjsonImport(
             stage: 'validate',
             errorMessage: parsed.error.message,
             payload: value,
+          })
+          emitSyncEvent(ctx.onEvent, {
+            type: 'job.error',
+            syncId: ctx.syncId,
+            jobRunId: runId,
+            error: {
+              source: SOURCE,
+              externalId: key,
+              stage: 'validate',
+              errorMessage: parsed.error.message,
+              payload: value,
+            },
           })
           continue
         }
@@ -388,6 +469,26 @@ export async function runMtgjsonImport(
       durationMs: Date.now() - started,
     })
 
+    emitSyncEvent(ctx.onEvent, {
+      type: 'job.completed',
+      syncId: ctx.syncId,
+      jobRunId: runId,
+      stage: STAGE,
+      job: JOB,
+      status,
+      metrics: {
+        recordsSeen,
+        recordsInserted,
+        recordsUpdated,
+        recordsUnchanged,
+        recordsFailed: recordsFailed + stats.unmatched + stats.ambiguous,
+        downloadBytes,
+        durationMs: Date.now() - started,
+      },
+      completedAt: new Date().toISOString(),
+      errorMessage: null,
+    })
+
     logger.info(
       {
         event: 'mtgjson.complete',
@@ -411,6 +512,25 @@ export async function runMtgjsonImport(
       recordsFailed: recordsFailed + stats.unmatched + stats.ambiguous,
       downloadBytes,
       durationMs: Date.now() - started,
+      errorMessage: message,
+    })
+    emitSyncEvent(ctx.onEvent, {
+      type: 'job.completed',
+      syncId: ctx.syncId,
+      jobRunId: runId,
+      stage: STAGE,
+      job: JOB,
+      status: 'failed',
+      metrics: {
+        recordsSeen,
+        recordsInserted,
+        recordsUpdated,
+        recordsUnchanged,
+        recordsFailed: recordsFailed + stats.unmatched + stats.ambiguous,
+        downloadBytes,
+        durationMs: Date.now() - started,
+      },
+      completedAt: new Date().toISOString(),
       errorMessage: message,
     })
     throw err

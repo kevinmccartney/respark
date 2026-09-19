@@ -48,6 +48,7 @@ export class ProgressBar {
   private readonly startedAt = Date.now()
   private lastRenderAt = 0
   private lastLogAt = 0
+  private lastProgressEmitAt = 0
   private readonly tty: boolean
   private closed = false
 
@@ -56,6 +57,7 @@ export class ProgressBar {
     private readonly mode: 'bytes' | 'cards',
     private readonly logger?: ProgressLogger,
     private readonly out: NodeJS.WritableStream = process.stderr,
+    private readonly onProgress?: (snap: ProgressSnapshot & { percent: number | null }) => void,
   ) {
     this.tty = Boolean(
       (out as NodeJS.WriteStream).isTTY && process.env.CI !== 'true',
@@ -75,6 +77,14 @@ export class ProgressBar {
       const remaining = Math.max(snap.total - snap.current, 0)
       const rate = snap.current / elapsedSec
       etaSec = rate > 0 ? remaining / rate : null
+    }
+
+    if (this.onProgress && (force || now - this.lastProgressEmitAt >= 1000)) {
+      this.lastProgressEmitAt = now
+      this.onProgress({
+        ...snap,
+        percent: pct === null ? null : Number(pct.toFixed(1)),
+      })
     }
 
     if (this.tty) {

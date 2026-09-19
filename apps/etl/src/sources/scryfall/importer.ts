@@ -2,6 +2,7 @@ import type { Pool } from "pg";
 import { payloadHash } from "../../core/hashing";
 import type { Logger } from "../../core/logger";
 import { ProgressBar, tapByteStream } from "../../core/progress";
+import { emitSyncEvent } from "../../core/stream-events";
 import type { GlobalFlags, IngestionRunStatus, JobContext } from "../../core/types";
 import { upsertCatalogRecords } from "../../repositories/catalog";
 import {
@@ -86,6 +87,16 @@ export async function runScryfallImport(
     sourceUrl: bulkDownloadUri(dataset),
   });
 
+  emitSyncEvent(ctx.onEvent, {
+    type: "job.started",
+    syncId: ctx.syncId,
+    jobRunId: runId,
+    stage: STAGE,
+    job: JOB,
+    status: "running",
+    startedAt: new Date().toISOString(),
+  });
+
   let recordsSeen = 0;
   let recordsInserted = 0;
   let recordsUpdated = 0;
@@ -100,6 +111,26 @@ export async function runScryfallImport(
     "Scryfall",
     useCardProgress ? "cards" : "bytes",
     logger,
+    process.stderr,
+    (snap) => {
+      emitSyncEvent(ctx.onEvent, {
+        type: "job.progress",
+        syncId: ctx.syncId,
+        jobRunId: runId,
+        stage: STAGE,
+        job: JOB,
+        progress: {
+          current: snap.current,
+          total: snap.total,
+          cards: snap.cards,
+          inserted: snap.inserted,
+          updated: snap.updated,
+          unchanged: snap.unchanged,
+          failed: snap.failed,
+          percent: snap.percent,
+        },
+      });
+    },
   );
 
   const snapshot = () => ({
@@ -175,16 +206,29 @@ export async function runScryfallImport(
       const parsed = scryfallCardSchema.safeParse(raw);
       if (!parsed.success) {
         recordsFailed += 1;
+        const externalId =
+          typeof (raw as { id?: unknown })?.id === "string"
+            ? (raw as { id: string }).id
+            : null;
         await insertIngestionError(pool, {
           runId,
           source: SOURCE,
-          externalId:
-            typeof (raw as { id?: unknown })?.id === "string"
-              ? (raw as { id: string }).id
-              : null,
+          externalId,
           stage: "validate",
           errorMessage: parsed.error.message,
           payload: raw,
+        });
+        emitSyncEvent(ctx.onEvent, {
+          type: "job.error",
+          syncId: ctx.syncId,
+          jobRunId: runId,
+          error: {
+            source: SOURCE,
+            externalId,
+            stage: "validate",
+            errorMessage: parsed.error.message,
+            payload: raw,
+          },
         });
         continue;
       }
@@ -201,6 +245,19 @@ export async function runScryfallImport(
           errorMessage:
             "Missing required fields for catalog (oracle_id / set / collector_number)",
           payload: raw,
+        });
+        emitSyncEvent(ctx.onEvent, {
+          type: "job.error",
+          syncId: ctx.syncId,
+          jobRunId: runId,
+          error: {
+            source: SOURCE,
+            externalId: card.id,
+            stage: "transform",
+            errorMessage:
+              "Missing required fields for catalog (oracle_id / set / collector_number)",
+            payload: raw,
+          },
         });
         // Still stage raw when possible so we can debug later.
         if (!options.dryRun && options.storeRaw) {
@@ -270,6 +327,27 @@ export async function runScryfallImport(
       durationMs: Date.now() - started,
     });
 
+    const completedAt = new Date().toISOString();
+    emitSyncEvent(ctx.onEvent, {
+      type: "job.completed",
+      syncId: ctx.syncId,
+      jobRunId: runId,
+      stage: STAGE,
+      job: JOB,
+      status,
+      metrics: {
+        recordsSeen,
+        recordsInserted,
+        recordsUpdated,
+        recordsUnchanged,
+        recordsFailed,
+        downloadBytes,
+        durationMs: Date.now() - started,
+      },
+      completedAt,
+      errorMessage: null,
+    });
+
     logger.info(
       {
         event: "scryfall.complete",
@@ -303,6 +381,25 @@ export async function runScryfallImport(
       recordsFailed,
       downloadBytes,
       durationMs: Date.now() - started,
+      errorMessage: message,
+    });
+    emitSyncEvent(ctx.onEvent, {
+      type: "job.completed",
+      syncId: ctx.syncId,
+      jobRunId: runId,
+      stage: STAGE,
+      job: JOB,
+      status: "failed",
+      metrics: {
+        recordsSeen,
+        recordsInserted,
+        recordsUpdated,
+        recordsUnchanged,
+        recordsFailed,
+        downloadBytes,
+        durationMs: Date.now() - started,
+      },
+      completedAt: new Date().toISOString(),
       errorMessage: message,
     });
     throw err;

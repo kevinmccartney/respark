@@ -1,5 +1,6 @@
 import type { Pool } from 'pg'
 import type { Logger } from '../core/logger'
+import { emitSyncEvent, type SyncEventHandler } from '../core/stream-events'
 import type { GlobalFlags, IngestionRunStatus } from '../core/types'
 import {
   finishEtlSync,
@@ -17,6 +18,10 @@ export type SyncOptions = GlobalFlags & {
   enrichmentJobs: EnrichmentJobId[]
 }
 
+export type RunEtlSyncHooks = {
+  onEvent?: SyncEventHandler
+}
+
 function jobOk(status: IngestionRunStatus): boolean {
   return status === 'success' || status === 'partial_success'
 }
@@ -24,20 +29,39 @@ function jobOk(status: IngestionRunStatus): boolean {
 /**
  * Run one ETL sync: optional catalog stage, then optional enrichment jobs.
  * Creates ops.etl_sync and rolls up status from job runs.
+ * Callers (CLI or API) supply an optional onEvent sink for live updates.
  */
 export async function runEtlSync(
   pool: Pool,
   logger: Logger,
   options: SyncOptions,
+  hooks: RunEtlSyncHooks = {},
 ): Promise<IngestionRunStatus> {
   if (!options.catalog && options.enrichmentJobs.length === 0) {
     throw new Error('sync requires --catalog and/or --enrichment <job>')
   }
 
+  const onEvent = hooks.onEvent
+  const startedAt = new Date().toISOString()
+
   const syncId = await startEtlSync(pool, {
     includeCatalog: options.catalog,
     includeEnrichment: options.enrichmentJobs.length > 0,
     enrichmentJobs: options.enrichmentJobs,
+  })
+
+  emitSyncEvent(onEvent, {
+    type: 'sync.started',
+    sync: {
+      id: syncId,
+      status: 'running',
+      includeCatalog: options.catalog,
+      includeEnrichment: options.enrichmentJobs.length > 0,
+      enrichmentJobs: [...options.enrichmentJobs],
+      startedAt,
+      completedAt: null,
+      errorMessage: null,
+    },
   })
 
   logger.info(
@@ -49,15 +73,27 @@ export async function runEtlSync(
     },
     'ETL sync started',
   )
+  emitSyncEvent(onEvent, {
+    type: 'job.log',
+    syncId,
+    jobRunId: null,
+    stage: null,
+    job: null,
+    level: 'info',
+    message: 'ETL sync started',
+    fields: {
+      catalog: options.catalog,
+      enrichmentJobs: options.enrichmentJobs,
+    },
+  })
 
   const statuses: IngestionRunStatus[] = []
   let fatalError: string | null = null
+  const jobCtx = { syncId, onEvent }
 
   try {
     if (options.catalog) {
-      const catalogStatus = await runScryfallImport(pool, logger, options, {
-        syncId,
-      })
+      const catalogStatus = await runScryfallImport(pool, logger, options, jobCtx)
       statuses.push(catalogStatus)
 
       if (!jobOk(catalogStatus) && options.enrichmentJobs.length > 0) {
@@ -65,15 +101,33 @@ export async function runEtlSync(
           { event: 'etl.sync.skip_enrichment', syncId, catalogStatus },
           'Catalog job did not succeed — skipping enrichment',
         )
+        emitSyncEvent(onEvent, {
+          type: 'job.log',
+          syncId,
+          jobRunId: null,
+          stage: 'catalog',
+          job: 'catalog',
+          level: 'warn',
+          message: 'Catalog job did not succeed — skipping enrichment',
+          fields: { catalogStatus },
+        })
         const status = rollupSyncStatus(statuses)
         await finishEtlSync(pool, { syncId, status })
+        const completedAt = new Date().toISOString()
+        emitSyncEvent(onEvent, {
+          type: 'sync.completed',
+          syncId,
+          status,
+          completedAt,
+          errorMessage: null,
+        })
         return status
       }
     }
 
     for (const job of options.enrichmentJobs) {
       if (job === 'identifiers') {
-        const status = await runMtgjsonImport(pool, logger, options, { syncId })
+        const status = await runMtgjsonImport(pool, logger, options, jobCtx)
         statuses.push(status)
       } else {
         throw new Error(`Unknown enrichment job: ${job}`)
@@ -93,16 +147,41 @@ export async function runEtlSync(
       status,
       errorMessage: fatalError,
     })
+    const completedAt = new Date().toISOString()
+    emitSyncEvent(onEvent, {
+      type: 'sync.updated',
+      syncId,
+      status,
+      completedAt,
+      errorMessage: fatalError,
+    })
+    emitSyncEvent(onEvent, {
+      type: 'sync.completed',
+      syncId,
+      status,
+      completedAt,
+      errorMessage: fatalError,
+    })
     throw err
   }
 
   const status = rollupSyncStatus(statuses)
   await finishEtlSync(pool, { syncId, status })
+  const completedAt = new Date().toISOString()
   logger.info({ event: 'etl.sync.complete', syncId, status }, 'ETL sync finished')
+  emitSyncEvent(onEvent, {
+    type: 'sync.completed',
+    syncId,
+    status,
+    completedAt,
+    errorMessage: null,
+  })
   return status
 }
 
-export function parseEnrichmentJobs(raw: string | string[] | undefined): EnrichmentJobId[] {
+export function parseEnrichmentJobs(
+  raw: string | string[] | undefined,
+): EnrichmentJobId[] {
   if (raw === undefined) return []
   const parts = (Array.isArray(raw) ? raw : [raw])
     .flatMap((v) => v.split(','))
