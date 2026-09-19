@@ -66,7 +66,7 @@ Current tables:
 - **`GET /cards`** — authenticated keyword search over unique `catalog.card` rows (trigram indexes; `page` + `limit` pagination).
 - **`GET /cards/suggestions`** — name-only autocomplete (`id` + `name`) for deck building.
 - **`GET /cards/:id`** — card detail plus printings (set, collector number, images).
-- **`GET/POST /decks`**, **`GET/PATCH/DELETE /decks/:id`**, **`POST/PATCH/DELETE /decks/:id/cards…`** — deck CRUD + card lines (`POST` accepts `cardId`; deck `PATCH` applies any provided fields — `name`, `description`, `format`; card `PATCH` accepts `quantity` and/or `printingId`).
+- **`GET/POST /decks`**, **`GET/PATCH/DELETE /decks/:id`**, **`POST /decks/:id/import`**, **`POST/PATCH/DELETE /decks/:id/cards…`** — deck CRUD + Moxfield-style list import (incl. `SIDEBOARD:` / `SB:`) + card lines (`POST` accepts `cardId`; deck `PATCH` applies any provided fields — `name`, `description`, `format`; card `PATCH` accepts `quantity`, `printingId`, `foil`, and/or `sideboard`; lines are unique per printing + foil + board).
 - **Pipeline schemas** — `raw`, `catalog`, `market`, `ops`, plus `ops.etl_sync` / `ops.etl_job_run` for ETL sync tracking. Admin starts syncs in-process via the `etl` lib and streams events on `/admin/etl-syncs/ws`. See [`apps/etl/README.md`](../etl/README.md) and `task etl -- --help`.
 
 ## Clerk webhooks

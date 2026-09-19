@@ -50,7 +50,7 @@ Identifiers-job summary and sampled unmatched MTGJSON rows (keyed by job-run id)
 | --- | --- |
 | `app.users` | Local identity + Clerk profile cache (`clerk_user_id`) |
 | `app.decks` | User decks (`user_id` → `app.users`; optional `description`; `format`: `standard` \| `commander` \| `modern`) |
-| `app.deck_card` | Deck lines (`printing_id` → `catalog.printing`, quantity; unique per deck + printing) |
+| `app.deck_card` | Deck lines (`printing_id` → `catalog.printing`, `foil`, `sideboard`, quantity; unique per deck + printing + foil + board) |
 
 Keeping identity in `app` (not a separate `users` schema) matches the other domain boundaries: one schema per product surface, not per table.
 

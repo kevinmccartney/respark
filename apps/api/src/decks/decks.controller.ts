@@ -109,6 +109,19 @@ export class DecksController {
     return { ok: true }
   }
 
+  @Post(':id/import')
+  async importList(
+    @CurrentUserId() userId: string,
+    @Param('id') id: string,
+    @Body() body: { text?: unknown },
+  ) {
+    requireUuid(id, 'deck id')
+    if (typeof body?.text !== 'string') {
+      throw new BadRequestException('text is required')
+    }
+    return this.decksService.importMoxfield(userId, id, body.text)
+  }
+
   @Post(':id/cards')
   async addCard(
     @CurrentUserId() userId: string,
@@ -128,15 +141,25 @@ export class DecksController {
     @CurrentUserId() userId: string,
     @Param('id') id: string,
     @Param('deckCardId') deckCardId: string,
-    @Body() body: { quantity?: unknown; printingId?: unknown },
+    @Body()
+    body: {
+      quantity?: unknown
+      printingId?: unknown
+      foil?: unknown
+      sideboard?: unknown
+    },
   ) {
     requireUuid(id, 'deck id')
     requireUuid(deckCardId, 'deck card id')
 
     const hasQuantity = body?.quantity !== undefined
     const hasPrinting = body?.printingId !== undefined
-    if (!hasQuantity && !hasPrinting) {
-      throw new BadRequestException('quantity or printingId is required')
+    const hasFoil = body?.foil !== undefined
+    const hasSideboard = body?.sideboard !== undefined
+    if (!hasQuantity && !hasPrinting && !hasFoil && !hasSideboard) {
+      throw new BadRequestException(
+        'quantity, printingId, foil, or sideboard is required',
+      )
     }
 
     let card = null as Awaited<
@@ -153,6 +176,27 @@ export class DecksController {
         id,
         lineId,
         printingId,
+      )
+      lineId = card.id
+    }
+
+    if (hasFoil) {
+      if (typeof body.foil !== 'boolean') {
+        throw new BadRequestException('foil must be a boolean')
+      }
+      card = await this.decksService.setCardFoil(userId, id, lineId, body.foil)
+      lineId = card.id
+    }
+
+    if (hasSideboard) {
+      if (typeof body.sideboard !== 'boolean') {
+        throw new BadRequestException('sideboard must be a boolean')
+      }
+      card = await this.decksService.setCardSideboard(
+        userId,
+        id,
+        lineId,
+        body.sideboard,
       )
       lineId = card.id
     }

@@ -18,6 +18,8 @@ export type DeckCard = {
   manaCost: string | null
   manaValue: string | null
   typeLine: string | null
+  foil: boolean
+  sideboard: boolean
   quantity: number
   setCode: string
   setName: string
@@ -40,4 +42,15 @@ export type UpdateDeckInput = {
   name?: string
   description?: string | null
   format?: DeckFormat
+}
+
+export type DeckImportUnmatched = {
+  line: string
+  reason: string
+}
+
+export type DeckImportResult = {
+  imported: number
+  unmatched: DeckImportUnmatched[]
+  detail: DeckDetail
 }

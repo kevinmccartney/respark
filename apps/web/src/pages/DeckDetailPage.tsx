@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ManaCost } from '../components/ManaCost.tsx'
+import { DeckImportDialog } from '../components/DeckImportDialog.tsx'
 import { PrintingPickerDialog } from '../components/PrintingPickerDialog.tsx'
 import { SiteHeader } from '../components/SiteHeader.tsx'
 import { ApiError } from '../lib/api.ts'
@@ -14,6 +15,7 @@ import {
   DECK_GROUP_LABELS,
   DECK_GROUP_MODES,
   groupDeckCards,
+  type DeckCardGroup,
   type DeckGroupMode,
 } from '../lib/deck-grouping.ts'
 import {
@@ -25,6 +27,8 @@ import {
   removeDeckCard,
   setDeckCardPrinting,
   setDeckCardQuantity,
+  setDeckCardFoil,
+  setDeckCardSideboard,
   updateDeck,
   type DeckCard,
   type DeckDetail,
@@ -53,15 +57,28 @@ export function DeckDetailPage() {
   const [descriptionDraft, setDescriptionDraft] = useState('')
   const [savingDetails, setSavingDetails] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
 
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<CardNameSuggestion[]>([])
   const [suggesting, setSuggesting] = useState(false)
   const [addingId, setAddingId] = useState<string | null>(null)
 
-  const groups = useMemo(
-    () => (detail ? groupDeckCards(detail.cards, groupMode) : []),
-    [detail, groupMode],
+  const mainboardCards = useMemo(
+    () => detail?.cards.filter((card) => !card.sideboard) ?? [],
+    [detail],
+  )
+  const sideboardCards = useMemo(
+    () => detail?.cards.filter((card) => card.sideboard) ?? [],
+    [detail],
+  )
+  const mainGroups = useMemo(
+    () => groupDeckCards(mainboardCards, groupMode),
+    [mainboardCards, groupMode],
+  )
+  const sideGroups = useMemo(
+    () => groupDeckCards(sideboardCards, groupMode),
+    [sideboardCards, groupMode],
   )
 
   useEffect(() => {
@@ -175,6 +192,42 @@ export function DeckDetailPage() {
     setDetail((prev) => (prev ? upsertDeckCard(prev, previousId, updated) : prev))
   }
 
+  async function toggleFoil(card: DeckCard) {
+    if (!detail) return
+    setActionError(null)
+    try {
+      const updated = await setDeckCardFoil(
+        getToken,
+        detail.deck.id,
+        card.id,
+        !card.foil,
+      )
+      setDetail((prev) => (prev ? upsertDeckCard(prev, card.id, updated) : prev))
+    } catch (err) {
+      setActionError(
+        err instanceof ApiError ? err.message : 'Could not update foil',
+      )
+    }
+  }
+
+  async function toggleSideboard(card: DeckCard) {
+    if (!detail) return
+    setActionError(null)
+    try {
+      const updated = await setDeckCardSideboard(
+        getToken,
+        detail.deck.id,
+        card.id,
+        !card.sideboard,
+      )
+      setDetail((prev) => (prev ? upsertDeckCard(prev, card.id, updated) : prev))
+    } catch (err) {
+      setActionError(
+        err instanceof ApiError ? err.message : 'Could not move card',
+      )
+    }
+  }
+
   function startEditDetails() {
     if (!detail) return
     setNameDraft(detail.deck.name)
@@ -238,8 +291,10 @@ export function DeckDetailPage() {
     }
   }
 
-  const totalCards =
-    detail?.cards.reduce((sum, card) => sum + card.quantity, 0) ?? 0
+  const mainTotal =
+    mainboardCards.reduce((sum, card) => sum + card.quantity, 0)
+  const sideTotal =
+    sideboardCards.reduce((sum, card) => sum + card.quantity, 0)
 
   return (
     <>
@@ -339,12 +394,23 @@ export function DeckDetailPage() {
                         {detail.deck.name}
                       </h1>
                       <p className="text-sm text-muted-foreground">
-                        {DECK_FORMAT_LABELS[detail.deck.format]} · {totalCards}{' '}
-                        card{totalCards === 1 ? '' : 's'} ·{' '}
-                        {detail.cards.length} unique
+                        {DECK_FORMAT_LABELS[detail.deck.format]} · {mainTotal}{' '}
+                        card{mainTotal === 1 ? '' : 's'}
+                        {sideTotal > 0
+                          ? ` · ${sideTotal} sideboard`
+                          : ''}{' '}
+                        · {mainboardCards.length} unique
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setImportOpen(true)}
+                      >
+                        Import
+                      </Button>
                       <Button
                         type="button"
                         variant="outline"
@@ -454,46 +520,33 @@ export function DeckDetailPage() {
                   No cards yet — search by name above to add some.
                 </p>
               ) : (
-                <div className="space-y-6">
-                  {groups.map((group) => (
-                    <div key={group.key} className="space-y-3">
-                      {groupMode !== 'none' ? (
-                        <h3 className="flex items-baseline justify-between gap-3 border-b pb-1 font-heading text-base">
-                          <span>{group.label}</span>
-                          <span className="text-sm font-normal text-muted-foreground">
-                            {group.totalQuantity}
-                          </span>
-                        </h3>
-                      ) : null}
-                      {group.subgroups && group.subgroups.length > 0 ? (
-                        <div className="space-y-4">
-                          {group.subgroups.map((subgroup) => (
-                            <div key={subgroup.key} className="space-y-2">
-                              <h4 className="flex items-baseline justify-between gap-3 text-sm font-medium text-muted-foreground">
-                                <span>{subgroup.label}</span>
-                                <span className="font-normal tabular-nums">
-                                  {subgroup.totalQuantity}
-                                </span>
-                              </h4>
-                              <CardCollection
-                                cards={subgroup.cards}
-                                viewMode={viewMode}
-                                onPickPrinting={setPickingCard}
-                                onBump={bumpQuantity}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <CardCollection
-                          cards={group.cards}
-                          viewMode={viewMode}
-                          onPickPrinting={setPickingCard}
-                          onBump={bumpQuantity}
-                        />
-                      )}
-                    </div>
-                  ))}
+                <div className="space-y-8">
+                  {mainboardCards.length > 0 ? (
+                    <BoardSection
+                      title="Mainboard"
+                      showTitle={sideboardCards.length > 0}
+                      groups={mainGroups}
+                      groupMode={groupMode}
+                      viewMode={viewMode}
+                      onPickPrinting={setPickingCard}
+                      onBump={bumpQuantity}
+                      onToggleFoil={toggleFoil}
+                      onToggleSideboard={toggleSideboard}
+                    />
+                  ) : null}
+                  {sideboardCards.length > 0 ? (
+                    <BoardSection
+                      title="Sideboard"
+                      showTitle
+                      groups={sideGroups}
+                      groupMode={groupMode}
+                      viewMode={viewMode}
+                      onPickPrinting={setPickingCard}
+                      onBump={bumpQuantity}
+                      onToggleFoil={toggleFoil}
+                      onToggleSideboard={toggleSideboard}
+                    />
+                  ) : null}
                 </div>
               )}
             </section>
@@ -505,6 +558,12 @@ export function DeckDetailPage() {
               }}
               deckCard={pickingCard}
               onSelect={handlePrintingSelect}
+            />
+            <DeckImportDialog
+              open={importOpen}
+              onOpenChange={setImportOpen}
+              deckId={detail.deck.id}
+              onImported={(next) => setDetail(next)}
             />
           </>
         ) : null}
@@ -552,16 +611,102 @@ function ToggleGroup<T extends string>({
   )
 }
 
+function BoardSection({
+  title,
+  showTitle,
+  groups,
+  groupMode,
+  viewMode,
+  onPickPrinting,
+  onBump,
+  onToggleFoil,
+  onToggleSideboard,
+}: {
+  title: string
+  showTitle: boolean
+  groups: DeckCardGroup[]
+  groupMode: DeckGroupMode
+  viewMode: ViewMode
+  onPickPrinting: (card: DeckCard) => void
+  onBump: (card: DeckCard, delta: number) => void
+  onToggleFoil: (card: DeckCard) => void
+  onToggleSideboard: (card: DeckCard) => void
+}) {
+  const total = groups.reduce((sum, group) => sum + group.totalQuantity, 0)
+
+  return (
+    <div className="space-y-4">
+      {showTitle ? (
+        <h3 className="flex items-baseline justify-between gap-3 font-heading text-lg">
+          <span>{title}</span>
+          <span className="text-sm font-normal text-muted-foreground">
+            {total}
+          </span>
+        </h3>
+      ) : null}
+      <div className="space-y-6">
+        {groups.map((group) => (
+          <div key={`${title}-${group.key}`} className="space-y-3">
+            {groupMode !== 'none' ? (
+              <h4 className="flex items-baseline justify-between gap-3 border-b pb-1 font-heading text-base">
+                <span>{group.label}</span>
+                <span className="text-sm font-normal text-muted-foreground">
+                  {group.totalQuantity}
+                </span>
+              </h4>
+            ) : null}
+            {group.subgroups && group.subgroups.length > 0 ? (
+              <div className="space-y-4">
+                {group.subgroups.map((subgroup) => (
+                  <div key={subgroup.key} className="space-y-2">
+                    <p className="flex items-baseline justify-between gap-3 text-sm font-medium text-muted-foreground">
+                      <span>{subgroup.label}</span>
+                      <span className="font-normal tabular-nums">
+                        {subgroup.totalQuantity}
+                      </span>
+                    </p>
+                    <CardCollection
+                      cards={subgroup.cards}
+                      viewMode={viewMode}
+                      onPickPrinting={onPickPrinting}
+                      onBump={onBump}
+                      onToggleFoil={onToggleFoil}
+                      onToggleSideboard={onToggleSideboard}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <CardCollection
+                cards={group.cards}
+                viewMode={viewMode}
+                onPickPrinting={onPickPrinting}
+                onBump={onBump}
+                onToggleFoil={onToggleFoil}
+                onToggleSideboard={onToggleSideboard}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function CardCollection({
   cards,
   viewMode,
   onPickPrinting,
   onBump,
+  onToggleFoil,
+  onToggleSideboard,
 }: {
   cards: DeckCard[]
   viewMode: ViewMode
   onPickPrinting: (card: DeckCard) => void
   onBump: (card: DeckCard, delta: number) => void
+  onToggleFoil: (card: DeckCard) => void
+  onToggleSideboard: (card: DeckCard) => void
 }) {
   if (viewMode === 'list') {
     return (
@@ -572,6 +717,8 @@ function CardCollection({
             card={card}
             onPickPrinting={onPickPrinting}
             onBump={onBump}
+            onToggleFoil={onToggleFoil}
+            onToggleSideboard={onToggleSideboard}
           />
         ))}
       </ul>
@@ -586,6 +733,8 @@ function CardCollection({
           card={card}
           onPickPrinting={onPickPrinting}
           onBump={onBump}
+          onToggleFoil={onToggleFoil}
+          onToggleSideboard={onToggleSideboard}
         />
       ))}
     </ul>
@@ -596,10 +745,14 @@ function ListCardRow({
   card,
   onPickPrinting,
   onBump,
+  onToggleFoil,
+  onToggleSideboard,
 }: {
   card: DeckCard
   onPickPrinting: (card: DeckCard) => void
   onBump: (card: DeckCard, delta: number) => void
+  onToggleFoil: (card: DeckCard) => void
+  onToggleSideboard: (card: DeckCard) => void
 }) {
   return (
     <li className="flex items-center justify-between gap-3 px-3 py-2">
@@ -632,14 +785,35 @@ function ListCardRow({
               {card.name}
             </Link>
             <ManaCost cost={card.manaCost} />
+            {card.foil ? (
+              <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                Foil
+              </span>
+            ) : null}
           </div>
-          <button
-            type="button"
-            className="mt-0.5 text-left text-sm text-muted-foreground hover:underline"
-            onClick={() => onPickPrinting(card)}
-          >
-            {card.setCode.toUpperCase()} #{card.collectorNumber}
-          </button>
+          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <button
+              type="button"
+              className="hover:underline"
+              onClick={() => onPickPrinting(card)}
+            >
+              {card.setCode.toUpperCase()} #{card.collectorNumber}
+            </button>
+            <button
+              type="button"
+              className="hover:underline"
+              onClick={() => void onToggleFoil(card)}
+            >
+              {card.foil ? 'Make non-foil' : 'Make foil'}
+            </button>
+            <button
+              type="button"
+              className="hover:underline"
+              onClick={() => void onToggleSideboard(card)}
+            >
+              {card.sideboard ? 'To mainboard' : 'To sideboard'}
+            </button>
+          </div>
         </div>
       </div>
       <QuantityControls card={card} onBump={onBump} />
@@ -651,10 +825,14 @@ function GridCardCell({
   card,
   onPickPrinting,
   onBump,
+  onToggleFoil,
+  onToggleSideboard,
 }: {
   card: DeckCard
   onPickPrinting: (card: DeckCard) => void
   onBump: (card: DeckCard, delta: number) => void
+  onToggleFoil: (card: DeckCard) => void
+  onToggleSideboard: (card: DeckCard) => void
 }) {
   return (
     <li className="flex flex-col gap-2">
@@ -690,6 +868,21 @@ function GridCardCell({
           onClick={() => onPickPrinting(card)}
         >
           {card.setCode.toUpperCase()} #{card.collectorNumber}
+          {card.foil ? ' · Foil' : ''}
+        </button>
+        <button
+          type="button"
+          className="text-xs text-muted-foreground hover:underline"
+          onClick={() => void onToggleFoil(card)}
+        >
+          {card.foil ? 'Make non-foil' : 'Make foil'}
+        </button>
+        <button
+          type="button"
+          className="text-xs text-muted-foreground hover:underline"
+          onClick={() => void onToggleSideboard(card)}
+        >
+          {card.sideboard ? 'To mainboard' : 'To sideboard'}
         </button>
         <QuantityControls card={card} onBump={onBump} />
       </div>

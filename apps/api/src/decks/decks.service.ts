@@ -16,7 +16,15 @@ import {
   type DeckFormat,
 } from '../db/schema'
 import { UsersService } from '../users/users.service'
-import type { CreateDeckInput, Deck, DeckCard, DeckDetail, UpdateDeckInput } from './deck.types'
+import type {
+  CreateDeckInput,
+  Deck,
+  DeckCard,
+  DeckDetail,
+  DeckImportResult,
+  UpdateDeckInput,
+} from './deck.types'
+import { normalizeCardName, parseMoxfieldExport } from './moxfield-import'
 
 type DeckRow = {
   id: string
@@ -34,6 +42,8 @@ type DeckCardRow = {
   mana_cost: string | null
   mana_value: string | null
   type_line: string | null
+  foil: boolean
+  sideboard: boolean
   quantity: number
   set_code: string
   set_name: string
@@ -184,6 +194,89 @@ export class DecksService {
     )
   }
 
+  async importMoxfield(
+    clerkUserId: string,
+    deckId: string,
+    text: string,
+  ): Promise<DeckImportResult> {
+    await this.requireOwnedDeck(clerkUserId, deckId)
+
+    const trimmed = text.trim()
+    if (!trimmed) {
+      throw new BadRequestException('import text is required')
+    }
+
+    const { lines, skipped } = parseMoxfieldExport(trimmed)
+    const unmatched = skipped.map((row) => ({
+      line: row.raw,
+      reason: row.reason,
+    }))
+
+    /** Aggregate by printing + foil + board. */
+    const quantities = new Map<
+      string,
+      { printingId: string; foil: boolean; sideboard: boolean; quantity: number }
+    >()
+
+    for (const line of lines) {
+      const printingId = await this.resolveMoxfieldPrinting(line)
+      if (!printingId) {
+        unmatched.push({
+          line: line.raw,
+          reason: `no printing for ${line.setCode} #${line.collectorNumber}`,
+        })
+        continue
+      }
+      const foil = line.tags.some((tag) => tag.toUpperCase() === 'F')
+      const key = `${printingId}:${foil ? '1' : '0'}:${line.sideboard ? '1' : '0'}`
+      const existing = quantities.get(key)
+      if (existing) {
+        existing.quantity += line.quantity
+      } else {
+        quantities.set(key, {
+          printingId,
+          foil,
+          sideboard: line.sideboard,
+          quantity: line.quantity,
+        })
+      }
+    }
+
+    let imported = 0
+    for (const entry of quantities.values()) {
+      await this.upsertPrintingLine(
+        deckId,
+        entry.printingId,
+        entry.quantity,
+        entry.foil,
+        entry.sideboard,
+      )
+      imported += 1
+    }
+
+    if (imported > 0) {
+      await this.touchDeck(deckId)
+    }
+
+    this.logger.info(
+      {
+        event: 'decks.import',
+        userId: clerkUserId,
+        deckId,
+        imported,
+        unmatched: unmatched.length,
+        lineCount: lines.length,
+      },
+      'Imported deck list',
+    )
+
+    return {
+      imported,
+      unmatched,
+      detail: await this.getForUser(clerkUserId, deckId),
+    }
+  }
+
   async getForUser(clerkUserId: string, deckId: string): Promise<DeckDetail> {
     const deck = await this.requireOwnedDeck(clerkUserId, deckId)
     const result = await this.db.execute<DeckCardRow>(sql`
@@ -195,6 +288,8 @@ export class DecksService {
         c.mana_cost,
         c.mana_value::text AS mana_value,
         c.type_line,
+        dc.foil,
+        dc.sideboard,
         dc.quantity,
         s.code AS set_code,
         s.name AS set_name,
@@ -207,7 +302,7 @@ export class DecksService {
       LEFT JOIN catalog.card_face f
         ON f.printing_id = p.id AND f.face_index = 0
       WHERE dc.deck_id = ${deckId}::uuid
-      ORDER BY c.name ASC, s.code ASC, p.collector_number ASC
+      ORDER BY dc.sideboard ASC, c.name ASC, s.code ASC, p.collector_number ASC, dc.foil ASC
     `)
 
     return {
@@ -238,7 +333,7 @@ export class DecksService {
       throw new BadRequestException('Card has no printings')
     }
 
-    const row = await this.upsertPrintingLine(deckId, printingId, 1)
+    const row = await this.upsertPrintingLine(deckId, printingId, 1, false, false)
 
     await this.touchDeck(deckId)
 
@@ -300,6 +395,8 @@ export class DecksService {
       .select({
         id: deckCards.id,
         printingId: deckCards.printingId,
+        foil: deckCards.foil,
+        sideboard: deckCards.sideboard,
         quantity: deckCards.quantity,
       })
       .from(deckCards)
@@ -335,37 +432,13 @@ export class DecksService {
       )
     }
 
-    const [existing] = await this.db
-      .select({
-        id: deckCards.id,
-        quantity: deckCards.quantity,
-      })
-      .from(deckCards)
-      .where(
-        and(eq(deckCards.deckId, deckId), eq(deckCards.printingId, printingId)),
-      )
-      .limit(1)
-
-    let survivorId: string
-    if (existing) {
-      const [merged] = await this.db
-        .update(deckCards)
-        .set({
-          quantity: existing.quantity + line.quantity,
-          updatedAt: new Date(),
-        })
-        .where(eq(deckCards.id, existing.id))
-        .returning({ id: deckCards.id })
-      await this.db.delete(deckCards).where(eq(deckCards.id, line.id))
-      survivorId = merged.id
-    } else {
-      const [updated] = await this.db
-        .update(deckCards)
-        .set({ printingId, updatedAt: new Date() })
-        .where(eq(deckCards.id, line.id))
-        .returning({ id: deckCards.id })
-      survivorId = updated.id
-    }
+    const survivorId = await this.moveLineToPrinting(
+      deckId,
+      line,
+      printingId,
+      line.foil,
+      line.sideboard,
+    )
 
     await this.touchDeck(deckId)
 
@@ -379,6 +452,112 @@ export class DecksService {
         survivorId,
       },
       'Changed deck card printing',
+    )
+
+    return this.requireDeckCard(survivorId)
+  }
+
+  async setCardFoil(
+    clerkUserId: string,
+    deckId: string,
+    deckCardId: string,
+    foil: boolean,
+  ): Promise<DeckCard> {
+    await this.requireOwnedDeck(clerkUserId, deckId)
+
+    const [line] = await this.db
+      .select({
+        id: deckCards.id,
+        printingId: deckCards.printingId,
+        foil: deckCards.foil,
+        sideboard: deckCards.sideboard,
+        quantity: deckCards.quantity,
+      })
+      .from(deckCards)
+      .where(and(eq(deckCards.id, deckCardId), eq(deckCards.deckId, deckId)))
+      .limit(1)
+
+    if (!line) {
+      throw new NotFoundException('Deck card not found')
+    }
+
+    if (line.foil === foil) {
+      return this.requireDeckCard(line.id)
+    }
+
+    const survivorId = await this.moveLineToPrinting(
+      deckId,
+      line,
+      line.printingId,
+      foil,
+      line.sideboard,
+    )
+
+    await this.touchDeck(deckId)
+
+    this.logger.info(
+      {
+        event: 'decks.card_foil_set',
+        userId: clerkUserId,
+        deckId,
+        deckCardId,
+        foil,
+        survivorId,
+      },
+      'Changed deck card foil',
+    )
+
+    return this.requireDeckCard(survivorId)
+  }
+
+  async setCardSideboard(
+    clerkUserId: string,
+    deckId: string,
+    deckCardId: string,
+    sideboard: boolean,
+  ): Promise<DeckCard> {
+    await this.requireOwnedDeck(clerkUserId, deckId)
+
+    const [line] = await this.db
+      .select({
+        id: deckCards.id,
+        printingId: deckCards.printingId,
+        foil: deckCards.foil,
+        sideboard: deckCards.sideboard,
+        quantity: deckCards.quantity,
+      })
+      .from(deckCards)
+      .where(and(eq(deckCards.id, deckCardId), eq(deckCards.deckId, deckId)))
+      .limit(1)
+
+    if (!line) {
+      throw new NotFoundException('Deck card not found')
+    }
+
+    if (line.sideboard === sideboard) {
+      return this.requireDeckCard(line.id)
+    }
+
+    const survivorId = await this.moveLineToPrinting(
+      deckId,
+      line,
+      line.printingId,
+      line.foil,
+      sideboard,
+    )
+
+    await this.touchDeck(deckId)
+
+    this.logger.info(
+      {
+        event: 'decks.card_sideboard_set',
+        userId: clerkUserId,
+        deckId,
+        deckCardId,
+        sideboard,
+        survivorId,
+      },
+      'Changed deck card sideboard',
     )
 
     return this.requireDeckCard(survivorId)
@@ -417,6 +596,8 @@ export class DecksService {
     deckId: string,
     printingId: string,
     addQuantity: number,
+    foil: boolean,
+    sideboard: boolean,
   ): Promise<{ id: string; quantity: number }> {
     const [existing] = await this.db
       .select({
@@ -425,7 +606,12 @@ export class DecksService {
       })
       .from(deckCards)
       .where(
-        and(eq(deckCards.deckId, deckId), eq(deckCards.printingId, printingId)),
+        and(
+          eq(deckCards.deckId, deckId),
+          eq(deckCards.printingId, printingId),
+          eq(deckCards.foil, foil),
+          eq(deckCards.sideboard, sideboard),
+        ),
       )
       .limit(1)
 
@@ -443,9 +629,54 @@ export class DecksService {
 
     const [inserted] = await this.db
       .insert(deckCards)
-      .values({ deckId, printingId, quantity: addQuantity })
+      .values({ deckId, printingId, foil, sideboard, quantity: addQuantity })
       .returning({ id: deckCards.id, quantity: deckCards.quantity })
     return inserted
+  }
+
+  /** Move/merge a deck line onto a printing + foil + board key. */
+  private async moveLineToPrinting(
+    deckId: string,
+    line: { id: string; quantity: number },
+    printingId: string,
+    foil: boolean,
+    sideboard: boolean,
+  ): Promise<string> {
+    const [existing] = await this.db
+      .select({
+        id: deckCards.id,
+        quantity: deckCards.quantity,
+      })
+      .from(deckCards)
+      .where(
+        and(
+          eq(deckCards.deckId, deckId),
+          eq(deckCards.printingId, printingId),
+          eq(deckCards.foil, foil),
+          eq(deckCards.sideboard, sideboard),
+        ),
+      )
+      .limit(1)
+
+    if (existing && existing.id !== line.id) {
+      const [merged] = await this.db
+        .update(deckCards)
+        .set({
+          quantity: existing.quantity + line.quantity,
+          updatedAt: new Date(),
+        })
+        .where(eq(deckCards.id, existing.id))
+        .returning({ id: deckCards.id })
+      await this.db.delete(deckCards).where(eq(deckCards.id, line.id))
+      return merged.id
+    }
+
+    const [updated] = await this.db
+      .update(deckCards)
+      .set({ printingId, foil, sideboard, updatedAt: new Date() })
+      .where(eq(deckCards.id, line.id))
+      .returning({ id: deckCards.id })
+    return updated.id
   }
 
   private async defaultPrintingId(cardId: string): Promise<string | null> {
@@ -464,6 +695,64 @@ export class DecksService {
     return result.rows[0]?.id ?? null
   }
 
+  private async resolveMoxfieldPrinting(line: {
+    name: string
+    setCode: string
+    collectorNumber: string
+  }): Promise<string | null> {
+    const wantedName = normalizeCardName(line.name)
+
+    const bySetAndNumber = await this.db.execute<{
+      id: string
+      name: string
+      language: string | null
+    }>(sql`
+      SELECT p.id, c.name, p.language
+      FROM catalog.printing p
+      JOIN catalog.set s ON s.id = p.set_id
+      JOIN catalog.card c ON c.id = p.card_id
+      WHERE lower(s.code) = lower(${line.setCode})
+        AND lower(p.collector_number) = lower(${line.collectorNumber})
+      ORDER BY
+        CASE WHEN p.language = 'en' THEN 0 ELSE 1 END,
+        p.id
+    `)
+
+    if (bySetAndNumber.rows.length > 0) {
+      const nameMatch = bySetAndNumber.rows.find(
+        (row) => normalizeCardName(row.name) === wantedName,
+      )
+      return (nameMatch ?? bySetAndNumber.rows[0]).id
+    }
+
+    // Fallback: match oracle name, then prefer the requested set's printing.
+    const byName = await this.db.execute<{ id: string }>(sql`
+      SELECT c.id
+      FROM catalog.card c
+      WHERE lower(c.name) = ${wantedName}
+      LIMIT 1
+    `)
+    const cardId = byName.rows[0]?.id
+    if (!cardId) return null
+
+    const inSet = await this.db.execute<{ id: string }>(sql`
+      SELECT p.id
+      FROM catalog.printing p
+      JOIN catalog.set s ON s.id = p.set_id
+      WHERE p.card_id = ${cardId}::uuid
+        AND lower(s.code) = lower(${line.setCode})
+      ORDER BY
+        CASE WHEN lower(p.collector_number) = lower(${line.collectorNumber}) THEN 0 ELSE 1 END,
+        CASE WHEN p.language = 'en' THEN 0 ELSE 1 END,
+        p.released_at DESC NULLS LAST,
+        p.id
+      LIMIT 1
+    `)
+    if (inSet.rows[0]?.id) return inSet.rows[0].id
+
+    return this.defaultPrintingId(cardId)
+  }
+
   private async requireDeckCard(deckCardId: string): Promise<DeckCard> {
     const result = await this.db.execute<DeckCardRow>(sql`
       SELECT
@@ -474,6 +763,8 @@ export class DecksService {
         c.mana_cost,
         c.mana_value::text AS mana_value,
         c.type_line,
+        dc.foil,
+        dc.sideboard,
         dc.quantity,
         s.code AS set_code,
         s.name AS set_name,
@@ -555,6 +846,8 @@ function toDeckCard(row: DeckCardRow): DeckCard {
     manaCost: row.mana_cost,
     manaValue: row.mana_value,
     typeLine: row.type_line,
+    foil: row.foil,
+    sideboard: row.sideboard,
     quantity: row.quantity,
     setCode: row.set_code,
     setName: row.set_name,

@@ -25,6 +25,8 @@ export type DeckCard = {
   manaCost: string | null
   manaValue: string | null
   typeLine: string | null
+  foil: boolean
+  sideboard: boolean
   quantity: number
   setCode: string
   setName: string
@@ -90,6 +92,29 @@ export function deleteDeck(getToken: GetToken, id: string): Promise<void> {
   }).then(() => undefined)
 }
 
+export type DeckImportUnmatched = {
+  line: string
+  reason: string
+}
+
+export type DeckImportResult = {
+  imported: number
+  unmatched: DeckImportUnmatched[]
+  detail: DeckDetail
+}
+
+export function importDeckList(
+  getToken: GetToken,
+  deckId: string,
+  text: string,
+): Promise<DeckImportResult> {
+  return apiFetchJson<DeckImportResult>(`/decks/${deckId}/import`, getToken, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+}
+
 export function addCardToDeck(
   getToken: GetToken,
   deckId: string,
@@ -135,6 +160,46 @@ export function setDeckCardPrinting(
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ printingId }),
+    },
+  ).then((body) => {
+    if (!body.card) throw new Error('Missing card in response')
+    return body.card
+  })
+}
+
+export function setDeckCardFoil(
+  getToken: GetToken,
+  deckId: string,
+  deckCardId: string,
+  foil: boolean,
+): Promise<DeckCard> {
+  return apiFetchJson<DeckCardResponse>(
+    `/decks/${deckId}/cards/${deckCardId}`,
+    getToken,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ foil }),
+    },
+  ).then((body) => {
+    if (!body.card) throw new Error('Missing card in response')
+    return body.card
+  })
+}
+
+export function setDeckCardSideboard(
+  getToken: GetToken,
+  deckId: string,
+  deckCardId: string,
+  sideboard: boolean,
+): Promise<DeckCard> {
+  return apiFetchJson<DeckCardResponse>(
+    `/decks/${deckId}/cards/${deckCardId}`,
+    getToken,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sideboard }),
     },
   ).then((body) => {
     if (!body.card) throw new Error('Missing card in response')
