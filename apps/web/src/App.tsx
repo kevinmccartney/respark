@@ -6,6 +6,7 @@ import { CardDetailPage } from './pages/CardDetailPage.tsx';
 import { DeckDetailPage } from './pages/DeckDetailPage.tsx';
 import { HomePage } from './pages/HomePage.tsx';
 import { NewDeckPage } from './pages/NewDeckPage.tsx';
+import { NotFoundPage } from './pages/NotFoundPage.tsx';
 import { SearchPage } from './pages/SearchPage.tsx';
 import { WelcomePage } from './pages/WelcomePage.tsx';
 
@@ -62,6 +63,7 @@ export default function App() {
             </RequireAuth>
           }
         />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
   );

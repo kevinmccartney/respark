@@ -9,7 +9,9 @@ import { ManaCost } from '../components/ManaCost.tsx';
 import { DeckImportDialog } from '../components/DeckImportDialog.tsx';
 import { PrintingPickerDialog } from '../components/PrintingPickerDialog.tsx';
 import { SiteHeader } from '../components/SiteHeader.tsx';
-import { ApiError } from '../lib/api.ts';
+import { uuidSchema } from 'schemas/primitives';
+import { ApiError, isNotFound } from '../lib/api.ts';
+import { NotFoundPage } from './NotFoundPage.tsx';
 import { suggestCardNames, type CardNameSuggestion } from '../lib/cards.ts';
 import {
   DECK_GROUP_LABELS,
@@ -47,6 +49,7 @@ export const DeckDetailPage = () => {
   const [detail, setDetail] = useState<DeckDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [groupMode, setGroupMode] = useState<DeckGroupMode>('none');
@@ -87,11 +90,23 @@ export const DeckDetailPage = () => {
     const load = async () => {
       setLoading(true);
       setError(null);
+      setNotFound(false);
+      if (!uuidSchema.safeParse(id).success) {
+        setNotFound(true);
+        setDetail(null);
+        setLoading(false);
+        return;
+      }
       try {
         const next = await fetchDeck(getToken, id);
         if (!controller.signal.aborted) setDetail(next);
       } catch (err) {
         if (controller.signal.aborted) return;
+        if (isNotFound(err)) {
+          setNotFound(true);
+          setDetail(null);
+          return;
+        }
         setError(err instanceof ApiError ? err.message : 'Could not load deck');
         setDetail(null);
       } finally {
@@ -250,7 +265,7 @@ export const DeckDetailPage = () => {
 
   const handleDelete = async () => {
     if (!detail || deleting) return;
-    const confirmed = window.confirm(`Delete “${detail.deck.name}”? This cannot be undone.`);
+    const confirmed = window.confirm(`Delete "${detail.deck.name}"? This cannot be undone.`);
     if (!confirmed) return;
 
     setDeleting(true);
@@ -266,6 +281,15 @@ export const DeckDetailPage = () => {
 
   const mainTotal = mainboardCards.reduce((sum, card) => sum + card.quantity, 0);
   const sideTotal = sideboardCards.reduce((sum, card) => sum + card.quantity, 0);
+
+  if (notFound) {
+    return (
+      <NotFoundPage
+        title="Deck not found"
+        description="That deck is not in your library, or the link is stale."
+      />
+    );
+  }
 
   return (
     <>

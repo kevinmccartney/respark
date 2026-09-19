@@ -15,6 +15,8 @@ export const apiBaseUrl = (): string => {
   return defaultApiBase;
 };
 
+export const isNotFound = (err: unknown): boolean => err instanceof ApiError && err.status === 404;
+
 export class ApiError extends Error {
   readonly status: number;
 

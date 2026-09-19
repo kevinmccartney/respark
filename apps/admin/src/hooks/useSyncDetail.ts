@@ -9,7 +9,7 @@ import type {
   IngestionReconciliation,
   IngestionUnmatched,
 } from 'schemas/etl-sync';
-import type { LogLevel } from 'schemas/primitives';
+import { uuidSchema, type LogLevel } from 'schemas/primitives';
 import type { SyncEvent } from 'schemas/sync-event';
 import {
   liveErrorFromEvent,
@@ -50,6 +50,7 @@ export const useSyncDetail = (id: string | undefined) => {
   const [errorsLoading, setErrorsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const [notFound, setNotFound] = useState(false);
   const [expandedPayload, setExpandedPayload] = useState<number | null>(null);
   const [liveLogs, setLiveLogs] = useState<LiveLog[]>([]);
   const [live, setLive] = useState(false);
@@ -75,11 +76,19 @@ export const useSyncDetail = (id: string | undefined) => {
       setLoading(true);
       setError(null);
       setForbidden(false);
+      setNotFound(false);
       setLiveLogs([]);
       setOffset(0);
       setUnmatchedOffset(0);
       errorsOffsetRef.current = 0;
       unmatchedOffsetRef.current = 0;
+      if (!uuidSchema.safeParse(id).success) {
+        if (controller.signal.aborted) return;
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+
       try {
         const syncRow = await fetchEtlSync(getToken, id!);
         if (controller.signal.aborted) return;
@@ -127,7 +136,7 @@ export const useSyncDetail = (id: string | undefined) => {
         }
       } catch (err) {
         if (controller.signal.aborted) return;
-        applyAdminLoadError(err, { setError, setForbidden }, 'Could not load sync');
+        applyAdminLoadError(err, { setError, setForbidden, setNotFound }, 'Could not load sync');
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -378,6 +387,7 @@ export const useSyncDetail = (id: string | undefined) => {
     loading,
     error,
     forbidden,
+    notFound,
     reconciliation,
     unmatched,
     totalUnmatched,

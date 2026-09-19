@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Card, CardContent } from '@/components/ui/card';
 import { useSyncDetail } from '@/hooks/useSyncDetail.ts';
+import { NotFoundPage } from '@/pages/NotFoundPage.tsx';
 import {
   formatDuration,
   formatProgressPercent,
@@ -36,6 +37,15 @@ export const SyncDetailPage = () => {
         detail.progressByJobId[runningJob.id]?.percent ?? null,
       )}`
     : null;
+
+  if (detail.notFound) {
+    return (
+      <NotFoundPage
+        title="Sync not found"
+        description="That sync id doesn’t match a pipeline run."
+      />
+    );
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-5 py-5">

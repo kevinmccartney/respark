@@ -5,8 +5,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SiteHeader } from '../components/SiteHeader.tsx';
-import { ApiError } from '../lib/api.ts';
+import { uuidSchema } from 'schemas/primitives';
+import { ApiError, isNotFound } from '../lib/api.ts';
 import { fetchCard, type CardDetail, type CardPrintingSummary } from '../lib/cards.ts';
+import { NotFoundPage } from './NotFoundPage.tsx';
 
 type CardDetailLocationState = {
   fromSearch?: string;
@@ -36,6 +38,7 @@ export const CardDetailPage = () => {
   const [card, setCard] = useState<CardDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -43,13 +46,23 @@ export const CardDetailPage = () => {
     const load = async () => {
       setLoading(true);
       setError(null);
+      setNotFound(false);
       setCard(null);
+      if (!uuidSchema.safeParse(id).success) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
       try {
         const detail = await fetchCard(getToken, id);
         if (controller.signal.aborted) return;
         setCard(detail);
       } catch (err) {
         if (controller.signal.aborted) return;
+        if (isNotFound(err)) {
+          setNotFound(true);
+          return;
+        }
         setError(err instanceof ApiError ? err.message : 'Could not load card');
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -74,6 +87,15 @@ export const CardDetailPage = () => {
   };
 
   const imageSrc = selectedPrinting?.imageLarge ?? selectedPrinting?.imageNormal ?? null;
+
+  if (notFound) {
+    return (
+      <NotFoundPage
+        title="Card not found"
+        description="That card isn’t in the catalog — it may have been skipped on import."
+      />
+    );
+  }
 
   return (
     <>

@@ -25,6 +25,8 @@ export class ApiError extends Error {
   }
 }
 
+export const isNotFound = (err: unknown): boolean => err instanceof ApiError && err.status === 404;
+
 type GetToken = () => Promise<string | null>;
 
 export const apiFetch = async (
