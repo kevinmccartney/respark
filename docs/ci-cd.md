@@ -1,6 +1,6 @@
 # CI / CD (GitHub Actions)
 
-Pipeline: **format check** ∥ **detect changes** → **build** (changed apps) and **plan** (if infra) → on deployable refs, **apply** (if infra) → **deploy API** (if needed) → **web** ∥ **admin** (if needed).
+Pipeline: **detect changes** → **format check** → **build** (changed apps) and **plan** (if infra) → on deployable refs, **apply** (if infra) → **deploy API** (if needed) → **web** ∥ **admin** (if needed).
 
 Orchestration lives in [`Taskfile.yml`](../Taskfile.yml). The workflow only wires GitHub Environments, OIDC, path filters, and artifacts, then runs `task …` (never raw `npm` / `terraform` beyond what Task invokes). npm scripts stay in `package.json` for package binaries; Task calls those scripts.
 

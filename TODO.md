@@ -9,7 +9,7 @@ Writing down ideas for the future
 - ~~Custom LLM instructions~~ (`.cursor/rules/` + `AGENTS.md`)
 - ~~Pipeline~~
 - ~~Arch diagrams and mermaid data ERDs/Documentation of major business objects~~ (`docs/domain.md`)
-- Make pipeline formatting check between detect changes and build apps
+- ~~Make pipeline formatting check between detect changes and build apps~~
 
 ## Admin
 
