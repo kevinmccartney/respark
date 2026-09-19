@@ -12,7 +12,7 @@ vars:
   API_IMAGE_TAG: latest
   AWS_REGION: us-east-1
   COMPOSE_FILE: docker-compose.yml
-  # Set DOCKER_BUILDX=1 in CI to build+push linux/arm64 via buildx.
+  # Set DOCKER_BUILDX=1 in CI to build+push linux/arm64 via buildx (native on ubuntu-24.04-arm).
   DOCKER_BUILDX: '0'
   # Local interactive apply unless set (e.g. TF_APPLY_FLAGS=-auto-approve).
   TF_APPLY_FLAGS: ''

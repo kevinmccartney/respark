@@ -47,16 +47,16 @@ Production deploys are intentional: use **Actions → CI / CD → Run workflow**
 
 ## Local ↔ CI isomorphism
 
-| Goal               | Local                                   | CI                                               |
-| ------------------ | --------------------------------------- | ------------------------------------------------ |
-| Format (write)     | `task format`                           | —                                                |
-| Format (check)     | `task format:check`                     | `format` job                                     |
-| Lint               | `task lint`                             | `format` job                                     |
-| Build apps         | `task build`                            | conditional `task *:build`                       |
-| Plan               | `task infra:plan ENV=develop`           | same                                             |
-| Apply              | `task infra:apply ENV=develop`          | same (applies uploaded `tfplan`)                 |
-| Deploy API         | `task api:deploy ENV=develop`           | same (+ `DOCKER_BUILDX=1` `API_IMAGE_TAG=<sha>`) |
-| Deploy web / admin | `task web:deploy` / `task admin:deploy` | same                                             |
+| Goal               | Local                                   | CI                                                                     |
+| ------------------ | --------------------------------------- | ---------------------------------------------------------------------- |
+| Format (write)     | `task format`                           | —                                                                      |
+| Format (check)     | `task format:check`                     | `format` job                                                           |
+| Lint               | `task lint`                             | `format` job                                                           |
+| Build apps         | `task build`                            | conditional `task *:build`                                             |
+| Plan               | `task infra:plan ENV=develop`           | same                                                                   |
+| Apply              | `task infra:apply ENV=develop`          | same (applies uploaded `tfplan`)                                       |
+| Deploy API         | `task api:deploy ENV=develop`           | same on `ubuntu-24.04-arm` (+ `DOCKER_BUILDX=1` `API_IMAGE_TAG=<sha>`) |
+| Deploy web / admin | `task web:deploy` / `task admin:deploy` | same                                                                   |
 
 `ENV` selects `infra/envs/<ENV>` (override with `TF_DIR` if needed).
 
@@ -143,7 +143,7 @@ Alternatively, pin the exact `sub` from a debug JWT decode (includes `@ownerId` 
 
 ## Notes
 
-- API images are built for **`linux/arm64`** (Graviton) and tagged with the git SHA and `latest`.
+- API images are built for **`linux/arm64`** (Graviton) and tagged with the git SHA and `latest`. The `deploy-api` job runs on **`ubuntu-24.04-arm`** so `npm ci` is native; do not reintroduce QEMU for this image (Node 22 on Alpine under amd64→arm64 emulation hits SIGILL).
 - Web/admin deploy tasks rebuild with `VITE_API_URL` from Terraform `api_url` and `VITE_CLERK_PUBLISHABLE_KEY` from the **GitHub Environment variable** of the same name (locally: `apps/web/.env.local` / `apps/admin/.env.local`). Web and admin share one Clerk app, so they share one publishable key. Production Vite builds fail if it is unset. Clerk **secret** keys stay in SSM.
 - `terraform apply` uses the exact plan artifact from the matching `plan` job (`tfplan-<env>`).
 - Overlapping runs on the same ref + env are serialized via workflow concurrency; PR runs cancel superseded builds.
