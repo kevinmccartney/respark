@@ -1,6 +1,7 @@
 import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 type SiteHeaderProps = {
   showAuthActions?: boolean
@@ -35,23 +36,26 @@ export function SiteHeader({ showAuthActions = true }: SiteHeaderProps) {
           </Link>
         </Show>
       </div>
-      {showAuthActions ? (
-        <nav className="flex items-center gap-2" aria-label="Account">
-          <Show when="signed-out">
-            <SignInButton mode="modal">
-              <Button type="button" variant="outline">
-                Sign in
-              </Button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <Button type="button">Sign up</Button>
-            </SignUpButton>
-          </Show>
-          <Show when="signed-in">
-            <UserButton />
-          </Show>
-        </nav>
-      ) : null}
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
+        {showAuthActions ? (
+          <nav className="flex items-center gap-2" aria-label="Account">
+            <Show when="signed-out">
+              <SignInButton mode="modal">
+                <Button type="button" variant="outline">
+                  Sign in
+                </Button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <Button type="button">Sign up</Button>
+              </SignUpButton>
+            </Show>
+            <Show when="signed-in">
+              <UserButton />
+            </Show>
+          </nav>
+        ) : null}
+      </div>
     </header>
   )
 }

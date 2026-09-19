@@ -1,8 +1,8 @@
-import { useAuth } from '@clerk/react'
-import { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
+import { useAuth } from "@clerk/react";
+import { useEffect, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -10,9 +10,9 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+} from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -20,12 +20,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from "@/components/ui/dialog";
 import {
   Pagination,
   PaginationContent,
   PaginationItem,
-} from '@/components/ui/pagination'
+} from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -33,16 +33,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { ApiError } from '../lib/api.ts'
-import { connectEtlSyncWs } from '../lib/etl-ws.ts'
+} from "@/components/ui/table";
+import { ApiError } from "../lib/api.ts";
+import { connectEtlSyncWs } from "../lib/etl-ws.ts";
 import {
   formatDuration,
   formatNumber,
   formatTimestamp,
   statusBadgeProps,
-} from '../lib/format.ts'
-import type { SyncEvent } from '../lib/sync-events.ts'
+} from "../lib/format.ts";
+import type { SyncEvent } from "../lib/sync-events.ts";
 import {
   fetchEtlSync,
   fetchJobErrors,
@@ -58,61 +58,61 @@ import {
   type IngestionError,
   type IngestionReconciliation,
   type IngestionUnmatched,
-} from '../lib/syncs.ts'
+} from "../lib/syncs.ts";
 
-const PAGE_SIZE = 50
+const PAGE_SIZE = 50;
 
 type LiveLog = {
-  id: number
-  level: string
-  message: string
-  at: string
-}
+  id: number;
+  level: string;
+  message: string;
+  at: string;
+};
 
 export function SyncDetailPage() {
-  const { id } = useParams<{ id: string }>()
-  const { getToken } = useAuth()
+  const { id } = useParams<{ id: string }>();
+  const { getToken } = useAuth();
 
-  const [sync, setSync] = useState<EtlSync | null>(null)
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
+  const [sync, setSync] = useState<EtlSync | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [reconciliation, setReconciliation] =
-    useState<IngestionReconciliation | null>(null)
-  const [unmatched, setUnmatched] = useState<IngestionUnmatched[]>([])
-  const [totalUnmatched, setTotalUnmatched] = useState(0)
-  const [unmatchedOffset, setUnmatchedOffset] = useState(0)
-  const [unmatchedLoading, setUnmatchedLoading] = useState(false)
-  const [errors, setErrors] = useState<IngestionError[]>([])
-  const [totalErrors, setTotalErrors] = useState(0)
-  const [offset, setOffset] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [errorsLoading, setErrorsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [forbidden, setForbidden] = useState(false)
-  const [expandedPayload, setExpandedPayload] = useState<number | null>(null)
-  const [liveLogs, setLiveLogs] = useState<LiveLog[]>([])
-  const [live, setLive] = useState(false)
-  const logSeqRef = useRef(0)
+    useState<IngestionReconciliation | null>(null);
+  const [unmatched, setUnmatched] = useState<IngestionUnmatched[]>([]);
+  const [totalUnmatched, setTotalUnmatched] = useState(0);
+  const [unmatchedOffset, setUnmatchedOffset] = useState(0);
+  const [unmatchedLoading, setUnmatchedLoading] = useState(false);
+  const [errors, setErrors] = useState<IngestionError[]>([]);
+  const [totalErrors, setTotalErrors] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [errorsLoading, setErrorsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
+  const [expandedPayload, setExpandedPayload] = useState<number | null>(null);
+  const [liveLogs, setLiveLogs] = useState<LiveLog[]>([]);
+  const [live, setLive] = useState(false);
+  const logSeqRef = useRef(0);
 
   useEffect(() => {
-    if (!id) return
-    const controller = new AbortController()
+    if (!id) return;
+    const controller = new AbortController();
 
     async function load() {
-      setLoading(true)
-      setError(null)
-      setForbidden(false)
-      setOffset(0)
-      setUnmatchedOffset(0)
+      setLoading(true);
+      setError(null);
+      setForbidden(false);
+      setOffset(0);
+      setUnmatchedOffset(0);
       try {
-        const syncRow = await fetchEtlSync(getToken, id!)
-        if (controller.signal.aborted) return
-        setSync(syncRow)
+        const syncRow = await fetchEtlSync(getToken, id!);
+        if (controller.signal.aborted) return;
+        setSync(syncRow);
 
-        const allJobs = syncRow.stages.flatMap((s) => s.jobs)
+        const allJobs = syncRow.stages.flatMap((s) => s.jobs);
         const preferred =
-          allJobs.find((j) => j.job === 'identifiers') ?? allJobs[0] ?? null
-        const jobId = preferred?.id ?? null
-        setSelectedJobId(jobId)
+          allJobs.find((j) => j.job === "identifiers") ?? allJobs[0] ?? null;
+        const jobId = preferred?.id ?? null;
+        setSelectedJobId(jobId);
 
         if (jobId) {
           const [errorPage, recon, unmatchedPage] = await Promise.all([
@@ -120,73 +120,75 @@ export function SyncDetailPage() {
               limit: PAGE_SIZE,
               offset: 0,
             }),
-            preferred?.job === 'identifiers'
+            preferred?.job === "identifiers"
               ? fetchJobReconciliation(getToken, id!, jobId)
               : Promise.resolve(null),
-            preferred?.job === 'identifiers'
+            preferred?.job === "identifiers"
               ? fetchJobUnmatched(getToken, id!, jobId, {
                   limit: PAGE_SIZE,
                   offset: 0,
                 })
               : Promise.resolve({ unmatched: [], total: 0 }),
-          ])
-          if (controller.signal.aborted) return
-          setErrors(errorPage.errors)
-          setTotalErrors(errorPage.total)
-          setReconciliation(recon)
-          setUnmatched(unmatchedPage.unmatched)
-          setTotalUnmatched(unmatchedPage.total)
+          ]);
+          if (controller.signal.aborted) return;
+          setErrors(errorPage.errors);
+          setTotalErrors(errorPage.total);
+          setReconciliation(recon);
+          setUnmatched(unmatchedPage.unmatched);
+          setTotalUnmatched(unmatchedPage.total);
         } else {
-          setErrors([])
-          setTotalErrors(0)
-          setReconciliation(null)
-          setUnmatched([])
-          setTotalUnmatched(0)
+          setErrors([]);
+          setTotalErrors(0);
+          setReconciliation(null);
+          setUnmatched([]);
+          setTotalUnmatched(0);
         }
       } catch (err) {
-        if (controller.signal.aborted) return
+        if (controller.signal.aborted) return;
         if (isForbidden(err)) {
-          setForbidden(true)
+          setForbidden(true);
           setError(
             'Your account is not an admin. Set publicMetadata.role to "admin" in Clerk.',
-          )
+          );
         } else if (err instanceof ApiError) {
-          setError(err.message)
+          setError(err.message);
         } else {
-          setError('Could not load sync')
+          setError("Could not load sync");
         }
       } finally {
-        if (!controller.signal.aborted) setLoading(false)
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
 
-    void load()
-    return () => controller.abort()
-  }, [getToken, id])
+    void load();
+    return () => controller.abort();
+  }, [getToken, id]);
 
   useEffect(() => {
-    if (!id || forbidden) return
+    if (!id || forbidden) return;
 
-    const upsertJob = (job: Partial<EtlJobRun> & { id: string; stage: string; job: string }) => {
+    const upsertJob = (
+      job: Partial<EtlJobRun> & { id: string; stage: string; job: string },
+    ) => {
       setSync((prev) => {
-        if (!prev) return prev
-        const stages = [...prev.stages]
-        let stageIdx = stages.findIndex((s) => s.stage === job.stage)
+        if (!prev) return prev;
+        const stages = [...prev.stages];
+        let stageIdx = stages.findIndex((s) => s.stage === job.stage);
         if (stageIdx < 0) {
-          stages.push({ stage: job.stage, jobs: [] })
-          stageIdx = stages.length - 1
+          stages.push({ stage: job.stage, jobs: [] });
+          stageIdx = stages.length - 1;
         }
-        const jobs = [...stages[stageIdx].jobs]
-        const jobIdx = jobs.findIndex((j) => j.id === job.id)
+        const jobs = [...stages[stageIdx].jobs];
+        const jobIdx = jobs.findIndex((j) => j.id === job.id);
         if (jobIdx >= 0) {
-          jobs[jobIdx] = { ...jobs[jobIdx], ...job }
+          jobs[jobIdx] = { ...jobs[jobIdx], ...job };
         } else {
           jobs.push({
             id: job.id,
             syncId: prev.id,
             stage: job.stage,
             job: job.job,
-            status: job.status ?? 'running',
+            status: job.status ?? "running",
             startedAt: job.startedAt ?? new Date().toISOString(),
             completedAt: job.completedAt ?? null,
             sourceVersion: null,
@@ -199,17 +201,17 @@ export function SyncDetailPage() {
             downloadBytes: job.downloadBytes ?? null,
             durationMs: job.durationMs ?? null,
             errorMessage: job.errorMessage ?? null,
-          })
+          });
         }
-        stages[stageIdx] = { ...stages[stageIdx], jobs }
-        return { ...prev, stages }
-      })
-      setSelectedJobId((curr) => curr ?? job.id)
-    }
+        stages[stageIdx] = { ...stages[stageIdx], jobs };
+        return { ...prev, stages };
+      });
+      setSelectedJobId((curr) => curr ?? job.id);
+    };
 
     const appendLog = (level: string, message: string) => {
-      logSeqRef.current += 1
-      const lineId = logSeqRef.current
+      logSeqRef.current += 1;
+      const lineId = logSeqRef.current;
       setLiveLogs((prev) =>
         [
           ...prev,
@@ -220,19 +222,19 @@ export function SyncDetailPage() {
             at: new Date().toISOString(),
           },
         ].slice(-200),
-      )
-    }
+      );
+    };
 
     const applyEvent = (event: SyncEvent) => {
       const syncId =
-        event.type === 'sync.started'
+        event.type === "sync.started"
           ? event.sync.id
-          : 'syncId' in event
+          : "syncId" in event
             ? event.syncId
-            : null
-      if (syncId !== id) return
+            : null;
+      if (syncId !== id) return;
 
-      if (event.type === 'sync.updated' || event.type === 'sync.completed') {
+      if (event.type === "sync.updated" || event.type === "sync.completed") {
         setSync((prev) =>
           prev
             ? {
@@ -242,23 +244,23 @@ export function SyncDetailPage() {
                 errorMessage: event.errorMessage,
               }
             : prev,
-        )
-        return
+        );
+        return;
       }
 
-      if (event.type === 'job.started') {
+      if (event.type === "job.started") {
         upsertJob({
           id: event.jobRunId,
           stage: event.stage,
           job: event.job,
           status: event.status,
           startedAt: event.startedAt,
-        })
-        appendLog('info', `Job started: ${event.stage}/${event.job}`)
-        return
+        });
+        appendLog("info", `Job started: ${event.stage}/${event.job}`);
+        return;
       }
 
-      if (event.type === 'job.completed') {
+      if (event.type === "job.completed") {
         upsertJob({
           id: event.jobRunId,
           stage: event.stage,
@@ -267,15 +269,15 @@ export function SyncDetailPage() {
           completedAt: event.completedAt,
           errorMessage: event.errorMessage,
           ...event.metrics,
-        })
+        });
         appendLog(
-          event.status === 'failed' ? 'error' : 'info',
+          event.status === "failed" ? "error" : "info",
           `Job completed: ${event.stage}/${event.job} (${event.status})`,
-        )
-        return
+        );
+        return;
       }
 
-      if (event.type === 'job.progress') {
+      if (event.type === "job.progress") {
         upsertJob({
           id: event.jobRunId,
           stage: event.stage,
@@ -285,19 +287,19 @@ export function SyncDetailPage() {
           recordsUpdated: event.progress.updated,
           recordsUnchanged: event.progress.unchanged,
           recordsFailed: event.progress.failed,
-        })
-        return
+        });
+        return;
       }
 
-      if (event.type === 'job.log') {
-        appendLog(event.level, event.message)
-        return
+      if (event.type === "job.log") {
+        appendLog(event.level, event.message);
+        return;
       }
 
-      if (event.type === 'job.error') {
-        setTotalErrors((n) => n + 1)
+      if (event.type === "job.error") {
+        setTotalErrors((n) => n + 1);
         setErrors((prev) => {
-          if (selectedJobId && event.jobRunId !== selectedJobId) return prev
+          if (selectedJobId && event.jobRunId !== selectedJobId) return prev;
           const row: IngestionError = {
             id: -Date.now(),
             runId: event.jobRunId,
@@ -307,17 +309,17 @@ export function SyncDetailPage() {
             errorMessage: event.error.errorMessage,
             payload: event.error.payload ?? null,
             createdAt: new Date().toISOString(),
-          }
-          return [row, ...prev].slice(0, PAGE_SIZE)
-        })
-        appendLog('error', event.error.errorMessage)
-        return
+          };
+          return [row, ...prev].slice(0, PAGE_SIZE);
+        });
+        appendLog("error", event.error.errorMessage);
+        return;
       }
 
-      if (event.type === 'job.unmatched') {
-        setTotalUnmatched((n) => n + 1)
+      if (event.type === "job.unmatched") {
+        setTotalUnmatched((n) => n + 1);
         setUnmatched((prev) => {
-          if (selectedJobId && event.jobRunId !== selectedJobId) return prev
+          if (selectedJobId && event.jobRunId !== selectedJobId) return prev;
           const row: IngestionUnmatched = {
             id: -Date.now(),
             runId: event.jobRunId,
@@ -329,107 +331,106 @@ export function SyncDetailPage() {
             scryfallId: event.unmatched.scryfallId,
             reason: event.unmatched.reason,
             createdAt: new Date().toISOString(),
-          }
-          return [...prev, row].slice(0, PAGE_SIZE)
-        })
+          };
+          return [...prev, row].slice(0, PAGE_SIZE);
+        });
       }
-    }
+    };
 
     const ws = connectEtlSyncWs(getToken, {
       onOpen: () => {
-        setLive(true)
-        ws.subscribeSync(id)
+        setLive(true);
+        ws.subscribeSync(id);
       },
       onClose: () => setLive(false),
       onEvent: applyEvent,
-    })
+    });
 
-    return () => ws.close()
-  }, [getToken, id, forbidden, selectedJobId])
+    return () => ws.close();
+  }, [getToken, id, forbidden, selectedJobId]);
 
   async function selectJob(job: EtlJobRun) {
-    if (!id) return
-    setSelectedJobId(job.id)
-    setErrorsLoading(true)
-    setUnmatchedLoading(true)
-    setOffset(0)
-    setUnmatchedOffset(0)
-    setExpandedPayload(null)
+    if (!id) return;
+    setSelectedJobId(job.id);
+    setErrorsLoading(true);
+    setUnmatchedLoading(true);
+    setOffset(0);
+    setUnmatchedOffset(0);
+    setExpandedPayload(null);
     try {
       const [errorPage, recon, unmatchedPage] = await Promise.all([
         fetchJobErrors(getToken, id, job.id, { limit: PAGE_SIZE, offset: 0 }),
-        job.job === 'identifiers'
+        job.job === "identifiers"
           ? fetchJobReconciliation(getToken, id, job.id)
           : Promise.resolve(null),
-        job.job === 'identifiers'
+        job.job === "identifiers"
           ? fetchJobUnmatched(getToken, id, job.id, {
               limit: PAGE_SIZE,
               offset: 0,
             })
           : Promise.resolve({ unmatched: [], total: 0 }),
-      ])
-      setErrors(errorPage.errors)
-      setTotalErrors(errorPage.total)
-      setReconciliation(recon)
-      setUnmatched(unmatchedPage.unmatched)
-      setTotalUnmatched(unmatchedPage.total)
+      ]);
+      setErrors(errorPage.errors);
+      setTotalErrors(errorPage.total);
+      setReconciliation(recon);
+      setUnmatched(unmatchedPage.unmatched);
+      setTotalUnmatched(unmatchedPage.total);
     } catch (err) {
-      if (err instanceof ApiError) setError(err.message)
-      else setError('Could not load job details')
+      if (err instanceof ApiError) setError(err.message);
+      else setError("Could not load job details");
     } finally {
-      setErrorsLoading(false)
-      setUnmatchedLoading(false)
+      setErrorsLoading(false);
+      setUnmatchedLoading(false);
     }
   }
 
   async function loadErrorPage(nextOffset: number) {
-    if (!id || !selectedJobId) return
-    setErrorsLoading(true)
+    if (!id || !selectedJobId) return;
+    setErrorsLoading(true);
     try {
       const errorPage = await fetchJobErrors(getToken, id, selectedJobId, {
         limit: PAGE_SIZE,
         offset: nextOffset,
-      })
-      setErrors(errorPage.errors)
-      setTotalErrors(errorPage.total)
-      setOffset(nextOffset)
-      setExpandedPayload(null)
+      });
+      setErrors(errorPage.errors);
+      setTotalErrors(errorPage.total);
+      setOffset(nextOffset);
+      setExpandedPayload(null);
     } catch (err) {
-      if (err instanceof ApiError) setError(err.message)
-      else setError('Could not load failed rows')
+      if (err instanceof ApiError) setError(err.message);
+      else setError("Could not load failed rows");
     } finally {
-      setErrorsLoading(false)
+      setErrorsLoading(false);
     }
   }
 
   async function loadUnmatchedPage(nextOffset: number) {
-    if (!id || !selectedJobId) return
-    setUnmatchedLoading(true)
+    if (!id || !selectedJobId) return;
+    setUnmatchedLoading(true);
     try {
       const page = await fetchJobUnmatched(getToken, id, selectedJobId, {
         limit: PAGE_SIZE,
         offset: nextOffset,
-      })
-      setUnmatched(page.unmatched)
-      setTotalUnmatched(page.total)
-      setUnmatchedOffset(nextOffset)
+      });
+      setUnmatched(page.unmatched);
+      setTotalUnmatched(page.total);
+      setUnmatchedOffset(nextOffset);
     } catch (err) {
-      if (err instanceof ApiError) setError(err.message)
-      else setError('Could not load unmatched records')
+      if (err instanceof ApiError) setError(err.message);
+      else setError("Could not load unmatched records");
     } finally {
-      setUnmatchedLoading(false)
+      setUnmatchedLoading(false);
     }
   }
 
   const selectedJob =
-    sync?.stages
-      .flatMap((s) => s.jobs)
-      .find((j) => j.id === selectedJobId) ?? null
+    sync?.stages.flatMap((s) => s.jobs).find((j) => j.id === selectedJobId) ??
+    null;
 
   const payloadRow =
     expandedPayload == null
       ? null
-      : (errors.find((e) => e.id === expandedPayload) ?? null)
+      : (errors.find((e) => e.id === expandedPayload) ?? null);
 
   return (
     <main className="mx-auto max-w-6xl px-5 py-5">
@@ -447,7 +448,7 @@ export function SyncDetailPage() {
 
       {loading ? <p className="text-muted-foreground">Loading…</p> : null}
       {error ? (
-        <Alert variant={forbidden ? 'destructive' : 'default'} className="mb-3">
+        <Alert variant={forbidden ? "destructive" : "default"} className="mb-3">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
@@ -473,7 +474,9 @@ export function SyncDetailPage() {
             <CardContent>
               <dl className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-4 gap-y-3">
                 <div>
-                  <dt className="mb-1 text-xs text-muted-foreground">Started</dt>
+                  <dt className="mb-1 text-xs text-muted-foreground">
+                    Started
+                  </dt>
                   <dd>{formatTimestamp(sync.startedAt)}</dd>
                 </div>
                 <div>
@@ -497,7 +500,7 @@ export function SyncDetailPage() {
               <Alert variant="destructive" className="mb-2">
                 <AlertTitle>Sync error</AlertTitle>
                 <AlertDescription>
-                  <pre className="mt-2 overflow-x-auto rounded-md bg-zinc-950 p-4 text-xs text-zinc-50 whitespace-pre-wrap break-words">
+                  <pre className="mt-2 overflow-x-auto rounded-md bg-muted p-4 text-xs text-foreground whitespace-pre-wrap break-words">
                     {sync.errorMessage}
                   </pre>
                 </AlertDescription>
@@ -510,23 +513,26 @@ export function SyncDetailPage() {
               <h2 id="live-log-heading" className="mb-3 font-heading text-lg">
                 Live log
               </h2>
-              <div className="max-h-48 overflow-auto rounded-xl bg-zinc-950 p-3 font-mono text-xs text-zinc-100 ring-1 ring-foreground/10">
+              <div className="max-h-48 overflow-auto rounded-xl bg-muted p-3 font-mono text-xs text-foreground ring-1 ring-foreground/10">
                 {liveLogs.map((line) => (
-                  <div key={line.id} className="whitespace-pre-wrap break-words">
-                    <span className="text-zinc-500">
+                  <div
+                    key={line.id}
+                    className="whitespace-pre-wrap break-words"
+                  >
+                    <span className="text-muted-foreground">
                       [{formatTimestamp(line.at)}]
-                    </span>{' '}
+                    </span>{" "}
                     <span
                       className={
-                        line.level === 'error'
-                          ? 'text-red-400'
-                          : line.level === 'warn'
-                            ? 'text-amber-300'
-                            : 'text-zinc-300'
+                        line.level === "error"
+                          ? "text-red-400"
+                          : line.level === "warn"
+                            ? "text-amber-300"
+                            : "text-foreground/80"
                       }
                     >
                       {line.level}
-                    </span>{' '}
+                    </span>{" "}
                     {line.message}
                   </div>
                 ))}
@@ -553,8 +559,8 @@ export function SyncDetailPage() {
                     type="button"
                     className={`w-full rounded-xl bg-card p-4 text-left ring-1 transition-shadow ${
                       selectedJobId === job.id
-                        ? 'ring-2 ring-foreground'
-                        : 'ring-foreground/10 hover:ring-foreground/30'
+                        ? "ring-2 ring-foreground"
+                        : "ring-foreground/10 hover:ring-foreground/30"
                     }`}
                     onClick={() => void selectJob(job)}
                   >
@@ -584,11 +590,13 @@ export function SyncDetailPage() {
                         <dd>{formatNumber(job.recordsUpdated)}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-muted-foreground">Failed</dt>
+                        <dt className="text-xs text-muted-foreground">
+                          Failed
+                        </dt>
                         <dd
                           className={
                             job.recordsFailed > 0
-                              ? 'font-semibold text-destructive'
+                              ? "font-semibold text-destructive"
                               : undefined
                           }
                         >
@@ -618,10 +626,13 @@ export function SyncDetailPage() {
             </section>
           ))}
 
-          {selectedJob?.job === 'identifiers' && reconciliation ? (
+          {selectedJob?.job === "identifiers" && reconciliation ? (
             <section className="mt-6" aria-labelledby="reconciliation-heading">
               <div className="mb-3 flex flex-wrap items-center gap-3">
-                <h2 id="reconciliation-heading" className="font-heading text-lg">
+                <h2
+                  id="reconciliation-heading"
+                  className="font-heading text-lg"
+                >
                   Reconciliation
                 </h2>
                 {reconciliation.demoMismatches ? (
@@ -647,7 +658,7 @@ export function SyncDetailPage() {
                       <dd
                         className={
                           reconciliation.unmatched > 0
-                            ? 'font-semibold text-destructive'
+                            ? "font-semibold text-destructive"
                             : undefined
                         }
                       >
@@ -661,7 +672,7 @@ export function SyncDetailPage() {
                       <dd
                         className={
                           reconciliation.ambiguous > 0
-                            ? 'font-semibold text-destructive'
+                            ? "font-semibold text-destructive"
                             : undefined
                         }
                       >
@@ -680,7 +691,7 @@ export function SyncDetailPage() {
             </section>
           ) : null}
 
-          {selectedJob?.job === 'identifiers' && reconciliation ? (
+          {selectedJob?.job === "identifiers" && reconciliation ? (
             <section className="mt-6" aria-labelledby="unmatched-heading">
               <div className="mb-3 flex items-baseline justify-between gap-4">
                 <h2 id="unmatched-heading" className="font-heading text-lg">
@@ -726,17 +737,17 @@ export function SyncDetailPage() {
                               {row.externalId}
                             </TableCell>
                             <TableCell className="max-w-xs whitespace-normal break-words">
-                              {row.name ?? '—'}
+                              {row.name ?? "—"}
                             </TableCell>
                             <TableCell className="font-mono text-sm">
-                              {row.setCode ?? '—'}
+                              {row.setCode ?? "—"}
                             </TableCell>
                             <TableCell className="font-mono text-sm">
-                              {row.collectorNumber ?? '—'}
+                              {row.collectorNumber ?? "—"}
                             </TableCell>
-                            <TableCell>{row.language ?? '—'}</TableCell>
+                            <TableCell>{row.language ?? "—"}</TableCell>
                             <TableCell className="font-mono text-sm">
-                              {row.scryfallId ?? '—'}
+                              {row.scryfallId ?? "—"}
                             </TableCell>
                             <TableCell className="max-w-sm whitespace-normal break-words">
                               {row.reason}
@@ -817,7 +828,7 @@ export function SyncDetailPage() {
                   <Dialog
                     open={expandedPayload != null}
                     onOpenChange={(open) => {
-                      if (!open) setExpandedPayload(null)
+                      if (!open) setExpandedPayload(null);
                     }}
                   >
                     <div className="rounded-xl bg-card ring-1 ring-foreground/10">
@@ -836,7 +847,7 @@ export function SyncDetailPage() {
                             <TableRow key={row.id}>
                               <TableCell>{row.stage}</TableCell>
                               <TableCell className="font-mono text-sm">
-                                {row.externalId ?? '—'}
+                                {row.externalId ?? "—"}
                               </TableCell>
                               <TableCell className="max-w-md whitespace-normal break-words">
                                 {row.errorMessage}
@@ -846,7 +857,7 @@ export function SyncDetailPage() {
                               </TableCell>
                               <TableCell>
                                 {row.payload == null ? (
-                                  '—'
+                                  "—"
                                 ) : (
                                   <Button
                                     type="button"
@@ -870,10 +881,10 @@ export function SyncDetailPage() {
                         <DialogDescription className="font-mono">
                           {payloadRow?.externalId ??
                             payloadRow?.stage ??
-                            'Failed row'}
+                            "Failed row"}
                         </DialogDescription>
                       </DialogHeader>
-                      <pre className="max-h-[60vh] overflow-auto rounded-md bg-zinc-950 p-4 text-xs text-zinc-50 whitespace-pre-wrap break-words">
+                      <pre className="max-h-[60vh] overflow-auto rounded-md bg-muted p-4 text-xs text-foreground whitespace-pre-wrap break-words">
                         {JSON.stringify(payloadRow?.payload, null, 2)}
                       </pre>
                       <DialogFooter showCloseButton />
@@ -915,5 +926,5 @@ export function SyncDetailPage() {
         </>
       ) : null}
     </main>
-  )
+  );
 }
