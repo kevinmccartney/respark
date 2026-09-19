@@ -16,12 +16,26 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Card, CardContent } from '@/components/ui/card';
 import { useSyncDetail } from '@/hooks/useSyncDetail.ts';
-import { formatDuration, formatTimestamp, statusBadgeProps } from '@/lib/format.ts';
-import { syncDurationMs, syncStagesLabel } from '@/lib/syncs.ts';
+import {
+  formatDuration,
+  formatProgressPercent,
+  formatTimestamp,
+  statusBadgeProps,
+} from '@/lib/format.ts';
+import { JOB_LABELS, syncDurationMs, syncStagesLabel } from '@/lib/syncs.ts';
 
 export const SyncDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const detail = useSyncDetail(id);
+
+  const runningJob = detail.sync?.stages
+    .flatMap((stage) => stage.jobs)
+    .find((job) => job.status === 'running');
+  const runningProgress = runningJob
+    ? `${JOB_LABELS[runningJob.job] ?? runningJob.job} ${formatProgressPercent(
+        detail.progressByJobId[runningJob.id]?.percent ?? null,
+      )}`
+    : null;
 
   return (
     <main className="mx-auto max-w-6xl px-5 py-5">
@@ -53,6 +67,9 @@ export const SyncDetailPage = () => {
               </h1>
               <Badge {...statusBadgeProps(detail.sync.status)}>{detail.sync.status}</Badge>
               {detail.live ? <span className="text-xs text-emerald-700">live</span> : null}
+              {runningProgress ? (
+                <span className="text-xs text-muted-foreground">{runningProgress}</span>
+              ) : null}
             </div>
             <p className="mt-1 font-mono text-sm text-muted-foreground">{detail.sync.id}</p>
           </header>
@@ -94,6 +111,7 @@ export const SyncDetailPage = () => {
           <SyncJobList
             sync={detail.sync}
             selectedJobId={detail.selectedJobId}
+            progressByJobId={detail.progressByJobId}
             onSelect={(job) => void detail.selectJob(job)}
           />
 

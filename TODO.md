@@ -6,7 +6,7 @@ Writing down ideas for the future
 
 ## Admin
 
-- Progress percent on sync details page
+- ~~Progress percent on sync details page~~
 - 404
 - Table of cards/sets/etc
 - User management

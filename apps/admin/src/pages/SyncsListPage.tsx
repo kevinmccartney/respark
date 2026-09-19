@@ -14,7 +14,12 @@ import {
 } from '@/components/ui/table';
 import { applyAdminLoadError, apiErrorMessage } from '@/lib/errors.ts';
 import { connectEtlSyncWs } from '@/lib/etl-ws.ts';
-import { formatDuration, formatTimestamp, statusBadgeProps } from '@/lib/format.ts';
+import {
+  formatDuration,
+  formatProgressPercent,
+  formatTimestamp,
+  statusBadgeProps,
+} from '@/lib/format.ts';
 import type { EtlSync } from 'schemas/etl-sync';
 import type { SyncEvent } from 'schemas/sync-event';
 import { patchSyncInList, upsertStartedSync } from '@/lib/sync-state.ts';
@@ -230,11 +235,7 @@ export const SyncsListPage = () => {
                       </TableCell>
                       <TableCell>{syncStagesLabel(sync)}</TableCell>
                       <TableCell className="text-muted-foreground">
-                        {prog
-                          ? prog.percent != null
-                            ? `${prog.job} ${prog.percent}%`
-                            : `${prog.job}…`
-                          : '—'}
+                        {prog ? `${prog.job} ${formatProgressPercent(prog.percent)}` : '—'}
                       </TableCell>
                       <TableCell>{formatTimestamp(sync.startedAt)}</TableCell>
                       <TableCell>{formatDuration(syncDurationMs(sync))}</TableCell>

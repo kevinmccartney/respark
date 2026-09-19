@@ -19,6 +19,9 @@ export const formatTimestamp = (iso: string | null): string => {
 
 export const formatNumber = (n: number): string => n.toLocaleString();
 
+export const formatProgressPercent = (percent: number | null): string =>
+  percent == null ? '…' : `${Math.round(percent)}%`;
+
 export type StatusBadgeProps = {
   variant: 'secondary' | 'destructive' | 'outline';
   className?: string;

@@ -52,6 +52,9 @@ export const useSyncDetail = (id: string | undefined) => {
   const [expandedPayload, setExpandedPayload] = useState<number | null>(null);
   const [liveLogs, setLiveLogs] = useState<LiveLog[]>([]);
   const [live, setLive] = useState(false);
+  const [progressByJobId, setProgressByJobId] = useState<
+    Record<string, { percent: number | null }>
+  >({});
 
   const selectedJobIdRef = useRef<string | null>(null);
   const errorsOffsetRef = useRef(0);
@@ -80,6 +83,7 @@ export const useSyncDetail = (id: string | undefined) => {
         const syncRow = await fetchEtlSync(getToken, id!);
         if (controller.signal.aborted) return;
         setSync(syncRow);
+        setProgressByJobId({});
 
         const allJobs = syncRow.stages.flatMap((s) => s.jobs);
         const preferred = allJobs.find((j) => j.job === 'identifiers') ?? allJobs[0] ?? null;
@@ -156,6 +160,9 @@ export const useSyncDetail = (id: string | undefined) => {
               })
             : prev,
         );
+        if (event.type === 'sync.completed') {
+          setProgressByJobId({});
+        }
         return;
       }
 
@@ -193,6 +200,11 @@ export const useSyncDetail = (id: string | undefined) => {
           errorMessage: event.errorMessage,
           ...event.metrics,
         });
+        setProgressByJobId((prev) => {
+          const next = { ...prev };
+          delete next[event.jobRunId];
+          return next;
+        });
         appendLog(
           event.status === 'failed' ? 'error' : 'info',
           `Job completed: ${event.stage}/${event.job} (${event.status})`,
@@ -211,6 +223,10 @@ export const useSyncDetail = (id: string | undefined) => {
           recordsUnchanged: event.progress.unchanged,
           recordsFailed: event.progress.failed,
         });
+        setProgressByJobId((prev) => ({
+          ...prev,
+          [event.jobRunId]: { percent: event.progress.percent },
+        }));
         return;
       }
 
@@ -353,6 +369,7 @@ export const useSyncDetail = (id: string | undefined) => {
     setExpandedPayload,
     payloadRow,
     liveLogs,
+    progressByJobId,
     selectJob,
     loadErrorPage,
     loadUnmatchedPage,
