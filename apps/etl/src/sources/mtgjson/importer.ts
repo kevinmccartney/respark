@@ -3,6 +3,7 @@ import { payloadHash } from '../../core/hashing';
 import type { Logger } from '../../core/logger';
 import { ProgressBar, tapByteStream } from '../../core/progress';
 import { emitSyncEvent } from '../../core/stream-events';
+import { isNonPlayableTypeLine } from '../../core/typeLine';
 import type { GlobalFlags, IngestionRunStatus, JobContext } from '../../core/types';
 import { finishJobRun, insertIngestionError, startJobRun } from '../../repositories/ingestionRuns';
 import {
@@ -369,6 +370,10 @@ export const runMtgjsonImport = async (
         // Prefer object uuid; fall back to map key
         if (!card.uuid) {
           (card as { uuid: string }).uuid = key;
+        }
+
+        if (isNonPlayableTypeLine(card.type)) {
+          continue;
         }
 
         const enrichment = extractEnrichment(card);

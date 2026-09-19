@@ -3,6 +3,7 @@ import { payloadHash } from '../../core/hashing';
 import type { Logger } from '../../core/logger';
 import { ProgressBar, tapByteStream } from '../../core/progress';
 import { emitSyncEvent } from '../../core/stream-events';
+import { isNonPlayableTypeLine } from '../../core/typeLine';
 import type { GlobalFlags, IngestionRunStatus, JobContext } from '../../core/types';
 import { upsertCatalogRecords } from '../../repositories/catalog';
 import { finishJobRun, insertIngestionError, startJobRun } from '../../repositories/ingestionRuns';
@@ -10,7 +11,7 @@ import { upsertScryfallCards, type RawScryfallUpsert } from '../../repositories/
 import { fetchBulkMetadata, openBulkDownload, selectBulkDataset } from './client';
 import { bulkByteSize, bulkDownloadUri, scryfallCardSchema } from './schema';
 import { streamJsonlGzip } from './stream';
-import { isNonPlayableTypeLine, transformScryfallCard, type CanonicalRecord } from './transformer';
+import { transformScryfallCard, type CanonicalRecord } from './transformer';
 
 const SOURCE = 'catalog';
 const STAGE = 'catalog';

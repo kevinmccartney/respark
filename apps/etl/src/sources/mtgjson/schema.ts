@@ -20,6 +20,7 @@ export const mtgjsonCardSchema = z
     setCode: z.string().optional(),
     number: z.string().optional(),
     language: z.string().optional(),
+    type: z.string().optional(),
     identifiers: mtgjsonIdentifiersSchema.optional(),
   })
   .passthrough();

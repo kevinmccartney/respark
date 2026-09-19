@@ -64,7 +64,7 @@ Scryfall is the source of truth for identity, printings, sets, and images. The i
 
 ### Card (`catalog.card`)
 
-The conceptual / oracle card (`oracle_id` from Scryfall). Shared rules text, colors, type line. Search and autocomplete query this table; the deck builder then picks a printing. Art cards, theme cards, and extras with a bare `Card` face on the type line are not imported.
+The conceptual / oracle card (`oracle_id` from Scryfall). Shared rules text, colors, type line. Search and autocomplete query this table; the deck builder then picks a printing. Art cards, theme cards, and extras with a bare `Card` face on the type line are not imported. The identifiers job skips the same extras.
 
 ### Set (`catalog.set`)
 

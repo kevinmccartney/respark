@@ -3,6 +3,8 @@
  * Scryfall owns oracle/printing fields — MTGJSON must not overwrite these later.
  */
 
+import { isNonPlayableTypeLine } from '../../core/typeLine';
+
 export type CanonicalSet = {
   scryfallId: string | null;
   code: string;
@@ -105,12 +107,6 @@ const asManaValue = (value: unknown): string | null => {
 
 const imageField = (images: Record<string, unknown> | null, key: string): string | null =>
   images ? asString(images[key]) : null;
-
-/** True when any `//`-separated face is a bare "Card" (art/theme backs, token extras). */
-export const isNonPlayableTypeLine = (typeLine: string | null | undefined): boolean => {
-  if (!typeLine) return false;
-  return typeLine.split('//').some((face) => face.trim() === 'Card');
-};
 
 /**
  * Returns null when the object should not become a catalog.card: missing identity

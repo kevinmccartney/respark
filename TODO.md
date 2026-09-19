@@ -20,3 +20,4 @@ Writing down ideas for the future
 ## ETL
 
 - ~~Exclude non-playable cards from import~~
+- Is there a more accurate way to find unplayable cards?

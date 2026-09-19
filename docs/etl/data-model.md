@@ -80,10 +80,10 @@ Internal PKs are UUIDs. Third-party IDs are unique constraints / identifier rows
 
 ## Raw
 
-| Table               | Role                                 |
-| ------------------- | ------------------------------------ |
-| `raw.scryfall_card` | Scryfall bulk card JSON (+ hash)     |
-| `raw.mtgjson_card`  | MTGJSON AllIdentifiers JSON (+ hash) |
+| Table               | Role                                                                    |
+| ------------------- | ----------------------------------------------------------------------- |
+| `raw.scryfall_card` | Scryfall bulk card JSON (+ hash)                                        |
+| `raw.mtgjson_card`  | MTGJSON AllIdentifiers JSON (+ hash). `Card`-face extras are not stored |
 
 Raw can dominate disk (~¾ of local DB size with both providers stored). Catalog-only is much smaller.
 
