@@ -6,7 +6,7 @@ import {
   statusBadgeProps,
 } from '@/lib/format.ts';
 import type { EtlJobRun, EtlSync } from 'schemas/etl-sync';
-import { JOB_LABELS, STAGE_LABELS } from '@/lib/syncs.ts';
+import { JOB_LABELS, STAGE_LABELS, syncJobSlots } from '@/lib/syncs.ts';
 
 type JobProgress = {
   percent: number | null;
@@ -26,13 +26,31 @@ export const SyncJobList = ({
   onSelect,
 }: SyncJobListProps) => (
   <>
-    {sync.stages.map((stage) => (
+    {syncJobSlots(sync).map((stage) => (
       <section key={stage.stage} className="mt-6" aria-labelledby={`stage-${stage.stage}`}>
         <h2 id={`stage-${stage.stage}`} className="mb-3 font-heading text-lg">
           {STAGE_LABELS[stage.stage] ?? stage.stage}
         </h2>
         <div className="space-y-3">
-          {stage.jobs.map((job) => {
+          {stage.jobs.map((slot) => {
+            const job = slot.run;
+            if (!job) {
+              return (
+                <div
+                  key={slot.key}
+                  className="w-full rounded-xl bg-card p-4 ring-1 ring-foreground/10"
+                >
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{JOB_LABELS[slot.job] ?? slot.job}</span>
+                    <Badge {...statusBadgeProps(slot.status)}>{slot.status}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {slot.status === 'scheduled' ? 'Not started yet' : 'Did not run'}
+                  </p>
+                </div>
+              );
+            }
+
             const progress = progressByJobId[job.id];
             const showProgress = job.status === 'running' && progress !== undefined;
             const percent = progress?.percent ?? null;

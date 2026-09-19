@@ -1,5 +1,7 @@
 import type { IngestionRunStatus } from 'schemas/etl-sync';
 
+export type JobDisplayStatus = IngestionRunStatus | 'scheduled' | 'skipped';
+
 export const formatDuration = (ms: number | null): string => {
   if (ms == null) return '—';
   if (ms < 1000) return `${ms}ms`;
@@ -27,7 +29,7 @@ export type StatusBadgeProps = {
   className?: string;
 };
 
-export const statusBadgeProps = (status: IngestionRunStatus): StatusBadgeProps => {
+export const statusBadgeProps = (status: JobDisplayStatus): StatusBadgeProps => {
   switch (status) {
     case 'success':
       return { variant: 'secondary', className: 'bg-emerald-100 text-emerald-800' };
@@ -42,6 +44,16 @@ export const statusBadgeProps = (status: IngestionRunStatus): StatusBadgeProps =
       return {
         variant: 'outline',
         className: 'border-blue-200 bg-blue-100 text-blue-800',
+      };
+    case 'scheduled':
+      return {
+        variant: 'outline',
+        className: 'border-foreground/20 bg-muted text-muted-foreground',
+      };
+    case 'skipped':
+      return {
+        variant: 'outline',
+        className: 'text-muted-foreground',
       };
   }
 };
