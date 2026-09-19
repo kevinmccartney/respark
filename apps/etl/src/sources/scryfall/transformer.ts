@@ -106,13 +106,23 @@ const asManaValue = (value: unknown): string | null => {
 const imageField = (images: Record<string, unknown> | null, key: string): string | null =>
   images ? asString(images[key]) : null;
 
+/** True when any `//`-separated face is a bare "Card" (art/theme backs, token extras). */
+export const isNonPlayableTypeLine = (typeLine: string | null | undefined): boolean => {
+  if (!typeLine) return false;
+  return typeLine.split('//').some((face) => face.trim() === 'Card');
+};
+
 /**
- * Returns null when the object cannot become a catalog.card (no oracle_id).
- * Tokens/art cards without oracle_id stay in raw only.
+ * Returns null when the object should not become a catalog.card: missing identity
+ * fields, or a non-playable extra (a `Card` face on the type line).
  */
 export const transformScryfallCard = (raw: unknown): CanonicalRecord | null => {
   const card = asRecord(raw);
   if (!card) return null;
+
+  if (isNonPlayableTypeLine(asString(card.type_line))) {
+    return null;
+  }
 
   const scryfallId = asString(card.id);
   const setCode = asString(card.set);

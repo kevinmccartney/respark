@@ -10,7 +10,7 @@ import { upsertScryfallCards, type RawScryfallUpsert } from '../../repositories/
 import { fetchBulkMetadata, openBulkDownload, selectBulkDataset } from './client';
 import { bulkByteSize, bulkDownloadUri, scryfallCardSchema } from './schema';
 import { streamJsonlGzip } from './stream';
-import { transformScryfallCard, type CanonicalRecord } from './transformer';
+import { isNonPlayableTypeLine, transformScryfallCard, type CanonicalRecord } from './transformer';
 
 const SOURCE = 'catalog';
 const STAGE = 'catalog';
@@ -87,6 +87,7 @@ export const runScryfallImport = async (
   let recordsUpdated = 0;
   let recordsUnchanged = 0;
   let recordsFailed = 0;
+  let recordsSkipped = 0;
   let downloadBytes = bulkByteSize(dataset);
   let bytesRead = 0;
   let batch: BatchItem[] = [];
@@ -215,6 +216,11 @@ export const runScryfallImport = async (
       }
 
       const card = parsed.data;
+      if (isNonPlayableTypeLine(card.type_line)) {
+        recordsSkipped += 1;
+        continue;
+      }
+
       const canonical = transformScryfallCard(raw);
       if (!canonical) {
         recordsFailed += 1;
@@ -337,6 +343,7 @@ export const runScryfallImport = async (
         recordsUpdated,
         recordsUnchanged,
         recordsFailed,
+        recordsSkipped,
         downloadBytes,
         durationMs: Date.now() - started,
         dryRun: options.dryRun,

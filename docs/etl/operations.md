@@ -8,7 +8,7 @@ task db:up
 task db:migrate
 ```
 
-API/admin syncs use the API’s `DATABASE_URL` (Compose or `apps/api/.env`).
+API/admin syncs use the API’s `DATABASE_URL` (Compose or `apps/api/.env`). The API loads the compiled `etl` package (`apps/etl/dist`). Nest `--watch` does not rebuild it — run `task etl:build` (or `task docker:up`) after changing pipeline source, then restart the API. The CLI (`task etl -- …`) runs TypeScript via `tsx` and does not need that rebuild.
 
 ## CLI (report / break-glass)
 

@@ -11,6 +11,7 @@ export const scryfallCardSchema = z
     uri: z.string().optional(),
     scryfall_uri: z.string().optional(),
     layout: z.string().optional(),
+    type_line: z.string().optional(),
     set: z.string().optional(),
     set_name: z.string().optional(),
     collector_number: z.string().optional(),

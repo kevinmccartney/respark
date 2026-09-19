@@ -110,6 +110,9 @@ tasks:
 
   docker:up:
     desc: Start local app stack via Docker Compose
+    deps:
+      - schemas:build
+      - etl:build
     cmds:
       - docker compose -f {{.COMPOSE_FILE}} up -d --build --wait
 
@@ -218,6 +221,7 @@ tasks:
     desc: Run the API in watch mode on PORT (default {{.API_PORT}})
     deps:
       - schemas:build
+      - etl:build
     env:
       PORT: '{{.API_PORT}}'
     cmds:
@@ -232,6 +236,7 @@ tasks:
     desc: Run the API with Node inspector on 9229 (or use VS Code "API debug (launch)")
     deps:
       - schemas:build
+      - etl:build
     env:
       PORT: '{{.API_PORT}}'
     cmds:

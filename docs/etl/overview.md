@@ -30,6 +30,8 @@ A sync may run catalog only, enrichment only, or both. Enrichment-only is allowe
 
 Enrichment **never creates** `catalog.printing` rows. Unmatched MTGJSON cards are recorded for review; they do not become catalog entities.
 
+The catalog job skips Scryfall objects whose `type_line` has a bare `Card` face (art cards, theme cards, token/emblem backs such as `Emblem // Card`). They are not written to `catalog` or `raw`.
+
 ## Architecture
 
 ![ETL architecture](diagrams/architecture.svg)
@@ -55,6 +57,8 @@ apps/etl/src/
   repositories/            # SQL helpers
   commands/report.ts       # size report
 ```
+
+The admin API imports this package from `apps/etl/dist` (see [operations](operations.md)). `task etl --` uses `tsx` on `src/` directly.
 
 DDL and Drizzle schemas live in `apps/api` (`task db:migrate`).
 
