@@ -15,17 +15,17 @@ const DEBOUNCE_MS = 300;
 
 type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 
-function parsePageSize(raw: string | null): PageSize {
+const parsePageSize = (raw: string | null): PageSize => {
   const n = Number.parseInt(raw ?? '', 10);
   return (PAGE_SIZE_OPTIONS as readonly number[]).includes(n) ? (n as PageSize) : DEFAULT_PAGE_SIZE;
-}
+};
 
-function parsePage(raw: string | null): number {
+const parsePage = (raw: string | null): number => {
   const n = Number.parseInt(raw ?? '', 10);
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
-}
+};
 
-export function SearchPage() {
+export const SearchPage = () => {
   const { getToken } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const qParam = searchParams.get('q') ?? '';
@@ -64,7 +64,7 @@ export function SearchPage() {
   useEffect(() => {
     const controller = new AbortController();
 
-    async function load() {
+    const load = async () => {
       setLoading(true);
       setError(null);
       try {
@@ -95,7 +95,7 @@ export function SearchPage() {
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
-    }
+    };
 
     void load();
     return () => controller.abort();
@@ -103,26 +103,26 @@ export function SearchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [getToken, qParam, pageSize, pageParam]);
 
-  function updateParams(mutate: (next: URLSearchParams) => void) {
+  const updateParams = (mutate: (next: URLSearchParams) => void) => {
     const next = new URLSearchParams(searchParams);
     mutate(next);
     setSearchParams(next, { replace: true });
-  }
+  };
 
-  function setPageSize(nextSize: PageSize) {
+  const setPageSize = (nextSize: PageSize) => {
     updateParams((next) => {
       if (nextSize === DEFAULT_PAGE_SIZE) next.delete('pageSize');
       else next.set('pageSize', String(nextSize));
       next.delete('page');
     });
-  }
+  };
 
-  function goToPage(nextPage: number) {
+  const goToPage = (nextPage: number) => {
     updateParams((next) => {
       if (nextPage <= 1) next.delete('page');
       else next.set('page', String(nextPage));
     });
-  }
+  };
 
   const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const rangeEnd = Math.min(page * pageSize, total);
@@ -248,9 +248,9 @@ export function SearchPage() {
       </main>
     </>
   );
-}
+};
 
-function PaginationControls({
+const PaginationControls = ({
   page,
   totalPages,
   onFirst,
@@ -264,7 +264,7 @@ function PaginationControls({
   onPrev: () => void;
   onNext: () => void;
   onLast: () => void;
-}) {
+}) => {
   const atStart = page <= 1;
   const atEnd = page >= totalPages;
 
@@ -287,4 +287,4 @@ function PaginationControls({
       </Button>
     </nav>
   );
-}
+};

@@ -28,13 +28,13 @@ type BatchItem = {
   sourcePayload: unknown;
 };
 
-function resolveStoreRaw(flags: GlobalFlags): boolean {
+const resolveStoreRaw = (flags: GlobalFlags): boolean => {
   if (flags.storeRaw !== undefined) return flags.storeRaw;
   if (process.env.ETL_STORE_RAW === 'false') return false;
   return true;
-}
+};
 
-function parseSourceUpdatedAt(value: string | number | null | undefined): Date | null {
+const parseSourceUpdatedAt = (value: string | number | null | undefined): Date | null => {
   if (value === null || value === undefined) return null;
   if (typeof value === 'number') {
     // Scryfall sometimes uses unix seconds
@@ -43,17 +43,17 @@ function parseSourceUpdatedAt(value: string | number | null | undefined): Date |
   }
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
-}
+};
 
 /**
  * Download Scryfall bulk data → raw.scryfall_card + catalog.* (Phase 4 full import).
  */
-export async function runScryfallImport(
+export const runScryfallImport = async (
   pool: Pool,
   logger: Logger,
   flags: GlobalFlags,
   ctx: JobContext,
-): Promise<IngestionRunStatus> {
+): Promise<IngestionRunStatus> => {
   const options: ScryfallImportOptions = {
     ...flags,
     storeRaw: resolveStoreRaw(flags),
@@ -383,4 +383,4 @@ export async function runScryfallImport(
     });
     throw err;
   }
-}
+};

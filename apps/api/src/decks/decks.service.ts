@@ -780,45 +780,41 @@ export class DecksService {
   }
 }
 
-export function parseDeckFormat(raw: unknown): DeckFormat {
+export const parseDeckFormat = (raw: unknown): DeckFormat => {
   if (typeof raw !== 'string' || !(DECK_FORMATS as readonly string[]).includes(raw)) {
     throw new BadRequestException(`format must be one of: ${DECK_FORMATS.join(', ')}`);
   }
   return raw as DeckFormat;
-}
+};
 
-function toDeck(row: DeckRow): Deck {
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    format: normalizeFormat(row.format),
-    updatedAt: row.updatedAt.toISOString(),
-  };
-}
+const toDeck = (row: DeckRow): Deck => ({
+  id: row.id,
+  name: row.name,
+  description: row.description,
+  format: normalizeFormat(row.format),
+  updatedAt: row.updatedAt.toISOString(),
+});
 
-function toDeckCard(row: DeckCardRow): DeckCard {
-  return {
-    id: row.id,
-    cardId: row.card_id,
-    printingId: row.printing_id,
-    name: row.name,
-    manaCost: row.mana_cost,
-    manaValue: row.mana_value,
-    typeLine: row.type_line,
-    foil: row.foil,
-    sideboard: row.sideboard,
-    quantity: row.quantity,
-    setCode: row.set_code,
-    setName: row.set_name,
-    collectorNumber: row.collector_number,
-    imageNormal: row.image_normal,
-  };
-}
+const toDeckCard = (row: DeckCardRow): DeckCard => ({
+  id: row.id,
+  cardId: row.card_id,
+  printingId: row.printing_id,
+  name: row.name,
+  manaCost: row.mana_cost,
+  manaValue: row.mana_value,
+  typeLine: row.type_line,
+  foil: row.foil,
+  sideboard: row.sideboard,
+  quantity: row.quantity,
+  setCode: row.set_code,
+  setName: row.set_name,
+  collectorNumber: row.collector_number,
+  imageNormal: row.image_normal,
+});
 
-function normalizeFormat(raw: string): DeckFormat {
+const normalizeFormat = (raw: string): DeckFormat => {
   if ((DECK_FORMATS as readonly string[]).includes(raw)) {
     return raw as DeckFormat;
   }
   return 'standard';
-}
+};

@@ -22,10 +22,12 @@ const MOXFIELD_LINE_RE =
 
 type BoardSection = 'main' | 'sideboard' | 'skip';
 
-export function parseMoxfieldExport(text: string): {
+export const parseMoxfieldExport = (
+  text: string,
+): {
   lines: MoxfieldLine[];
   skipped: { raw: string; reason: string }[];
-} {
+} => {
   const lines: MoxfieldLine[] = [];
   const skipped: { raw: string; reason: string }[] = [];
   let section: BoardSection = 'main';
@@ -79,20 +81,19 @@ export function parseMoxfieldExport(text: string): {
   }
 
   return { lines, skipped };
-}
+};
 
-function parseSectionHeader(raw: string): BoardSection | null {
+const parseSectionHeader = (raw: string): BoardSection | null => {
   if (/^sideboard\s*:?\s*$/i.test(raw)) return 'sideboard';
   if (/^(deck|mainboard|commander)\s*:?\s*$/i.test(raw)) return 'main';
   if (/^maybeboard\s*:?\s*$/i.test(raw)) return 'skip';
   return null;
-}
+};
 
 /** Normalize DFC slash variants and casing for comparison. */
-export function normalizeCardName(name: string): string {
-  return name
+export const normalizeCardName = (name: string): string =>
+  name
     .replace(/\s*\/\/\s*/g, ' // ')
     .replace(/\s+\/\s+/g, ' // ')
     .trim()
     .toLowerCase();
-}

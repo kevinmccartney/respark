@@ -27,10 +27,12 @@ Style is enforced by Prettier + ESLint (`task format`, `task lint`). Do not bike
 ## Quality
 
 - **TypeScript strict**: no `any` unless unavoidable and localized; prefer `unknown` + narrow.
+- **Zod at boundaries**: parse REST/WS with schemas that match the **wire format**, not the DB type. Shared primitives (`z.uuid()`, `z.iso.datetime()`, log levels) live in `lib/schemas/primitives.ts` — import those; don’t redefine them in domain schemas. JSON timestamps are ISO-8601 strings — use `z.iso.datetime()` (Zod 4), not `z.string()` or `z.date()`. Entity IDs that are Postgres `uuid` — use `z.uuid()`, not `z.string()`; serial/bigserial PKs stay `z.number()`. External/provider ids (`externalId`, set codes) stay `z.string()` unless the column is actually uuid. Prefer enums/unions over loose `string`. Infer TS types from schemas (`z.infer<typeof schema>`). Get the model right before wiring UI.
 - **Explicit domain types** next to the feature (`deck.types.ts`, `card.types.ts`); share across web/API only when shapes truly match.
 - **Early returns** over deep nesting; keep functions focused.
-- **Avoid** new wrappers, indirection, or “utils gods” — extend the nearest module.
-- React: function components; hooks at top level; don’t add `useMemo` / `useCallback` unless the codebase already needs them for a measured reason.
+- **Import from the defining module**: don’t re-export types/values as a convenience barrel. Callers import `EtlSync` from `schemas/etl-sync.ts`, fetch helpers from `syncs.ts`, etc.
+- **Arrow functions**: prefer `const fn = () => {}` / `export const Foo = () => {}` over `function` declarations. Class methods stay as methods (Nest services/controllers). Generators and `this`-bound functions may keep `function`. Enforced by ESLint (`prefer-arrow-functions`, `prefer-arrow-callback`).
+- React: arrow-function components; hooks at top level; don’t add `useMemo` / `useCallback` unless the codebase already needs them for a measured reason.
 - Nest: keep business logic in services; controllers stay thin; inject `PinoLogger` for structured logs.
 - ETL: keep stages/jobs aligned with `docs/etl/`; repository functions named after the table/domain they touch.
 - Don’t fight generated `components/ui/**` (shadcn) unless fixing a real bug.

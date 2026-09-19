@@ -74,48 +74,43 @@ export type CanonicalRecord = {
   identifiers: CanonicalIdentifier[];
 };
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
-}
 
-function asString(value: unknown): string | null {
-  return typeof value === 'string' && value.length > 0 ? value : null;
-}
+const asString = (value: unknown): string | null =>
+  typeof value === 'string' && value.length > 0 ? value : null;
 
-function asBool(value: unknown): boolean | null {
-  return typeof value === 'boolean' ? value : null;
-}
+const asBool = (value: unknown): boolean | null => (typeof value === 'boolean' ? value : null);
 
-function asStringArray(value: unknown): string[] | null {
+const asStringArray = (value: unknown): string[] | null => {
   if (!Array.isArray(value)) return null;
   const out = value.filter((v): v is string => typeof v === 'string');
   return out;
-}
+};
 
-function asDateOnly(value: unknown): string | null {
+const asDateOnly = (value: unknown): string | null => {
   const s = asString(value);
   if (!s) return null;
   // Scryfall dates are YYYY-MM-DD or ISO timestamps
   return s.slice(0, 10);
-}
+};
 
-function asManaValue(value: unknown): string | null {
+const asManaValue = (value: unknown): string | null => {
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   if (typeof value === 'string' && value.length > 0) return value;
   return null;
-}
+};
 
-function imageField(images: Record<string, unknown> | null, key: string): string | null {
-  return images ? asString(images[key]) : null;
-}
+const imageField = (images: Record<string, unknown> | null, key: string): string | null =>
+  images ? asString(images[key]) : null;
 
 /**
  * Returns null when the object cannot become a catalog.card (no oracle_id).
  * Tokens/art cards without oracle_id stay in raw only.
  */
-export function transformScryfallCard(raw: unknown): CanonicalRecord | null {
+export const transformScryfallCard = (raw: unknown): CanonicalRecord | null => {
   const card = asRecord(raw);
   if (!card) return null;
 
@@ -232,4 +227,4 @@ export function transformScryfallCard(raw: unknown): CanonicalRecord | null {
     faces,
     identifiers,
   };
-}
+};

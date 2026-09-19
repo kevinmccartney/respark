@@ -213,7 +213,7 @@ export class AdminService {
   }
 }
 
-function toEtlSync(row: EtlSyncRow, jobs: EtlJobRunRow[]): EtlSync {
+const toEtlSync = (row: EtlSyncRow, jobs: EtlJobRunRow[]): EtlSync => {
   const stageOrder = ['catalog', 'enrichment'];
   const byStage = new Map<string, EtlJobRun[]>();
   for (const job of jobs) {
@@ -245,72 +245,64 @@ function toEtlSync(row: EtlSyncRow, jobs: EtlJobRunRow[]): EtlSync {
     createdAt: row.createdAt.toISOString(),
     stages,
   };
-}
+};
 
-function toEtlJobRun(row: EtlJobRunRow): EtlJobRun {
-  return {
-    id: row.id,
-    syncId: row.syncId,
-    stage: row.stage,
-    job: row.job,
-    status: row.status,
-    startedAt: row.startedAt.toISOString(),
-    completedAt: row.completedAt?.toISOString() ?? null,
-    sourceVersion: row.sourceVersion,
-    sourceUrl: row.sourceUrl,
-    recordsSeen: row.recordsSeen,
-    recordsInserted: row.recordsInserted,
-    recordsUpdated: row.recordsUpdated,
-    recordsUnchanged: row.recordsUnchanged,
-    recordsFailed: row.recordsFailed,
-    downloadBytes: row.downloadBytes,
-    durationMs: row.durationMs,
-    errorMessage: row.errorMessage,
-  };
-}
+const toEtlJobRun = (row: EtlJobRunRow): EtlJobRun => ({
+  id: row.id,
+  syncId: row.syncId,
+  stage: row.stage,
+  job: row.job,
+  status: row.status,
+  startedAt: row.startedAt.toISOString(),
+  completedAt: row.completedAt?.toISOString() ?? null,
+  sourceVersion: row.sourceVersion,
+  sourceUrl: row.sourceUrl,
+  recordsSeen: row.recordsSeen,
+  recordsInserted: row.recordsInserted,
+  recordsUpdated: row.recordsUpdated,
+  recordsUnchanged: row.recordsUnchanged,
+  recordsFailed: row.recordsFailed,
+  downloadBytes: row.downloadBytes,
+  durationMs: row.durationMs,
+  errorMessage: row.errorMessage,
+});
 
-function toIngestionError(row: IngestionErrorRow): IngestionError {
-  return {
-    id: row.id,
-    runId: row.runId,
-    source: row.source,
-    externalId: row.externalId,
-    stage: row.stage,
-    errorMessage: row.errorMessage,
-    payload: row.payload,
-    createdAt: row.createdAt.toISOString(),
-  };
-}
+const toIngestionError = (row: IngestionErrorRow): IngestionError => ({
+  id: row.id,
+  runId: row.runId,
+  source: row.source,
+  externalId: row.externalId,
+  stage: row.stage,
+  errorMessage: row.errorMessage,
+  payload: row.payload,
+  createdAt: row.createdAt.toISOString(),
+});
 
-function toIngestionReconciliation(row: IngestionReconciliationRow): IngestionReconciliation {
-  return {
-    runId: row.runId,
-    matched: row.matched,
-    unmatched: row.unmatched,
-    ambiguous: row.ambiguous,
-    identifiersAdded: row.identifiersAdded,
-    rawInserted: row.rawInserted,
-    rawUpdated: row.rawUpdated,
-    rawUnchanged: row.rawUnchanged,
-    storeRaw: row.storeRaw,
-    demoMismatches: row.demoMismatches,
-    dryRun: row.dryRun,
-    limitN: row.limitN,
-    createdAt: row.createdAt.toISOString(),
-  };
-}
+const toIngestionReconciliation = (row: IngestionReconciliationRow): IngestionReconciliation => ({
+  runId: row.runId,
+  matched: row.matched,
+  unmatched: row.unmatched,
+  ambiguous: row.ambiguous,
+  identifiersAdded: row.identifiersAdded,
+  rawInserted: row.rawInserted,
+  rawUpdated: row.rawUpdated,
+  rawUnchanged: row.rawUnchanged,
+  storeRaw: row.storeRaw,
+  demoMismatches: row.demoMismatches,
+  dryRun: row.dryRun,
+  limitN: row.limitN,
+  createdAt: row.createdAt.toISOString(),
+});
 
-function toIngestionUnmatched(row: IngestionUnmatchedRow): IngestionUnmatched {
-  return {
-    id: row.id,
-    runId: row.runId,
-    externalId: row.externalId,
-    name: row.name,
-    setCode: row.setCode,
-    collectorNumber: row.collectorNumber,
-    language: row.language,
-    scryfallId: row.scryfallId,
-    reason: row.reason,
-    createdAt: row.createdAt.toISOString(),
-  };
-}
+const toIngestionUnmatched = (row: IngestionUnmatchedRow): IngestionUnmatched => ({
+  id: row.id,
+  runId: row.runId,
+  externalId: row.externalId,
+  name: row.name,
+  setCode: row.setCode,
+  collectorNumber: row.collectorNumber,
+  language: row.language,
+  scryfallId: row.scryfallId,
+  reason: row.reason,
+  createdAt: row.createdAt.toISOString(),
+});

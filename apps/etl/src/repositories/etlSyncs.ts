@@ -9,7 +9,7 @@ export type StartSyncInput = {
   enrichmentJobs?: string[];
 };
 
-export async function startEtlSync(pool: Pool, input: StartSyncInput): Promise<string> {
+export const startEtlSync = async (pool: Pool, input: StartSyncInput): Promise<string> => {
   const enrichmentJobs = input.enrichmentJobs ?? [];
   const result = await pool.query<{ id: string }>(
     `insert into ops.etl_sync
@@ -19,16 +19,16 @@ export async function startEtlSync(pool: Pool, input: StartSyncInput): Promise<s
     [input.includeCatalog, input.includeEnrichment, enrichmentJobs],
   );
   return result.rows[0].id;
-}
+};
 
-export async function finishEtlSync(
+export const finishEtlSync = async (
   pool: Pool,
   input: {
     syncId: string;
     status: EtlSyncStatus;
     errorMessage?: string | null;
   },
-): Promise<void> {
+): Promise<void> => {
   await pool.query(
     `update ops.etl_sync set
        status = $2,
@@ -37,10 +37,10 @@ export async function finishEtlSync(
      where id = $1`,
     [input.syncId, input.status, input.errorMessage ?? null],
   );
-}
+};
 
 /** Roll up job-run statuses into a single sync status. */
-export function rollupSyncStatus(statuses: IngestionRunStatus[]): EtlSyncStatus {
+export const rollupSyncStatus = (statuses: IngestionRunStatus[]): EtlSyncStatus => {
   if (statuses.length === 0) return 'failed';
   if (statuses.every((s) => s === 'success')) return 'success';
   if (statuses.every((s) => s === 'failed')) return 'failed';
@@ -48,4 +48,4 @@ export function rollupSyncStatus(statuses: IngestionRunStatus[]): EtlSyncStatus 
     return 'partial_success';
   }
   return 'success';
-}
+};

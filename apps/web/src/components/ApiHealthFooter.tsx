@@ -4,13 +4,13 @@ import { apiBaseUrl } from '../lib/api.ts';
 
 type HealthState = 'checking' | 'ok' | 'error';
 
-export function ApiHealthFooter() {
+export const ApiHealthFooter = () => {
   const [state, setState] = useState<HealthState>('checking');
 
   useEffect(() => {
     const controller = new AbortController();
 
-    async function checkHealth() {
+    const checkHealth = async () => {
       try {
         const response = await fetch(`${apiBaseUrl()}/healthz`, {
           signal: controller.signal,
@@ -38,7 +38,7 @@ export function ApiHealthFooter() {
           setState('error');
         }
       }
-    }
+    };
 
     void checkHealth();
 
@@ -60,4 +60,4 @@ export function ApiHealthFooter() {
       </Badge>
     </footer>
   );
-}
+};

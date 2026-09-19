@@ -1,4 +1,6 @@
-export function formatDuration(ms: number | null): string {
+import type { IngestionRunStatus } from './schemas/etl-sync.ts';
+
+export const formatDuration = (ms: number | null): string => {
   if (ms == null) return '—';
   if (ms < 1000) return `${ms}ms`;
   const seconds = ms / 1000;
@@ -6,25 +8,23 @@ export function formatDuration(ms: number | null): string {
   const minutes = Math.floor(seconds / 60);
   const rem = Math.round(seconds % 60);
   return `${minutes}m ${rem}s`;
-}
+};
 
-export function formatTimestamp(iso: string | null): string {
+export const formatTimestamp = (iso: string | null): string => {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString();
-}
+};
 
-export function formatNumber(n: number): string {
-  return n.toLocaleString();
-}
+export const formatNumber = (n: number): string => n.toLocaleString();
 
 export type StatusBadgeProps = {
   variant: 'secondary' | 'destructive' | 'outline';
   className?: string;
 };
 
-export function statusBadgeProps(status: string): StatusBadgeProps {
+export const statusBadgeProps = (status: IngestionRunStatus): StatusBadgeProps => {
   switch (status) {
     case 'success':
       return { variant: 'secondary', className: 'bg-emerald-100 text-emerald-800' };
@@ -40,7 +40,5 @@ export function statusBadgeProps(status: string): StatusBadgeProps {
         variant: 'outline',
         className: 'border-blue-200 bg-blue-100 text-blue-800',
       };
-    default:
-      return { variant: 'outline' };
   }
-}
+};

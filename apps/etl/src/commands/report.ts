@@ -38,7 +38,7 @@ export type SizeReport = {
   }>;
 };
 
-function prettyBytes(bytes: number): string {
+const prettyBytes = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
   const units = ['KB', 'MB', 'GB', 'TB'];
   let value = bytes;
@@ -48,9 +48,9 @@ function prettyBytes(bytes: number): string {
     unit += 1;
   } while (value >= 1024 && unit < units.length - 1);
   return `${value.toFixed(value >= 10 || unit === 0 ? 1 : 2)} ${units[unit]}`;
-}
+};
 
-export async function collectSizeReport(pool: Pool): Promise<SizeReport> {
+export const collectSizeReport = async (pool: Pool): Promise<SizeReport> => {
   const db = await pool.query<{ name: string; bytes: string }>(
     `select current_database() as name, pg_database_size(current_database())::text as bytes`,
   );
@@ -190,13 +190,13 @@ export async function collectSizeReport(pool: Pool): Promise<SizeReport> {
     largestTables: tables.slice(0, 20),
     latestRuns,
   };
-}
+};
 
-export async function writeSizeReport(
+export const writeSizeReport = async (
   pool: Pool,
   logger: Logger,
   outPath = DEFAULT_REPORT_PATH,
-): Promise<SizeReport> {
+): Promise<SizeReport> => {
   const report = await collectSizeReport(pool);
   await mkdir(dirname(outPath), { recursive: true });
   await writeFile(outPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
@@ -213,4 +213,4 @@ export async function writeSizeReport(
   );
 
   return report;
-}
+};

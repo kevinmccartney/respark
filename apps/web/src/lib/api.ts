@@ -1,6 +1,6 @@
 const defaultApiBase = 'http://localhost:3000';
 
-export function apiBaseUrl(): string {
+export const apiBaseUrl = (): string => {
   const configured = import.meta.env.VITE_API_URL?.trim();
   if (configured) return configured.replace(/\/$/, '');
 
@@ -11,7 +11,7 @@ export function apiBaseUrl(): string {
   }
 
   return defaultApiBase;
-}
+};
 
 export class ApiError extends Error {
   readonly status: number;
@@ -25,11 +25,11 @@ export class ApiError extends Error {
 
 type GetToken = () => Promise<string | null>;
 
-export async function apiFetch(
+export const apiFetch = async (
   path: string,
   getToken: GetToken,
   init?: RequestInit,
-): Promise<Response> {
+): Promise<Response> => {
   const token = await getToken();
   if (!token) {
     throw new ApiError('Sign in required', 401);
@@ -42,13 +42,13 @@ export async function apiFetch(
     ...init,
     headers,
   });
-}
+};
 
-export async function apiFetchJson<T>(
+export const apiFetchJson = async <T>(
   path: string,
   getToken: GetToken,
   init?: RequestInit,
-): Promise<T> {
+): Promise<T> => {
   const response = await apiFetch(path, getToken, init);
 
   if (!response.ok) {
@@ -56,10 +56,10 @@ export async function apiFetchJson<T>(
   }
 
   return response.json() as Promise<T>;
-}
+};
 
 /** Nest error responses carry a `message` worth surfacing; fall back to the status text. */
-async function errorMessage(response: Response): Promise<string> {
+const errorMessage = async (response: Response): Promise<string> => {
   try {
     const body = (await response.json()) as { message?: unknown };
     if (typeof body.message === 'string' && body.message) return body.message;
@@ -69,4 +69,4 @@ async function errorMessage(response: Response): Promise<string> {
   }
 
   return response.statusText || 'Request failed';
-}
+};

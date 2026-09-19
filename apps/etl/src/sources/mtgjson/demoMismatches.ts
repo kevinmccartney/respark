@@ -16,7 +16,7 @@ export type DemoBatchItem = {
 const DEMO_UNMATCHED_SCRYFALL_ID = '00000000-0000-4000-8000-000000000001';
 const DEMO_AMBIGUOUS_SCRYFALL_ID = '00000000-0000-4000-8000-0000000000aa';
 
-function demoItem(enrichment: MtgjsonEnrichment, note: string): DemoBatchItem {
+const demoItem = (enrichment: MtgjsonEnrichment, note: string): DemoBatchItem => {
   const payload = {
     demo: true,
     note,
@@ -37,50 +37,48 @@ function demoItem(enrichment: MtgjsonEnrichment, note: string): DemoBatchItem {
     enrichment,
     sourcePayload: payload,
   };
-}
+};
 
 /**
  * Synthetic cards that miss catalog.printing (real resolvePrinting → unmatched).
  */
-export function buildDemoUnmatchedItems(): DemoBatchItem[] {
-  return [
-    demoItem(
-      {
-        mtgjsonUuid: 'demo-unmatched-no-scryfall',
-        name: 'Demo Card (no Scryfall id)',
-        setCode: 'ZZZ',
-        collectorNumber: '99999',
-        language: null,
-        scryfallId: null,
-        identifiers: [{ provider: 'mtgjson', externalId: 'demo-unmatched-no-scryfall' }],
-      },
-      'Synthetic unmatched: fake set/number, no scryfallId',
-    ),
-    demoItem(
-      {
-        mtgjsonUuid: 'demo-unmatched-bad-scryfall',
-        name: 'Demo Card (unknown Scryfall id)',
-        setCode: 'ZZZ',
-        collectorNumber: '99998',
-        language: 'English',
-        scryfallId: DEMO_UNMATCHED_SCRYFALL_ID,
-        identifiers: [
-          { provider: 'mtgjson', externalId: 'demo-unmatched-bad-scryfall' },
-          { provider: 'tcgplayer', externalId: 'demo-tcg-999' },
-        ],
-      },
-      'Synthetic unmatched: valid-looking scryfallId absent from catalog',
-    ),
-  ];
-}
+export const buildDemoUnmatchedItems = (): DemoBatchItem[] => [
+  demoItem(
+    {
+      mtgjsonUuid: 'demo-unmatched-no-scryfall',
+      name: 'Demo Card (no Scryfall id)',
+      setCode: 'ZZZ',
+      collectorNumber: '99999',
+      language: null,
+      scryfallId: null,
+      identifiers: [{ provider: 'mtgjson', externalId: 'demo-unmatched-no-scryfall' }],
+    },
+    'Synthetic unmatched: fake set/number, no scryfallId',
+  ),
+  demoItem(
+    {
+      mtgjsonUuid: 'demo-unmatched-bad-scryfall',
+      name: 'Demo Card (unknown Scryfall id)',
+      setCode: 'ZZZ',
+      collectorNumber: '99998',
+      language: 'English',
+      scryfallId: DEMO_UNMATCHED_SCRYFALL_ID,
+      identifiers: [
+        { provider: 'mtgjson', externalId: 'demo-unmatched-bad-scryfall' },
+        { provider: 'tcgplayer', externalId: 'demo-tcg-999' },
+      ],
+    },
+    'Synthetic unmatched: valid-looking scryfallId absent from catalog',
+  ),
+];
 
 /**
  * Clone an existing printing (same set + collector_number, new scryfall_id)
  * so set/number reconciliation returns ambiguous. Caller must cleanup().
  */
-export async function installDemoAmbiguousClone(
+export const installDemoAmbiguousClone = async (
   client: PoolClient,
-): Promise<{ item: DemoBatchItem; cleanup: () => Promise<void> } | null> {
+): Promise<{ item: DemoBatchItem; cleanup: () => Promise<void> } | null> => {
   const seed = await client.query<{
     id: string;
     card_id: string;
@@ -126,4 +124,4 @@ export async function installDemoAmbiguousClone(
       await client.query(`delete from catalog.printing where id = $1`, [cloneId]);
     },
   };
-}
+};

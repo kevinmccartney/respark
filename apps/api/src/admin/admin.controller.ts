@@ -96,7 +96,7 @@ export class AdminController {
   }
 }
 
-function parseEnrichmentJobs(raw: unknown): EnrichmentJobId[] {
+const parseEnrichmentJobs = (raw: unknown): EnrichmentJobId[] => {
   if (raw === undefined || raw === null) return [];
   if (!Array.isArray(raw)) {
     throw new BadRequestException('enrichmentJobs must be an array of strings');
@@ -115,23 +115,23 @@ function parseEnrichmentJobs(raw: unknown): EnrichmentJobId[] {
     if (!jobs.includes(job)) jobs.push(job);
   }
   return jobs;
-}
+};
 
-function parseLimit(raw: string | undefined, fallback: number, max: number): number {
+const parseLimit = (raw: string | undefined, fallback: number, max: number): number => {
   if (raw === undefined || raw === '') return fallback;
   const n = Number(raw);
   if (!Number.isFinite(n) || n < 1) return fallback;
   return Math.min(Math.floor(n), max);
-}
+};
 
-function parseOffset(raw: string | undefined): number {
+const parseOffset = (raw: string | undefined): number => {
   if (raw === undefined || raw === '') return 0;
   const n = Number(raw);
   if (!Number.isFinite(n) || n < 0) return 0;
   return Math.floor(n);
-}
+};
 
-function nonempty(value: string | undefined): string | undefined {
+const nonempty = (value: string | undefined): string | undefined => {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
-}
+};

@@ -12,20 +12,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ApiError } from '../lib/api.ts';
-import { connectEtlSyncWs } from '../lib/etl-ws.ts';
-import { formatDuration, formatTimestamp, statusBadgeProps } from '../lib/format.ts';
-import type { SyncEvent } from '../lib/sync-events.ts';
-import {
-  fetchEtlSyncs,
-  isForbidden,
-  startEtlSync,
-  syncDurationMs,
-  syncStagesLabel,
-  type EtlSync,
-} from '../lib/syncs.ts';
+import { applyAdminLoadError, apiErrorMessage } from '@/lib/errors.ts';
+import { connectEtlSyncWs } from '@/lib/etl-ws.ts';
+import { formatDuration, formatTimestamp, statusBadgeProps } from '@/lib/format.ts';
+import type { EtlSync } from '@/lib/schemas/etl-sync.ts';
+import type { SyncEvent } from '@/lib/schemas/sync-event.ts';
+import { patchSyncInList, upsertStartedSync } from '@/lib/sync-state.ts';
+import { fetchEtlSyncs, startEtlSync, syncDurationMs, syncStagesLabel } from '@/lib/syncs.ts';
 
-export function SyncsListPage() {
+export const SyncsListPage = () => {
   const { getToken } = useAuth();
   const navigate = useNavigate();
   const [syncs, setSyncs] = useState<EtlSync[]>([]);
@@ -44,25 +39,20 @@ export function SyncsListPage() {
   const enrichmentOnly = includeEnrichment && !includeCatalog;
 
   const loadSyncs = useCallback(
-    async (signal?: AbortSignal) => {
-      setLoading(true);
-      setError(null);
-      setForbidden(false);
+    async (signal?: AbortSignal, silent = false) => {
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+        setForbidden(false);
+      }
       try {
         const list = await fetchEtlSyncs(getToken, { limit: 100 });
         if (!signal?.aborted) setSyncs(list);
       } catch (err) {
         if (signal?.aborted) return;
-        if (isForbidden(err)) {
-          setForbidden(true);
-          setError('Your account is not an admin. Set publicMetadata.role to "admin" in Clerk.');
-        } else if (err instanceof ApiError) {
-          setError(err.message);
-        } else {
-          setError('Could not load ETL syncs');
-        }
+        applyAdminLoadError(err, { setError, setForbidden }, 'Could not load ETL syncs');
       } finally {
-        if (!signal?.aborted) setLoading(false);
+        if (!signal?.aborted && !silent) setLoading(false);
       }
     },
     [getToken],
@@ -79,54 +69,12 @@ export function SyncsListPage() {
 
     const applyEvent = (event: SyncEvent) => {
       if (event.type === 'sync.started') {
-        const s = event.sync;
-        setSyncs((prev) => {
-          if (prev.some((x) => x.id === s.id)) {
-            return prev.map((x) =>
-              x.id === s.id
-                ? {
-                    ...x,
-                    status: s.status,
-                    includeCatalog: s.includeCatalog,
-                    includeEnrichment: s.includeEnrichment,
-                    enrichmentJobs: s.enrichmentJobs,
-                    startedAt: s.startedAt,
-                    completedAt: s.completedAt,
-                    errorMessage: s.errorMessage,
-                  }
-                : x,
-            );
-          }
-          const row: EtlSync = {
-            id: s.id,
-            status: s.status,
-            includeCatalog: s.includeCatalog,
-            includeEnrichment: s.includeEnrichment,
-            enrichmentJobs: s.enrichmentJobs,
-            startedAt: s.startedAt,
-            completedAt: s.completedAt,
-            errorMessage: s.errorMessage,
-            createdAt: s.startedAt,
-            stages: [],
-          };
-          return [row, ...prev].slice(0, 100);
-        });
+        setSyncs((prev) => upsertStartedSync(prev, event));
         return;
       }
 
       if (event.type === 'sync.updated' || event.type === 'sync.completed') {
-        setSyncs((prev) =>
-          prev.map((x) =>
-            x.id === event.syncId
-              ? {
-                  ...x,
-                  status: event.status,
-                  completedAt: event.completedAt,
-                  errorMessage: event.errorMessage,
-                }
-              : x,
-          ),
-        );
+        setSyncs((prev) => patchSyncInList(prev, event));
         if (event.type === 'sync.completed') {
           setProgressBySync((prev) => {
             const next = { ...prev };
@@ -160,7 +108,7 @@ export function SyncsListPage() {
     return () => ws.close();
   }, [getToken, forbidden]);
 
-  async function onStartSync() {
+  const onStartSync = async () => {
     if (!includeCatalog && !includeEnrichment) {
       setStartMessage('Select Catalog and/or Enrichment');
       return;
@@ -173,13 +121,13 @@ export function SyncsListPage() {
         enrichmentJobs: includeEnrichment ? ['identifiers'] : [],
       });
       setStartMessage('Sync started — live updates will appear below.');
+      void loadSyncs(undefined, true);
     } catch (err) {
-      if (err instanceof ApiError) setStartMessage(err.message);
-      else setStartMessage('Could not start ETL sync');
+      setStartMessage(apiErrorMessage(err, 'Could not start ETL sync'));
     } finally {
       setStarting(false);
     }
-  }
+  };
 
   return (
     <main className="mx-auto max-w-6xl px-5 py-5">
@@ -300,4 +248,4 @@ export function SyncsListPage() {
       ) : null}
     </main>
   );
-}
+};

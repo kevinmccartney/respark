@@ -22,7 +22,7 @@ type Props = {
   onSelect: (printingId: string) => Promise<void>;
 };
 
-export function PrintingPickerDialog({ open, onOpenChange, deckCard, onSelect }: Props) {
+export const PrintingPickerDialog = ({ open, onOpenChange, deckCard, onSelect }: Props) => {
   const { getToken } = useAuth();
   const [printings, setPrintings] = useState<CardPrintingSummary[]>([]);
   const [loading, setLoading] = useState(false);
@@ -59,7 +59,7 @@ export function PrintingPickerDialog({ open, onOpenChange, deckCard, onSelect }:
     return () => controller.abort();
   }, [open, deckCard, getToken]);
 
-  async function handleSelect(printing: CardPrintingSummary) {
+  const handleSelect = async (printing: CardPrintingSummary) => {
     if (!deckCard || savingId) return;
     if (printing.id === deckCard.printingId) {
       onOpenChange(false);
@@ -75,7 +75,7 @@ export function PrintingPickerDialog({ open, onOpenChange, deckCard, onSelect }:
     } finally {
       setSavingId(null);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -153,4 +153,4 @@ export function PrintingPickerDialog({ open, onOpenChange, deckCard, onSelect }:
       </DialogPortal>
     </Dialog>
   );
-}
+};

@@ -1,7 +1,6 @@
-import type { SyncEvent } from './sync-events.ts';
+import type { GetToken } from './api.ts';
 import { apiBaseUrl } from './api.ts';
-
-type GetToken = () => Promise<string | null>;
+import { etlWsEnvelopeSchema, syncEventSchema, type SyncEvent } from './schemas/sync-event.ts';
 
 export type EtlWsHandlers = {
   onEvent?: (event: SyncEvent) => void;
@@ -10,21 +9,26 @@ export type EtlWsHandlers = {
   onError?: (err: Event) => void;
 };
 
-function wsBaseUrl(): string {
+const wsBaseUrl = (): string => {
   const http = apiBaseUrl();
   if (http.startsWith('https://')) return `wss://${http.slice('https://'.length)}`;
   if (http.startsWith('http://')) return `ws://${http.slice('http://'.length)}`;
   return http;
-}
+};
+
+const warnInvalidWs = (kind: string, value: unknown, error?: { message: string }): void => {
+  if (!import.meta.env.DEV) return;
+  console.warn(`[etl-ws] dropped ${kind}`, error?.message ?? '', value);
+};
 
 /**
  * Connect to the admin ETL sync WebSocket. Sends Nest-ws envelopes:
  * `{ event, data }` for subscribe / incoming etl events.
  */
-export function connectEtlSyncWs(
+export const connectEtlSyncWs = (
   getToken: GetToken,
   handlers: EtlWsHandlers = {},
-): { close: () => void; subscribeList: () => void; subscribeSync: (id: string) => void } {
+): { close: () => void; subscribeList: () => void; subscribeSync: (id: string) => void } => {
   let socket: WebSocket | null = null;
   let closed = false;
   let reconnectAttempt = 0;
@@ -67,18 +71,29 @@ export function connectEtlSyncWs(
     };
 
     socket.onmessage = (ev) => {
+      let json: unknown;
       try {
-        const parsed = JSON.parse(String(ev.data)) as {
-          event?: string;
-          data?: SyncEvent;
-        };
-        if (parsed.event === 'etl' && parsed.data) {
-          handlers.onEvent?.(parsed.data);
-        }
-        // 'ready' / 'subscribe' acks are informational; ignore here
+        json = JSON.parse(String(ev.data));
       } catch {
-        // ignore malformed
+        warnInvalidWs('non-JSON message', ev.data);
+        return;
       }
+
+      const envelope = etlWsEnvelopeSchema.safeParse(json);
+      if (!envelope.success) {
+        warnInvalidWs('envelope', json, envelope.error);
+        return;
+      }
+
+      if (envelope.data.event !== 'etl') return;
+
+      const event = syncEventSchema.safeParse(envelope.data.data);
+      if (!event.success) {
+        warnInvalidWs('etl event', envelope.data.data, event.error);
+        return;
+      }
+
+      handlers.onEvent?.(event.data);
     };
 
     socket.onerror = (err) => {
@@ -113,4 +128,4 @@ export function connectEtlSyncWs(
     subscribeList: () => send('subscribe', { channel: 'list' }),
     subscribeSync: (syncId: string) => send('subscribe', { channel: 'sync', syncId }),
   };
-}
+};

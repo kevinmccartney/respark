@@ -22,7 +22,7 @@ type Props = {
   onImported: (detail: DeckDetail) => void;
 };
 
-export function DeckImportDialog({ open, onOpenChange, deckId, onImported }: Props) {
+export const DeckImportDialog = ({ open, onOpenChange, deckId, onImported }: Props) => {
   const { getToken } = useAuth();
   const [text, setText] = useState('');
   const [importing, setImporting] = useState(false);
@@ -30,15 +30,15 @@ export function DeckImportDialog({ open, onOpenChange, deckId, onImported }: Pro
   const [unmatched, setUnmatched] = useState<DeckImportUnmatched[] | null>(null);
   const [importedCount, setImportedCount] = useState<number | null>(null);
 
-  function resetState() {
+  const resetState = () => {
     setText('');
     setError(null);
     setUnmatched(null);
     setImportedCount(null);
     setImporting(false);
-  }
+  };
 
-  async function handleImport() {
+  const handleImport = async () => {
     if (!text.trim() || importing) return;
     setImporting(true);
     setError(null);
@@ -58,7 +58,7 @@ export function DeckImportDialog({ open, onOpenChange, deckId, onImported }: Pro
     } finally {
       setImporting(false);
     }
-  }
+  };
 
   return (
     <Dialog
@@ -147,4 +147,4 @@ export function DeckImportDialog({ open, onOpenChange, deckId, onImported }: Pro
       </DialogPortal>
     </Dialog>
   );
-}
+};

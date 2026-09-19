@@ -12,7 +12,7 @@ const DEFAULT_HEADERS = {
 /** Prefer default_cards: one object per unique English-ish printing. */
 export const PREFERRED_BULK_TYPE = 'default_cards';
 
-export async function fetchBulkMetadata(logger: Logger): Promise<BulkDataItem[]> {
+export const fetchBulkMetadata = async (logger: Logger): Promise<BulkDataItem[]> => {
   logger.info(
     { event: 'scryfall.bulk_meta.fetch', url: BULK_DATA_URL },
     'Fetching Scryfall bulk metadata',
@@ -33,21 +33,21 @@ export async function fetchBulkMetadata(logger: Logger): Promise<BulkDataItem[]>
     'Fetched Scryfall bulk metadata',
   );
   return parsed.data.data;
-}
+};
 
-export function selectBulkDataset(
+export const selectBulkDataset = (
   items: BulkDataItem[],
   type: string = PREFERRED_BULK_TYPE,
-): BulkDataItem {
+): BulkDataItem => {
   const match = items.find((item) => item.type === type);
   if (!match) {
     const available = items.map((i) => i.type).join(', ');
     throw new Error(`Scryfall bulk type "${type}" not found. Available: ${available}`);
   }
   return match;
-}
+};
 
-export async function openBulkDownload(
+export const openBulkDownload = async (
   item: BulkDataItem,
   logger: Logger,
   signal?: AbortSignal,
@@ -55,7 +55,7 @@ export async function openBulkDownload(
   body: ReadableStream<Uint8Array>;
   contentLength: number | null;
   uri: string;
-}> {
+}> => {
   const uri = bulkDownloadUri(item);
   logger.info(
     {
@@ -85,4 +85,4 @@ export async function openBulkDownload(
     : bulkByteSize(item);
 
   return { body: response.body, contentLength, uri };
-}
+};

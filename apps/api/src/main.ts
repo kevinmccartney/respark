@@ -14,7 +14,7 @@ for (const file of ['.env', '.env.local']) {
   }
 }
 
-async function bootstrap() {
+const bootstrap = async () => {
   // rawBody keeps the exact bytes Clerk signed available for webhook verification.
   const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
   app.useWebSocketAdapter(new WsAdapter(app));
@@ -38,7 +38,7 @@ async function bootstrap() {
     },
     'API listening',
   );
-}
+};
 
 bootstrap().catch((err) => {
   console.error(err);

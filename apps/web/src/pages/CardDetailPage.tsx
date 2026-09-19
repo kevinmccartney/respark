@@ -12,7 +12,7 @@ type CardDetailLocationState = {
   fromSearch?: string;
 };
 
-function searchBackPath(state: unknown): string {
+const searchBackPath = (state: unknown): string => {
   if (
     state &&
     typeof state === 'object' &&
@@ -23,9 +23,9 @@ function searchBackPath(state: unknown): string {
     return (state as CardDetailLocationState).fromSearch!;
   }
   return '/search';
-}
+};
 
-export function CardDetailPage() {
+export const CardDetailPage = () => {
   const { id = '' } = useParams<{ id: string }>();
   const location = useLocation();
   const backToSearch = searchBackPath(location.state);
@@ -40,7 +40,7 @@ export function CardDetailPage() {
   useEffect(() => {
     const controller = new AbortController();
 
-    async function load() {
+    const load = async () => {
       setLoading(true);
       setError(null);
       setCard(null);
@@ -54,7 +54,7 @@ export function CardDetailPage() {
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
-    }
+    };
 
     if (id) void load();
     return () => controller.abort();
@@ -65,13 +65,13 @@ export function CardDetailPage() {
     return card.printings.find((p) => p.id === printingParam) ?? card.printings[0];
   }, [card, printingParam]);
 
-  function selectPrinting(printing: CardPrintingSummary) {
+  const selectPrinting = (printing: CardPrintingSummary) => {
     const next = new URLSearchParams(searchParams);
     // Default printing is the first (newest); omit param when selected.
     if (card && printing.id === card.printings[0]?.id) next.delete('printing');
     else next.set('printing', printing.id);
     setSearchParams(next, { replace: true });
-  }
+  };
 
   const imageSrc = selectedPrinting?.imageLarge ?? selectedPrinting?.imageNormal ?? null;
 
@@ -222,9 +222,9 @@ export function CardDetailPage() {
       </main>
     </>
   );
-}
+};
 
-function Meta({ label, value }: { label: string; value: string | null | undefined }) {
+const Meta = ({ label, value }: { label: string; value: string | null | undefined }) => {
   if (!value) return null;
   return (
     <>
@@ -232,4 +232,4 @@ function Meta({ label, value }: { label: string; value: string | null | undefine
       <dd>{value}</dd>
     </>
   );
-}
+};

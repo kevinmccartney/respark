@@ -16,13 +16,13 @@ export type ProgressLogger = {
   info: (obj: Record<string, unknown>, msg?: string) => void;
 };
 
-function formatRate(cardsPerSec: number): string {
+const formatRate = (cardsPerSec: number): string => {
   if (!Number.isFinite(cardsPerSec) || cardsPerSec <= 0) return '—';
   if (cardsPerSec >= 100) return `${Math.round(cardsPerSec)}/s`;
   return `${cardsPerSec.toFixed(1)}/s`;
-}
+};
 
-function formatEta(seconds: number | null): string {
+const formatEta = (seconds: number | null): string => {
   if (seconds === null || !Number.isFinite(seconds) || seconds < 0) return '—';
   if (seconds < 60) return `${Math.ceil(seconds)}s`;
   const m = Math.floor(seconds / 60);
@@ -31,18 +31,16 @@ function formatEta(seconds: number | null): string {
   const h = Math.floor(m / 60);
   const rm = m % 60;
   return `${h}h${String(rm).padStart(2, '0')}m`;
-}
+};
 
-function formatBytes(n: number): string {
+const formatBytes = (n: number): string => {
   if (n < 1024) return `${n}B`;
   if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)}KB`;
   if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)}MB`;
   return `${(n / 1024 ** 3).toFixed(2)}GB`;
-}
+};
 
-function formatCount(n: number): string {
-  return n.toLocaleString('en-US');
-}
+const formatCount = (n: number): string => n.toLocaleString('en-US');
 
 export class ProgressBar {
   private readonly startedAt = Date.now();
@@ -152,18 +150,18 @@ export class ProgressBar {
 }
 
 /** Count compressed bytes as they flow through a web ReadableStream. */
-export function tapByteStream(
+export const tapByteStream = (
   body: ReadableStream<Uint8Array>,
   onBytes: (totalBytes: number) => void,
-): ReadableStream<Uint8Array> {
+): ReadableStream<Uint8Array> => {
   let total = 0;
   return body.pipeThrough(
     new TransformStream<Uint8Array, Uint8Array>({
-      transform(chunk, controller) {
+      transform: (chunk, controller) => {
         total += chunk.byteLength;
         onBytes(total);
         controller.enqueue(chunk);
       },
     }),
   );
-}
+};

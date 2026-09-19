@@ -19,7 +19,7 @@ export type MtgjsonEnrichment = {
  * Extract cross-provider IDs from an MTGJSON card.
  * Scryfall-owned catalog fields are never written here — only identifiers.
  */
-export function extractEnrichment(card: MtgjsonCard): MtgjsonEnrichment {
+export const extractEnrichment = (card: MtgjsonCard): MtgjsonEnrichment => {
   const ids = card.identifiers ?? {};
   const identifiers: EnrichmentIdentifier[] = [{ provider: 'mtgjson', externalId: card.uuid }];
 
@@ -43,4 +43,4 @@ export function extractEnrichment(card: MtgjsonCard): MtgjsonEnrichment {
     scryfallId: ids.scryfallId ?? null,
     identifiers,
   };
-}
+};

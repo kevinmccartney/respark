@@ -1,14 +1,11 @@
 const MANA_SYMBOL_RE = /\{([^}]+)\}/g;
 
-function symbolCode(raw: string): string {
-  return raw.replace(/\//g, '');
-}
+const symbolCode = (raw: string): string => raw.replace(/\//g, '');
 
-function symbolUrl(code: string): string {
-  return `https://svgs.scryfall.io/card-symbols/${encodeURIComponent(code)}.svg`;
-}
+const symbolUrl = (code: string): string =>
+  `https://svgs.scryfall.io/card-symbols/${encodeURIComponent(code)}.svg`;
 
-export function ManaCost({
+export const ManaCost = ({
   cost,
   className,
   size = 16,
@@ -16,7 +13,7 @@ export function ManaCost({
   cost: string | null | undefined;
   className?: string;
   size?: number;
-}) {
+}) => {
   if (!cost) return null;
 
   const symbols = [...cost.matchAll(MANA_SYMBOL_RE)].map((match) => match[1]);
@@ -54,4 +51,4 @@ export function ManaCost({
       })}
     </span>
   );
-}
+};

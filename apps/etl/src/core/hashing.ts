@@ -1,15 +1,12 @@
 import { createHash } from 'node:crypto';
 
 /** Deterministic JSON for hashing — sorts object keys recursively. */
-export function stableStringify(value: unknown): string {
-  return JSON.stringify(sortValue(value));
-}
+export const stableStringify = (value: unknown): string => JSON.stringify(sortValue(value));
 
-export function payloadHash(value: unknown): string {
-  return createHash('sha256').update(stableStringify(value)).digest('hex');
-}
+export const payloadHash = (value: unknown): string =>
+  createHash('sha256').update(stableStringify(value)).digest('hex');
 
-function sortValue(value: unknown): unknown {
+const sortValue = (value: unknown): unknown => {
   if (Array.isArray(value)) {
     return value.map(sortValue);
   }
@@ -20,4 +17,4 @@ function sortValue(value: unknown): unknown {
     return Object.fromEntries(entries.map(([k, v]) => [k, sortValue(v)]));
   }
   return value;
-}
+};

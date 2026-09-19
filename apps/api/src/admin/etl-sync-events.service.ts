@@ -10,12 +10,12 @@ const globalBus = globalThis as typeof globalThis & {
   __resparkEtlSyncEvents?: Subject<SyncEvent>;
 };
 
-function bus(): Subject<SyncEvent> {
+const bus = (): Subject<SyncEvent> => {
   if (!globalBus.__resparkEtlSyncEvents) {
     globalBus.__resparkEtlSyncEvents = new Subject<SyncEvent>();
   }
   return globalBus.__resparkEtlSyncEvents;
-}
+};
 
 @Injectable()
 export class EtlSyncEventsService {

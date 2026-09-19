@@ -96,7 +96,7 @@ export class ClerkWebhooksController {
   }
 }
 
-function toProfile(data: ClerkUser) {
+const toProfile = (data: ClerkUser) => {
   const primary =
     data.email_addresses?.find((address) => address.id === data.primary_email_address_id) ??
     data.email_addresses?.[0];
@@ -109,4 +109,4 @@ function toProfile(data: ClerkUser) {
     imageUrl: data.image_url ?? null,
     clerkUpdatedAt: data.updated_at ? new Date(data.updated_at) : null,
   };
-}
+};

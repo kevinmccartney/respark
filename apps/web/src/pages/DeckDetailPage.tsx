@@ -39,7 +39,7 @@ const SUGGEST_DEBOUNCE_MS = 200;
 
 type ViewMode = 'list' | 'grid';
 
-export function DeckDetailPage() {
+export const DeckDetailPage = () => {
   const { id = '' } = useParams<{ id: string }>();
   const { getToken } = useAuth();
   const navigate = useNavigate();
@@ -84,7 +84,7 @@ export function DeckDetailPage() {
   useEffect(() => {
     const controller = new AbortController();
 
-    async function load() {
+    const load = async () => {
       setLoading(true);
       setError(null);
       try {
@@ -97,7 +97,7 @@ export function DeckDetailPage() {
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
-    }
+    };
 
     if (id) void load();
     return () => controller.abort();
@@ -132,7 +132,7 @@ export function DeckDetailPage() {
     };
   }, [getToken, query]);
 
-  async function handleAdd(suggestion: CardNameSuggestion) {
+  const handleAdd = async (suggestion: CardNameSuggestion) => {
     if (!detail || addingId) return;
     setAddingId(suggestion.id);
     setActionError(null);
@@ -146,9 +146,9 @@ export function DeckDetailPage() {
     } finally {
       setAddingId(null);
     }
-  }
+  };
 
-  async function bumpQuantity(card: DeckCard, delta: number) {
+  const bumpQuantity = async (card: DeckCard, delta: number) => {
     if (!detail) return;
     const nextQty = card.quantity + delta;
     setActionError(null);
@@ -171,16 +171,16 @@ export function DeckDetailPage() {
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : 'Could not update quantity');
     }
-  }
+  };
 
-  async function handlePrintingSelect(printingId: string) {
+  const handlePrintingSelect = async (printingId: string) => {
     if (!detail || !pickingCard) return;
     const previousId = pickingCard.id;
     const updated = await setDeckCardPrinting(getToken, detail.deck.id, previousId, printingId);
     setDetail((prev) => (prev ? upsertDeckCard(prev, previousId, updated) : prev));
-  }
+  };
 
-  async function toggleFoil(card: DeckCard) {
+  const toggleFoil = async (card: DeckCard) => {
     if (!detail) return;
     setActionError(null);
     try {
@@ -189,9 +189,9 @@ export function DeckDetailPage() {
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : 'Could not update foil');
     }
-  }
+  };
 
-  async function toggleSideboard(card: DeckCard) {
+  const toggleSideboard = async (card: DeckCard) => {
     if (!detail) return;
     setActionError(null);
     try {
@@ -205,24 +205,24 @@ export function DeckDetailPage() {
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : 'Could not move card');
     }
-  }
+  };
 
-  function startEditDetails() {
+  const startEditDetails = () => {
     if (!detail) return;
     setNameDraft(detail.deck.name);
     setFormatDraft(detail.deck.format);
     setDescriptionDraft(detail.deck.description ?? '');
     setEditingDetails(true);
     setActionError(null);
-  }
+  };
 
-  function cancelEditDetails() {
+  const cancelEditDetails = () => {
     setEditingDetails(false);
     setNameDraft('');
     setDescriptionDraft('');
-  }
+  };
 
-  async function saveDetails() {
+  const saveDetails = async () => {
     if (!detail || savingDetails) return;
     const trimmedName = nameDraft.trim();
     if (!trimmedName) {
@@ -246,9 +246,9 @@ export function DeckDetailPage() {
     } finally {
       setSavingDetails(false);
     }
-  }
+  };
 
-  async function handleDelete() {
+  const handleDelete = async () => {
     if (!detail || deleting) return;
     const confirmed = window.confirm(`Delete “${detail.deck.name}”? This cannot be undone.`);
     if (!confirmed) return;
@@ -262,7 +262,7 @@ export function DeckDetailPage() {
       setActionError(err instanceof ApiError ? err.message : 'Could not delete deck');
       setDeleting(false);
     }
-  }
+  };
 
   const mainTotal = mainboardCards.reduce((sum, card) => sum + card.quantity, 0);
   const sideTotal = sideboardCards.reduce((sum, card) => sum + card.quantity, 0);
@@ -528,9 +528,9 @@ export function DeckDetailPage() {
       </main>
     </>
   );
-}
+};
 
-function ToggleGroup<T extends string>({
+const ToggleGroup = <T extends string>({
   label,
   value,
   options,
@@ -540,36 +540,34 @@ function ToggleGroup<T extends string>({
   value: T;
   options: { value: T; label: string }[];
   onChange: (value: T) => void;
-}) {
-  return (
-    <div className="inline-flex items-center gap-2">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <div className="inline-flex rounded-md border" role="group" aria-label={label}>
-        {options.map((option, index) => (
-          <Button
-            key={option.value}
-            type="button"
-            variant={value === option.value ? 'secondary' : 'ghost'}
-            size="sm"
-            className={
-              index === 0
-                ? 'rounded-r-none'
-                : index === options.length - 1
-                  ? 'rounded-l-none'
-                  : 'rounded-none'
-            }
-            aria-pressed={value === option.value}
-            onClick={() => onChange(option.value)}
-          >
-            {option.label}
-          </Button>
-        ))}
-      </div>
+}) => (
+  <div className="inline-flex items-center gap-2">
+    <span className="text-xs text-muted-foreground">{label}</span>
+    <div className="inline-flex rounded-md border" role="group" aria-label={label}>
+      {options.map((option, index) => (
+        <Button
+          key={option.value}
+          type="button"
+          variant={value === option.value ? 'secondary' : 'ghost'}
+          size="sm"
+          className={
+            index === 0
+              ? 'rounded-r-none'
+              : index === options.length - 1
+                ? 'rounded-l-none'
+                : 'rounded-none'
+          }
+          aria-pressed={value === option.value}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </Button>
+      ))}
     </div>
-  );
-}
+  </div>
+);
 
-function BoardSection({
+const BoardSection = ({
   title,
   showTitle,
   groups,
@@ -589,7 +587,7 @@ function BoardSection({
   onBump: (card: DeckCard, delta: number) => void;
   onToggleFoil: (card: DeckCard) => void;
   onToggleSideboard: (card: DeckCard) => void;
-}) {
+}) => {
   const total = groups.reduce((sum, group) => sum + group.totalQuantity, 0);
 
   return (
@@ -645,9 +643,9 @@ function BoardSection({
       </div>
     </div>
   );
-}
+};
 
-function CardCollection({
+const CardCollection = ({
   cards,
   viewMode,
   onPickPrinting,
@@ -661,7 +659,7 @@ function CardCollection({
   onBump: (card: DeckCard, delta: number) => void;
   onToggleFoil: (card: DeckCard) => void;
   onToggleSideboard: (card: DeckCard) => void;
-}) {
+}) => {
   if (viewMode === 'list') {
     return (
       <ul className="divide-y rounded-md border">
@@ -693,9 +691,9 @@ function CardCollection({
       ))}
     </ul>
   );
-}
+};
 
-function ListCardRow({
+const ListCardRow = ({
   card,
   onPickPrinting,
   onBump,
@@ -707,130 +705,117 @@ function ListCardRow({
   onBump: (card: DeckCard, delta: number) => void;
   onToggleFoil: (card: DeckCard) => void;
   onToggleSideboard: (card: DeckCard) => void;
-}) {
-  return (
-    <li className="flex items-center justify-between gap-3 px-3 py-2">
-      <div className="flex min-w-0 items-center gap-3">
-        <button
-          type="button"
-          className="shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          onClick={() => onPickPrinting(card)}
-          aria-label={`Change printing for ${card.name}`}
-        >
-          {card.imageNormal ? (
-            <img src={card.imageNormal} alt="" className="h-12 w-auto rounded-sm" loading="lazy" />
-          ) : (
-            <div className="bg-muted flex h-12 w-9 items-center justify-center rounded-sm text-[10px]">
-              ?
-            </div>
-          )}
-        </button>
-        <div className="min-w-0">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-            <Link to={`/cards/${card.cardId}`} className="font-medium hover:underline">
-              {card.name}
-            </Link>
-            <ManaCost cost={card.manaCost} />
-            {card.foil ? (
-              <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Foil</span>
-            ) : null}
-          </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <button type="button" className="hover:underline" onClick={() => onPickPrinting(card)}>
-              {card.setCode.toUpperCase()} #{card.collectorNumber}
-            </button>
-            <button
-              type="button"
-              className="hover:underline"
-              onClick={() => void onToggleFoil(card)}
-            >
-              {card.foil ? 'Make non-foil' : 'Make foil'}
-            </button>
-            <button
-              type="button"
-              className="hover:underline"
-              onClick={() => void onToggleSideboard(card)}
-            >
-              {card.sideboard ? 'To mainboard' : 'To sideboard'}
-            </button>
-          </div>
-        </div>
-      </div>
-      <QuantityControls card={card} onBump={onBump} />
-    </li>
-  );
-}
-
-function GridCardCell({
-  card,
-  onPickPrinting,
-  onBump,
-  onToggleFoil,
-  onToggleSideboard,
-}: {
-  card: DeckCard;
-  onPickPrinting: (card: DeckCard) => void;
-  onBump: (card: DeckCard, delta: number) => void;
-  onToggleFoil: (card: DeckCard) => void;
-  onToggleSideboard: (card: DeckCard) => void;
-}) {
-  return (
-    <li className="flex flex-col gap-2">
+}) => (
+  <li className="flex items-center justify-between gap-3 px-3 py-2">
+    <div className="flex min-w-0 items-center gap-3">
       <button
         type="button"
-        className="block w-full rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => onPickPrinting(card)}
         aria-label={`Change printing for ${card.name}`}
       >
         {card.imageNormal ? (
-          <img
-            src={card.imageNormal}
-            alt={card.name}
-            className="w-full rounded-md"
-            loading="lazy"
-          />
+          <img src={card.imageNormal} alt="" className="h-12 w-auto rounded-sm" loading="lazy" />
         ) : (
-          <div className="bg-muted flex aspect-5/7 items-center justify-center rounded-md px-2 text-center text-sm font-medium">
-            {card.name}
+          <div className="bg-muted flex h-12 w-9 items-center justify-center rounded-sm text-[10px]">
+            ?
           </div>
         )}
       </button>
-      <div className="flex flex-col items-center gap-1.5">
-        <Link
-          to={`/cards/${card.cardId}`}
-          className="w-full truncate text-center text-sm font-medium hover:underline"
-        >
-          {card.name}
-        </Link>
-        <button
-          type="button"
-          className="text-xs text-muted-foreground hover:underline"
-          onClick={() => onPickPrinting(card)}
-        >
-          {card.setCode.toUpperCase()} #{card.collectorNumber}
-          {card.foil ? ' · Foil' : ''}
-        </button>
-        <button
-          type="button"
-          className="text-xs text-muted-foreground hover:underline"
-          onClick={() => void onToggleFoil(card)}
-        >
-          {card.foil ? 'Make non-foil' : 'Make foil'}
-        </button>
-        <button
-          type="button"
-          className="text-xs text-muted-foreground hover:underline"
-          onClick={() => void onToggleSideboard(card)}
-        >
-          {card.sideboard ? 'To mainboard' : 'To sideboard'}
-        </button>
-        <QuantityControls card={card} onBump={onBump} />
+      <div className="min-w-0">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+          <Link to={`/cards/${card.cardId}`} className="font-medium hover:underline">
+            {card.name}
+          </Link>
+          <ManaCost cost={card.manaCost} />
+          {card.foil ? (
+            <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Foil</span>
+          ) : null}
+        </div>
+        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <button type="button" className="hover:underline" onClick={() => onPickPrinting(card)}>
+            {card.setCode.toUpperCase()} #{card.collectorNumber}
+          </button>
+          <button type="button" className="hover:underline" onClick={() => void onToggleFoil(card)}>
+            {card.foil ? 'Make non-foil' : 'Make foil'}
+          </button>
+          <button
+            type="button"
+            className="hover:underline"
+            onClick={() => void onToggleSideboard(card)}
+          >
+            {card.sideboard ? 'To mainboard' : 'To sideboard'}
+          </button>
+        </div>
       </div>
-    </li>
-  );
-}
+    </div>
+    <QuantityControls card={card} onBump={onBump} />
+  </li>
+);
 
-function upsertDeckCard(detail: DeckDetail, previousId: string, next: DeckCard): DeckDetail {
+const GridCardCell = ({
+  card,
+  onPickPrinting,
+  onBump,
+  onToggleFoil,
+  onToggleSideboard,
+}: {
+  card: DeckCard;
+  onPickPrinting: (card: DeckCard) => void;
+  onBump: (card: DeckCard, delta: number) => void;
+  onToggleFoil: (card: DeckCard) => void;
+  onToggleSideboard: (card: DeckCard) => void;
+}) => (
+  <li className="flex flex-col gap-2">
+    <button
+      type="button"
+      className="block w-full rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      onClick={() => onPickPrinting(card)}
+      aria-label={`Change printing for ${card.name}`}
+    >
+      {card.imageNormal ? (
+        <img src={card.imageNormal} alt={card.name} className="w-full rounded-md" loading="lazy" />
+      ) : (
+        <div className="bg-muted flex aspect-5/7 items-center justify-center rounded-md px-2 text-center text-sm font-medium">
+          {card.name}
+        </div>
+      )}
+    </button>
+    <div className="flex flex-col items-center gap-1.5">
+      <Link
+        to={`/cards/${card.cardId}`}
+        className="w-full truncate text-center text-sm font-medium hover:underline"
+      >
+        {card.name}
+      </Link>
+      <button
+        type="button"
+        className="text-xs text-muted-foreground hover:underline"
+        onClick={() => onPickPrinting(card)}
+      >
+        {card.setCode.toUpperCase()} #{card.collectorNumber}
+        {card.foil ? ' · Foil' : ''}
+      </button>
+      <button
+        type="button"
+        className="text-xs text-muted-foreground hover:underline"
+        onClick={() => void onToggleFoil(card)}
+      >
+        {card.foil ? 'Make non-foil' : 'Make foil'}
+      </button>
+      <button
+        type="button"
+        className="text-xs text-muted-foreground hover:underline"
+        onClick={() => void onToggleSideboard(card)}
+      >
+        {card.sideboard ? 'To mainboard' : 'To sideboard'}
+      </button>
+      <QuantityControls card={card} onBump={onBump} />
+    </div>
+  </li>
+);
+
+const upsertDeckCard = (detail: DeckDetail, previousId: string, next: DeckCard): DeckDetail => {
   const without = detail.cards.filter((card) => card.id !== previousId && card.id !== next.id);
   const cards = [...without, next].sort((a, b) => {
     const byName = a.name.localeCompare(b.name);
@@ -841,36 +826,34 @@ function upsertDeckCard(detail: DeckDetail, previousId: string, next: DeckCard):
     deck: { ...detail.deck, updatedAt: new Date().toISOString() },
     cards,
   };
-}
+};
 
-function QuantityControls({
+const QuantityControls = ({
   card,
   onBump,
 }: {
   card: DeckCard;
   onBump: (card: DeckCard, delta: number) => void;
-}) {
-  return (
-    <div className="flex shrink-0 items-center gap-1">
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-sm"
-        aria-label={`Decrease ${card.name}`}
-        onClick={() => void onBump(card, -1)}
-      >
-        −
-      </Button>
-      <span className="min-w-8 text-center tabular-nums text-sm">{card.quantity}</span>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-sm"
-        aria-label={`Increase ${card.name}`}
-        onClick={() => void onBump(card, 1)}
-      >
-        +
-      </Button>
-    </div>
-  );
-}
+}) => (
+  <div className="flex shrink-0 items-center gap-1">
+    <Button
+      type="button"
+      variant="outline"
+      size="icon-sm"
+      aria-label={`Decrease ${card.name}`}
+      onClick={() => void onBump(card, -1)}
+    >
+      −
+    </Button>
+    <span className="min-w-8 text-center tabular-nums text-sm">{card.quantity}</span>
+    <Button
+      type="button"
+      variant="outline"
+      size="icon-sm"
+      aria-label={`Increase ${card.name}`}
+      onClick={() => void onBump(card, 1)}
+    >
+      +
+    </Button>
+  </div>
+);

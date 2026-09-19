@@ -17,10 +17,10 @@ export type UpsertBatchResult = {
  * Batch upsert into raw.mtgjson_card.
  * Rows whose payload_hash is unchanged are left alone.
  */
-export async function upsertMtgjsonCards(
+export const upsertMtgjsonCards = async (
   client: PoolClient,
   rows: RawMtgjsonUpsert[],
-): Promise<UpsertBatchResult> {
+): Promise<UpsertBatchResult> => {
   if (rows.length === 0) {
     return { inserted: 0, updated: 0, unchanged: 0 };
   }
@@ -60,4 +60,4 @@ export async function upsertMtgjsonCards(
     updated,
     unchanged: rows.length - result.rows.length,
   };
-}
+};

@@ -7,6 +7,7 @@ WORKDIR /repo
 
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
+ENV HUSKY=0
 RUN npm ci --workspace=web
 
 COPY apps/web apps/web

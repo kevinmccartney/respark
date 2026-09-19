@@ -18,21 +18,20 @@ export type RunEtlSyncHooks = {
   onEvent?: SyncEventHandler;
 };
 
-function jobOk(status: IngestionRunStatus): boolean {
-  return status === 'success' || status === 'partial_success';
-}
+const jobOk = (status: IngestionRunStatus): boolean =>
+  status === 'success' || status === 'partial_success';
 
 /**
  * Run one ETL sync: optional catalog stage, then optional enrichment jobs.
  * Creates ops.etl_sync and rolls up status from job runs.
  * Callers (CLI or API) supply an optional onEvent sink for live updates.
  */
-export async function runEtlSync(
+export const runEtlSync = async (
   pool: Pool,
   logger: Logger,
   options: SyncOptions,
   hooks: RunEtlSyncHooks = {},
-): Promise<IngestionRunStatus> {
+): Promise<IngestionRunStatus> => {
   if (!options.catalog && options.enrichmentJobs.length === 0) {
     throw new Error('sync requires --catalog and/or --enrichment <job>');
   }
@@ -168,9 +167,9 @@ export async function runEtlSync(
     errorMessage: null,
   });
   return status;
-}
+};
 
-export function parseEnrichmentJobs(raw: string | string[] | undefined): EnrichmentJobId[] {
+export const parseEnrichmentJobs = (raw: string | string[] | undefined): EnrichmentJobId[] => {
   if (raw === undefined) return [];
   const parts = (Array.isArray(raw) ? raw : [raw])
     .flatMap((v) => v.split(','))
@@ -188,4 +187,4 @@ export function parseEnrichmentJobs(raw: string | string[] | undefined): Enrichm
     }
   }
   return jobs;
-}
+};

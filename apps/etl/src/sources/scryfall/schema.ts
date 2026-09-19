@@ -45,14 +45,13 @@ export const bulkDataListSchema = z.object({
 
 export type BulkDataItem = z.infer<typeof bulkDataItemSchema>;
 
-export function bulkDownloadUri(item: BulkDataItem): string {
+export const bulkDownloadUri = (item: BulkDataItem): string => {
   const uri = item.jsonl_download_uri ?? item.download_uri;
   if (!uri) {
     throw new Error(`Scryfall bulk item "${item.type}" has no download URI`);
   }
   return uri;
-}
+};
 
-export function bulkByteSize(item: BulkDataItem): number | null {
-  return item.compressed_size ?? item.size ?? null;
-}
+export const bulkByteSize = (item: BulkDataItem): number | null =>
+  item.compressed_size ?? item.size ?? null;

@@ -51,23 +51,20 @@ type DecksResponse = { decks: Deck[] };
 type DeckResponse = { deck: Deck };
 type DeckCardResponse = { card: DeckCard | null };
 
-export function fetchDecks(getToken: GetToken): Promise<Deck[]> {
-  return apiFetchJson<DecksResponse>('/decks', getToken).then((body) => body.decks);
-}
+export const fetchDecks = (getToken: GetToken): Promise<Deck[]> =>
+  apiFetchJson<DecksResponse>('/decks', getToken).then((body) => body.decks);
 
-export function createDeck(getToken: GetToken, input: CreateDeckInput): Promise<Deck> {
-  return apiFetchJson<DeckResponse>('/decks', getToken, {
+export const createDeck = (getToken: GetToken, input: CreateDeckInput): Promise<Deck> =>
+  apiFetchJson<DeckResponse>('/decks', getToken, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   }).then((body) => body.deck);
-}
 
-export function fetchDeck(getToken: GetToken, id: string): Promise<DeckDetail> {
-  return apiFetchJson<DeckDetail>(`/decks/${id}`, getToken);
-}
+export const fetchDeck = (getToken: GetToken, id: string): Promise<DeckDetail> =>
+  apiFetchJson<DeckDetail>(`/decks/${id}`, getToken);
 
-export function updateDeck(
+export const updateDeck = (
   getToken: GetToken,
   id: string,
   input: {
@@ -75,19 +72,17 @@ export function updateDeck(
     description?: string | null;
     format?: DeckFormat;
   },
-): Promise<Deck> {
-  return apiFetchJson<DeckResponse>(`/decks/${id}`, getToken, {
+): Promise<Deck> =>
+  apiFetchJson<DeckResponse>(`/decks/${id}`, getToken, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   }).then((body) => body.deck);
-}
 
-export function deleteDeck(getToken: GetToken, id: string): Promise<void> {
-  return apiFetchJson<{ ok: boolean }>(`/decks/${id}`, getToken, {
+export const deleteDeck = (getToken: GetToken, id: string): Promise<void> =>
+  apiFetchJson<{ ok: boolean }>(`/decks/${id}`, getToken, {
     method: 'DELETE',
   }).then(() => undefined);
-}
 
 export type DeckImportUnmatched = {
   line: string;
@@ -100,24 +95,23 @@ export type DeckImportResult = {
   detail: DeckDetail;
 };
 
-export function importDeckList(
+export const importDeckList = (
   getToken: GetToken,
   deckId: string,
   text: string,
-): Promise<DeckImportResult> {
-  return apiFetchJson<DeckImportResult>(`/decks/${deckId}/import`, getToken, {
+): Promise<DeckImportResult> =>
+  apiFetchJson<DeckImportResult>(`/decks/${deckId}/import`, getToken, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
   });
-}
 
-export function addCardToDeck(
+export const addCardToDeck = (
   getToken: GetToken,
   deckId: string,
   cardId: string,
-): Promise<DeckCard> {
-  return apiFetchJson<DeckCardResponse>(`/decks/${deckId}/cards`, getToken, {
+): Promise<DeckCard> =>
+  apiFetchJson<DeckCardResponse>(`/decks/${deckId}/cards`, getToken, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ cardId }),
@@ -125,28 +119,26 @@ export function addCardToDeck(
     if (!body.card) throw new Error('Missing card in response');
     return body.card;
   });
-}
 
-export function setDeckCardQuantity(
+export const setDeckCardQuantity = (
   getToken: GetToken,
   deckId: string,
   deckCardId: string,
   quantity: number,
-): Promise<DeckCard | null> {
-  return apiFetchJson<DeckCardResponse>(`/decks/${deckId}/cards/${deckCardId}`, getToken, {
+): Promise<DeckCard | null> =>
+  apiFetchJson<DeckCardResponse>(`/decks/${deckId}/cards/${deckCardId}`, getToken, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ quantity }),
   }).then((body) => body.card);
-}
 
-export function setDeckCardPrinting(
+export const setDeckCardPrinting = (
   getToken: GetToken,
   deckId: string,
   deckCardId: string,
   printingId: string,
-): Promise<DeckCard> {
-  return apiFetchJson<DeckCardResponse>(`/decks/${deckId}/cards/${deckCardId}`, getToken, {
+): Promise<DeckCard> =>
+  apiFetchJson<DeckCardResponse>(`/decks/${deckId}/cards/${deckCardId}`, getToken, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ printingId }),
@@ -154,15 +146,14 @@ export function setDeckCardPrinting(
     if (!body.card) throw new Error('Missing card in response');
     return body.card;
   });
-}
 
-export function setDeckCardFoil(
+export const setDeckCardFoil = (
   getToken: GetToken,
   deckId: string,
   deckCardId: string,
   foil: boolean,
-): Promise<DeckCard> {
-  return apiFetchJson<DeckCardResponse>(`/decks/${deckId}/cards/${deckCardId}`, getToken, {
+): Promise<DeckCard> =>
+  apiFetchJson<DeckCardResponse>(`/decks/${deckId}/cards/${deckCardId}`, getToken, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ foil }),
@@ -170,15 +161,14 @@ export function setDeckCardFoil(
     if (!body.card) throw new Error('Missing card in response');
     return body.card;
   });
-}
 
-export function setDeckCardSideboard(
+export const setDeckCardSideboard = (
   getToken: GetToken,
   deckId: string,
   deckCardId: string,
   sideboard: boolean,
-): Promise<DeckCard> {
-  return apiFetchJson<DeckCardResponse>(`/decks/${deckId}/cards/${deckCardId}`, getToken, {
+): Promise<DeckCard> =>
+  apiFetchJson<DeckCardResponse>(`/decks/${deckId}/cards/${deckCardId}`, getToken, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sideboard }),
@@ -186,14 +176,12 @@ export function setDeckCardSideboard(
     if (!body.card) throw new Error('Missing card in response');
     return body.card;
   });
-}
 
-export function removeDeckCard(
+export const removeDeckCard = (
   getToken: GetToken,
   deckId: string,
   deckCardId: string,
-): Promise<void> {
-  return apiFetchJson<{ ok: boolean }>(`/decks/${deckId}/cards/${deckCardId}`, getToken, {
+): Promise<void> =>
+  apiFetchJson<{ ok: boolean }>(`/decks/${deckId}/cards/${deckCardId}`, getToken, {
     method: 'DELETE',
   }).then(() => undefined);
-}

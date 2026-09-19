@@ -10,7 +10,7 @@ import { SiteHeader } from '../components/SiteHeader.tsx';
 import { ApiError } from '../lib/api.ts';
 import { createDeck, DECK_FORMAT_LABELS, DECK_FORMATS, type DeckFormat } from '../lib/decks.ts';
 
-export function NewDeckPage() {
+export const NewDeckPage = () => {
   const { getToken } = useAuth();
   const navigate = useNavigate();
 
@@ -22,7 +22,7 @@ export function NewDeckPage() {
 
   const trimmedName = name.trim();
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!trimmedName || saving) return;
 
@@ -39,7 +39,7 @@ export function NewDeckPage() {
       setError(err instanceof ApiError ? err.message : 'Could not create deck');
       setSaving(false);
     }
-  }
+  };
 
   return (
     <>
@@ -123,4 +123,4 @@ export function NewDeckPage() {
       </main>
     </>
   );
-}
+};

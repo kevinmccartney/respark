@@ -7,7 +7,7 @@ export type CatalogUpsertResult = {
   unchanged: number;
 };
 
-async function upsertSet(client: PoolClient, record: CanonicalRecord): Promise<string> {
+const upsertSet = async (client: PoolClient, record: CanonicalRecord): Promise<string> => {
   const s = record.set;
   const result = await client.query<{ id: string }>(
     `insert into catalog.set as t
@@ -36,9 +36,9 @@ async function upsertSet(client: PoolClient, record: CanonicalRecord): Promise<s
     [s.code],
   );
   return existing.rows[0].id;
-}
+};
 
-async function upsertCard(client: PoolClient, record: CanonicalRecord): Promise<string> {
+const upsertCard = async (client: PoolClient, record: CanonicalRecord): Promise<string> => {
   const c = record.card;
   const result = await client.query<{ id: string }>(
     `insert into catalog.card as t
@@ -90,16 +90,16 @@ async function upsertCard(client: PoolClient, record: CanonicalRecord): Promise<
     [c.oracleId],
   );
   return existing.rows[0].id;
-}
+};
 
 type PrintingWrite = { id: string; changed: boolean; inserted: boolean };
 
-async function upsertPrinting(
+const upsertPrinting = async (
   client: PoolClient,
   cardId: string,
   setId: string,
   record: CanonicalRecord,
-): Promise<PrintingWrite> {
+): Promise<PrintingWrite> => {
   const p = record.printing;
   const existing = await client.query<{ id: string }>(
     `select id from catalog.printing where scryfall_id = $1`,
@@ -211,13 +211,13 @@ async function upsertPrinting(
     changed: (updated.rowCount ?? 0) > 0,
     inserted: false,
   };
-}
+};
 
-async function replaceFaces(
+const replaceFaces = async (
   client: PoolClient,
   printingId: string,
   record: CanonicalRecord,
-): Promise<void> {
+): Promise<void> => {
   await client.query(`delete from catalog.card_face where printing_id = $1`, [printingId]);
   for (const face of record.faces) {
     await client.query(
@@ -242,13 +242,13 @@ async function replaceFaces(
       ],
     );
   }
-}
+};
 
-async function upsertIdentifiers(
+const upsertIdentifiers = async (
   client: PoolClient,
   printingId: string,
   record: CanonicalRecord,
-): Promise<void> {
+): Promise<void> => {
   for (const id of record.identifiers) {
     await client.query(
       `insert into catalog.printing_identifier (printing_id, provider, external_id, updated_at)
@@ -260,15 +260,15 @@ async function upsertIdentifiers(
       [printingId, id.provider, id.externalId],
     );
   }
-}
+};
 
 /**
  * Upsert one Scryfall-derived catalog graph. Returns printing-level change accounting.
  */
-export async function upsertCatalogRecord(
+export const upsertCatalogRecord = async (
   client: PoolClient,
   record: CanonicalRecord,
-): Promise<CatalogUpsertResult> {
+): Promise<CatalogUpsertResult> => {
   const setId = await upsertSet(client, record);
   const cardId = await upsertCard(client, record);
   const printing = await upsertPrinting(client, cardId, setId, record);
@@ -280,12 +280,12 @@ export async function upsertCatalogRecord(
   if (printing.inserted) return { inserted: 1, updated: 0, unchanged: 0 };
   if (printing.changed) return { inserted: 0, updated: 1, unchanged: 0 };
   return { inserted: 0, updated: 0, unchanged: 1 };
-}
+};
 
-export async function upsertCatalogRecords(
+export const upsertCatalogRecords = async (
   client: PoolClient,
   records: CanonicalRecord[],
-): Promise<CatalogUpsertResult> {
+): Promise<CatalogUpsertResult> => {
   const totals: CatalogUpsertResult = { inserted: 0, updated: 0, unchanged: 0 };
   for (const record of records) {
     const result = await upsertCatalogRecord(client, record);
@@ -294,4 +294,4 @@ export async function upsertCatalogRecords(
     totals.unchanged += result.unchanged;
   }
   return totals;
-}
+};

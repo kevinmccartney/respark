@@ -18,10 +18,10 @@ export type UpsertBatchResult = {
  * Batch upsert into raw.scryfall_card.
  * Rows whose payload_hash is unchanged are left alone (counted as unchanged).
  */
-export async function upsertScryfallCards(
+export const upsertScryfallCards = async (
   client: PoolClient,
   rows: RawScryfallUpsert[],
-): Promise<UpsertBatchResult> {
+): Promise<UpsertBatchResult> => {
   if (rows.length === 0) {
     return { inserted: 0, updated: 0, unchanged: 0 };
   }
@@ -72,4 +72,4 @@ export async function upsertScryfallCards(
     updated,
     unchanged: rows.length - result.rows.length,
   };
-}
+};

@@ -242,8 +242,7 @@ export class CardsService {
   }
 }
 
-function matchSql(pattern: string | null): SQL {
-  return sql`
+const matchSql = (pattern: string | null): SQL => sql`
     (
       ${pattern}::text IS NULL
       OR c.name ILIKE ${pattern} ESCAPE '\\'
@@ -264,47 +263,40 @@ function matchSql(pattern: string | null): SQL {
       )
     )
   `;
-}
 
-function clampLimit(raw: number | undefined): number {
+const clampLimit = (raw: number | undefined): number => {
   if (raw === undefined || Number.isNaN(raw)) return DEFAULT_LIMIT;
   return Math.min(MAX_LIMIT, Math.max(1, Math.floor(raw)));
-}
+};
 
-function clampPage(raw: number | undefined): number {
+const clampPage = (raw: number | undefined): number => {
   if (raw === undefined || Number.isNaN(raw)) return 1;
   return Math.max(1, Math.floor(raw));
-}
+};
 
-function escapeIlike(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
-}
+const escapeIlike = (value: string): string =>
+  value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 
-function toCard(row: SearchRow): CardSearchResult {
-  return {
-    id: row.id,
-    oracleId: row.oracle_id,
-    name: row.name,
-    manaCost: row.mana_cost,
-    typeLine: row.type_line,
-    oracleText: row.oracle_text,
-    imageNormal: row.image_normal,
-  };
-}
+const toCard = (row: SearchRow): CardSearchResult => ({
+  id: row.id,
+  oracleId: row.oracle_id,
+  name: row.name,
+  manaCost: row.mana_cost,
+  typeLine: row.type_line,
+  oracleText: row.oracle_text,
+  imageNormal: row.image_normal,
+});
 
-function toPrinting(row: PrintingDetailRow): CardPrintingSummary {
-  return {
-    id: row.id,
-    scryfallId: row.scryfall_id,
-    collectorNumber: row.collector_number,
-    language: row.language,
-    rarity: row.rarity,
-    artist: row.artist,
-    releasedAt: row.released_at,
-    setCode: row.set_code,
-    setName: row.set_name,
-    imageNormal: row.image_normal ?? row.face_image_normal,
-    imageLarge:
-      row.image_large ?? row.face_image_large ?? row.image_normal ?? row.face_image_normal,
-  };
-}
+const toPrinting = (row: PrintingDetailRow): CardPrintingSummary => ({
+  id: row.id,
+  scryfallId: row.scryfall_id,
+  collectorNumber: row.collector_number,
+  language: row.language,
+  rarity: row.rarity,
+  artist: row.artist,
+  releasedAt: row.released_at,
+  setCode: row.set_code,
+  setName: row.set_name,
+  imageNormal: row.image_normal ?? row.face_image_normal,
+  imageLarge: row.image_large ?? row.face_image_large ?? row.image_normal ?? row.face_image_normal,
+});

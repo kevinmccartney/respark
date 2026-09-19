@@ -19,7 +19,7 @@ program
   .option('--store-raw', 'Persist raw provider payloads (default true)', undefined)
   .option('--no-store-raw', 'Skip raw payload persistence');
 
-function flagsFrom(cmd: Command): GlobalFlags {
+const flagsFrom = (cmd: Command): GlobalFlags => {
   const opts = cmd.optsWithGlobals() as {
     limit?: number;
     dryRun?: boolean;
@@ -32,18 +32,18 @@ function flagsFrom(cmd: Command): GlobalFlags {
     verbose: Boolean(opts.verbose),
     storeRaw: opts.storeRaw,
   };
-}
+};
 
-async function withDb<T>(work: (pool: ReturnType<typeof createPool>) => Promise<T>): Promise<T> {
+const withDb = async <T>(work: (pool: ReturnType<typeof createPool>) => Promise<T>): Promise<T> => {
   const pool = createPool();
   try {
     return await work(pool);
   } finally {
     await pool.end();
   }
-}
+};
 
-function stub(command: string, description: string) {
+const stub = (command: string, description: string) => {
   program
     .command(command)
     .description(`${description} (not implemented yet)`)
@@ -52,13 +52,13 @@ function stub(command: string, description: string) {
       const logger = createLogger(flags.verbose);
       logger.info({ event: 'etl.stub', command, ...flags }, `${command} is not implemented yet`);
     });
-}
+};
 
-async function runSyncCommand(opts: {
+const runSyncCommand = async (opts: {
   catalog?: boolean;
   enrichment?: string | string[];
   demoMismatches?: boolean;
-}): Promise<void> {
+}): Promise<void> => {
   const flags = flagsFrom(program);
   flags.demoMismatches = Boolean(opts.demoMismatches);
   const logger = createLogger(flags.verbose);
@@ -82,7 +82,7 @@ async function runSyncCommand(opts: {
       process.exitCode = 1;
     }
   });
-}
+};
 
 program
   .command('ping')

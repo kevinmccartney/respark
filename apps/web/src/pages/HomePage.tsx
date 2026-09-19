@@ -8,7 +8,7 @@ import { SiteHeader } from '../components/SiteHeader.tsx';
 import { ApiError } from '../lib/api.ts';
 import { DECK_FORMAT_LABELS, fetchDecks, type Deck } from '../lib/decks.ts';
 
-export function HomePage() {
+export const HomePage = () => {
   const { getToken } = useAuth();
   const { user } = useUser();
   const firstName = user?.firstName?.trim();
@@ -21,7 +21,7 @@ export function HomePage() {
   useEffect(() => {
     const controller = new AbortController();
 
-    async function loadDecks() {
+    const loadDecks = async () => {
       setLoading(true);
       setError(null);
       try {
@@ -41,7 +41,7 @@ export function HomePage() {
           setLoading(false);
         }
       }
-    }
+    };
 
     void loadDecks();
 
@@ -103,4 +103,4 @@ export function HomePage() {
       </main>
     </>
   );
-}
+};

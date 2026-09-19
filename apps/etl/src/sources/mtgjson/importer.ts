@@ -32,11 +32,11 @@ type BatchItem = {
   sourcePayload: unknown;
 };
 
-function resolveStoreRaw(flags: GlobalFlags): boolean {
+const resolveStoreRaw = (flags: GlobalFlags): boolean => {
   if (flags.storeRaw !== undefined) return flags.storeRaw;
   if (process.env.ETL_STORE_RAW === 'false') return false;
   return true;
-}
+};
 
 export type MtgjsonImportStats = {
   matched: number;
@@ -52,12 +52,12 @@ export type MtgjsonImportStats = {
  * Download MTGJSON AllIdentifiers → raw.mtgjson_card + enrich catalog identifiers.
  * Never inserts catalog.printing rows.
  */
-export async function runMtgjsonImport(
+export const runMtgjsonImport = async (
   pool: Pool,
   logger: Logger,
   flags: GlobalFlags,
   ctx: JobContext,
-): Promise<IngestionRunStatus> {
+): Promise<IngestionRunStatus> => {
   const storeRaw = resolveStoreRaw(flags);
   const batchSize = Number.parseInt(process.env.ETL_BATCH_SIZE ?? '', 10) || DEFAULT_BATCH_SIZE;
 
@@ -524,4 +524,4 @@ export async function runMtgjsonImport(
     });
     throw err;
   }
-}
+};

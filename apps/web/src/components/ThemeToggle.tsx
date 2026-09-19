@@ -8,7 +8,7 @@ const LABELS: Record<Theme, string> = {
   system: 'System',
 };
 
-export function ThemeToggle() {
+export const ThemeToggle = () => {
   const { theme, cycleTheme } = useTheme();
 
   return (
@@ -23,4 +23,4 @@ export function ThemeToggle() {
       {theme === 'light' ? <Sun /> : theme === 'dark' ? <Moon /> : <Monitor />}
     </Button>
   );
-}
+};

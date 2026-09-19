@@ -3,6 +3,9 @@
 #   task docker:up      # build + start
 #   task docker:logs    # follow API + web + admin logs
 #   task docker:down    # stop (keeps the DB volume)
+#
+# HUSKY=0 on app services. Dockerfiles also set it: compose env is not
+# available during RUN npm ci, and workspace installs omit the husky binary.
 
 services:
   db:
@@ -39,6 +42,7 @@ services:
       PORT: '3000'
       NODE_ENV: development
       LOG_LEVEL: '${LOG_LEVEL:-debug}'
+      HUSKY: '0'
       # Compose network hostname — overrides localhost from apps/api/.env
       DATABASE_URL: postgres://respark:respark@db:5432/respark
       # Apply drizzle/ on boot so a fresh volume is usable immediately
@@ -67,6 +71,7 @@ services:
     environment:
       # Browser talks to the published API port on the host, not the Compose service name.
       VITE_API_URL: http://localhost:${PORT:-3000}
+      HUSKY: '0'
     volumes:
       - ./apps/web/src:/repo/apps/web/src
       - ./apps/web/index.html:/repo/apps/web/index.html
@@ -88,6 +93,7 @@ services:
     environment:
       # Browser talks to the published API port on the host, not the Compose service name.
       VITE_API_URL: http://localhost:${PORT:-3000}
+      HUSKY: '0'
     volumes:
       - ./apps/admin/src:/repo/apps/admin/src
       - ./apps/admin/index.html:/repo/apps/admin/index.html

@@ -28,10 +28,10 @@ export type UnmatchedRecord = {
  * 1. identifiers.scryfallId → catalog.printing.scryfall_id
  * 2. set code + collector number (+ language when available)
  */
-export async function resolvePrinting(
+export const resolvePrinting = async (
   client: PoolClient,
   enrichment: MtgjsonEnrichment,
-): Promise<{ status: MatchStatus; printingId: string | null; reason: string }> {
+): Promise<{ status: MatchStatus; printingId: string | null; reason: string }> => {
   if (enrichment.scryfallId) {
     // Guard against non-UUID scryfall ids from older MTGJSON rows
     const looksUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -101,17 +101,17 @@ export async function resolvePrinting(
       ? 'scryfall_id_not_in_catalog'
       : 'no_scryfall_id_and_no_set_number_match',
   };
-}
+};
 
 /**
  * Attach MTGJSON-derived provider IDs to a matched printing.
  * Returns how many identifiers were newly written or re-pointed.
  */
-export async function enrichPrintingIdentifiers(
+export const enrichPrintingIdentifiers = async (
   client: PoolClient,
   printingId: string,
   identifiers: EnrichmentIdentifier[],
-): Promise<number> {
+): Promise<number> => {
   let added = 0;
   for (const id of identifiers) {
     if (id.provider === 'scryfall') continue;
@@ -130,12 +130,12 @@ export async function enrichPrintingIdentifiers(
     if (result.rows.length > 0) added += 1;
   }
   return added;
-}
+};
 
-export async function reconcileMtgjsonCard(
+export const reconcileMtgjsonCard = async (
   client: PoolClient,
   enrichment: MtgjsonEnrichment,
-): Promise<MatchResult> {
+): Promise<MatchResult> => {
   const match = await resolvePrinting(client, enrichment);
   if (match.status !== 'matched' || !match.printingId) {
     return {
@@ -158,4 +158,4 @@ export async function reconcileMtgjsonCard(
     identifiersAdded,
     reason: match.reason,
   };
-}
+};

@@ -2,7 +2,7 @@ import { useAuth } from '@clerk/react';
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 
-export function RequireAuth({ children }: { children: ReactNode }) {
+export const RequireAuth = ({ children }: { children: ReactNode }) => {
   const { isLoaded, isSignedIn } = useAuth();
 
   if (!isLoaded) {
@@ -14,9 +14,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }
 
   return children;
-}
+};
 
-export function GuestOnly({ children }: { children: ReactNode }) {
+export const GuestOnly = ({ children }: { children: ReactNode }) => {
   const { isLoaded, isSignedIn } = useAuth();
 
   if (!isLoaded) {
@@ -28,4 +28,4 @@ export function GuestOnly({ children }: { children: ReactNode }) {
   }
 
   return children;
-}
+};

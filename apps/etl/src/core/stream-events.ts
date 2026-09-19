@@ -128,11 +128,11 @@ export type SyncEvent =
 
 export type SyncEventHandler = (event: SyncEvent) => void;
 
-export function emitSyncEvent(onEvent: SyncEventHandler | undefined, event: SyncEvent): void {
+export const emitSyncEvent = (onEvent: SyncEventHandler | undefined, event: SyncEvent): void => {
   if (!onEvent) return;
   try {
     onEvent(event);
   } catch {
     // Never let a bad subscriber abort the ETL run.
   }
-}
+};

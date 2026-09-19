@@ -10,16 +10,16 @@ const packageRoot = resolve(here, '../..');
  * Existing process.env wins (override: false) so Compose/API-spawned jobs keep
  * their DATABASE_URL instead of apps/etl/.env pointing at localhost.
  */
-export function loadEnv() {
+export const loadEnv = () => {
   for (const file of ['.env', '.env.local']) {
     const path = resolve(packageRoot, file);
     if (existsSync(path)) {
       config({ path, override: false });
     }
   }
-}
+};
 
-export function createPool(): Pool {
+export const createPool = (): Pool => {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error('DATABASE_URL is required. Copy apps/etl/.env.example to apps/etl/.env.');
@@ -31,4 +31,4 @@ export function createPool(): Pool {
   const ssl = caPath && existsSync(caPath) ? { ca: readFileSync(caPath, 'utf8') } : undefined;
 
   return new Pool(ssl ? { connectionString, ssl } : { connectionString });
-}
+};

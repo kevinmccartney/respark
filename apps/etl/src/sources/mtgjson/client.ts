@@ -13,7 +13,7 @@ export type MtgjsonDataset = {
   compressedBytes: number | null;
 };
 
-export async function fetchMtgjsonMeta(logger: Logger): Promise<MtgjsonDataset> {
+export const fetchMtgjsonMeta = async (logger: Logger): Promise<MtgjsonDataset> => {
   logger.info({ event: 'mtgjson.meta.fetch', url: META_URL }, 'Fetching MTGJSON meta');
   const response = await fetch(META_URL, {
     headers: { Accept: 'application/json', 'User-Agent': DEFAULT_HEADERS['User-Agent'] },
@@ -36,9 +36,9 @@ export async function fetchMtgjsonMeta(logger: Logger): Promise<MtgjsonDataset> 
     downloadUrl: ALL_IDENTIFIERS_URL,
     compressedBytes: null,
   };
-}
+};
 
-export async function openAllIdentifiersDownload(
+export const openAllIdentifiersDownload = async (
   dataset: MtgjsonDataset,
   logger: Logger,
   signal?: AbortSignal,
@@ -46,7 +46,7 @@ export async function openAllIdentifiersDownload(
   body: ReadableStream<Uint8Array>;
   contentLength: number | null;
   uri: string;
-}> {
+}> => {
   const uri = dataset.downloadUrl;
   logger.info(
     {
@@ -70,4 +70,4 @@ export async function openAllIdentifiersDownload(
   const contentLength = contentLengthHeader ? Number.parseInt(contentLengthHeader, 10) : null;
 
   return { body: response.body, contentLength, uri };
-}
+};

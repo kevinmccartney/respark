@@ -1,7 +1,7 @@
 import pino from 'pino';
 
-export function createLogger(verbose: boolean) {
-  return pino({
+export const createLogger = (verbose: boolean) =>
+  pino({
     level: verbose ? 'debug' : 'info',
     transport:
       process.env.NODE_ENV === 'production'
@@ -11,6 +11,5 @@ export function createLogger(verbose: boolean) {
             options: { colorize: true, translateTime: 'SYS:standard' },
           },
   });
-}
 
 export type Logger = ReturnType<typeof createLogger>;

@@ -1,6 +1,10 @@
+import type { z } from 'zod';
+
 const defaultApiBase = 'http://localhost:3000';
 
-export function apiBaseUrl(): string {
+export type GetToken = () => Promise<string | null>;
+
+export const apiBaseUrl = (): string => {
   const configured = import.meta.env.VITE_API_URL?.trim();
   if (configured) return configured.replace(/\/$/, '');
 
@@ -9,7 +13,7 @@ export function apiBaseUrl(): string {
   }
 
   return defaultApiBase;
-}
+};
 
 export class ApiError extends Error {
   readonly status: number;
@@ -21,13 +25,11 @@ export class ApiError extends Error {
   }
 }
 
-type GetToken = () => Promise<string | null>;
-
-export async function apiFetch(
+export const apiFetch = async (
   path: string,
   getToken: GetToken,
   init?: RequestInit,
-): Promise<Response> {
+): Promise<Response> => {
   const token = await getToken();
   if (!token) {
     throw new ApiError('Sign in required', 401);
@@ -40,23 +42,36 @@ export async function apiFetch(
     ...init,
     headers,
   });
-}
+};
 
-export async function apiFetchJson<T>(
+export const apiFetchJson = async <S extends z.ZodType>(
   path: string,
   getToken: GetToken,
+  schema: S,
   init?: RequestInit,
-): Promise<T> {
+): Promise<z.infer<S>> => {
   const response = await apiFetch(path, getToken, init);
 
   if (!response.ok) {
     throw new ApiError(await errorMessage(response), response.status);
   }
 
-  return response.json() as Promise<T>;
-}
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch {
+    throw new ApiError('API returned a non-JSON body', response.status);
+  }
 
-async function errorMessage(response: Response): Promise<string> {
+  const parsed = schema.safeParse(json);
+  if (!parsed.success) {
+    throw new ApiError(`Invalid API response: ${parsed.error.message}`, response.status);
+  }
+
+  return parsed.data;
+};
+
+const errorMessage = async (response: Response): Promise<string> => {
   try {
     const body = (await response.json()) as { message?: unknown };
     if (typeof body.message === 'string' && body.message) return body.message;
@@ -66,4 +81,4 @@ async function errorMessage(response: Response): Promise<string> {
   }
 
   return response.statusText || 'Request failed';
-}
+};

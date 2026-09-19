@@ -22,7 +22,7 @@ export type FinishJobRunInput = {
   errorMessage?: string | null;
 };
 
-export async function startJobRun(pool: Pool, input: StartJobRunInput): Promise<string> {
+export const startJobRun = async (pool: Pool, input: StartJobRunInput): Promise<string> => {
   const result = await pool.query<{ id: string }>(
     `insert into ops.etl_job_run
        (sync_id, stage, job, status, source_version, source_url)
@@ -31,9 +31,9 @@ export async function startJobRun(pool: Pool, input: StartJobRunInput): Promise<
     [input.syncId, input.stage, input.job, input.sourceVersion ?? null, input.sourceUrl ?? null],
   );
   return result.rows[0].id;
-}
+};
 
-export async function finishJobRun(pool: Pool, input: FinishJobRunInput): Promise<void> {
+export const finishJobRun = async (pool: Pool, input: FinishJobRunInput): Promise<void> => {
   await pool.query(
     `update ops.etl_job_run set
        status = $2,
@@ -60,9 +60,9 @@ export async function finishJobRun(pool: Pool, input: FinishJobRunInput): Promis
       input.errorMessage ?? null,
     ],
   );
-}
+};
 
-export async function insertIngestionError(
+export const insertIngestionError = async (
   client: Pool | PoolClient,
   input: {
     runId: string;
@@ -72,7 +72,7 @@ export async function insertIngestionError(
     errorMessage: string;
     payload?: unknown;
   },
-): Promise<void> {
+): Promise<void> => {
   await client.query(
     `insert into ops.ingestion_error
        (run_id, source, external_id, stage, error_message, payload)
@@ -86,4 +86,4 @@ export async function insertIngestionError(
       input.payload === undefined ? null : JSON.stringify(input.payload),
     ],
   );
-}
+};

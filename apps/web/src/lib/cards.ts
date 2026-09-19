@@ -50,35 +50,34 @@ export type CardDetail = {
 
 type GetToken = () => Promise<string | null>;
 
-export function searchCards(
+export const searchCards = (
   getToken: GetToken,
   opts: { q?: string; limit?: number; page?: number },
-): Promise<CardSearchPage> {
+): Promise<CardSearchPage> => {
   const params = new URLSearchParams();
   if (opts.q) params.set('q', opts.q);
   if (opts.limit !== undefined) params.set('limit', String(opts.limit));
   if (opts.page !== undefined && opts.page > 1) params.set('page', String(opts.page));
   const qs = params.toString();
   return apiFetchJson<CardSearchPage>(`/cards${qs ? `?${qs}` : ''}`, getToken);
-}
+};
 
-export function fetchCard(getToken: GetToken, id: string): Promise<CardDetail> {
-  return apiFetchJson<CardDetail>(`/cards/${id}`, getToken);
-}
+export const fetchCard = (getToken: GetToken, id: string): Promise<CardDetail> =>
+  apiFetchJson<CardDetail>(`/cards/${id}`, getToken);
 
 export type CardNameSuggestion = {
   id: string;
   name: string;
 };
 
-export function suggestCardNames(
+export const suggestCardNames = (
   getToken: GetToken,
   q: string,
   limit = 15,
-): Promise<CardNameSuggestion[]> {
+): Promise<CardNameSuggestion[]> => {
   const params = new URLSearchParams({ q, limit: String(limit) });
   return apiFetchJson<{ suggestions: CardNameSuggestion[] }>(
     `/cards/suggestions?${params}`,
     getToken,
   ).then((body) => body.suggestions);
-}
+};

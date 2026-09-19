@@ -232,8 +232,8 @@ export class EtlSyncGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   }
 }
 
-function syncIdOf(event: SyncEvent): string | null {
+const syncIdOf = (event: SyncEvent): string | null => {
   if (event.type === 'sync.started') return event.sync.id;
   if ('syncId' in event) return event.syncId;
   return null;
-}
+};

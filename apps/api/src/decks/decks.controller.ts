@@ -207,8 +207,8 @@ export class DecksController {
   }
 }
 
-function requireUuid(value: string, label: string) {
+const requireUuid = (value: string, label: string) => {
   if (!UUID_RE.test(value)) {
     throw new BadRequestException(`Invalid ${label}`);
   }
-}
+};

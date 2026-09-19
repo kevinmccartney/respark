@@ -6,6 +6,7 @@ WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/etl/package.json apps/etl/
+ENV HUSKY=0
 RUN npm ci --workspace=api --workspace=etl
 COPY apps/api/tsconfig.json apps/api/tsconfig.build.json apps/api/nest-cli.json apps/api/
 COPY apps/api/src apps/api/src
@@ -21,6 +22,7 @@ ENV ETL_REPO_ROOT=/repo
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/etl/package.json apps/etl/
+ENV HUSKY=0
 RUN npm ci --omit=dev --workspace=api --workspace=etl --no-audit --no-fund
 
 # RDS enforces TLS and signs certificates with its own root CA, which is not in

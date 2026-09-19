@@ -16,10 +16,10 @@ export type ReconciliationSummaryInput = {
   limitN: number | null;
 };
 
-export async function upsertIngestionReconciliation(
+export const upsertIngestionReconciliation = async (
   client: Pool | PoolClient,
   input: ReconciliationSummaryInput,
-): Promise<void> {
+): Promise<void> => {
   await client.query(
     `insert into ops.ingestion_reconciliation as t
        (run_id, matched, unmatched, ambiguous, identifiers_added,
@@ -53,16 +53,16 @@ export async function upsertIngestionReconciliation(
       input.limitN,
     ],
   );
-}
+};
 
 /**
  * Replace unmatched samples for a run (idempotent re-finish).
  */
-export async function replaceUnmatchedRecords(
+export const replaceUnmatchedRecords = async (
   client: Pool | PoolClient,
   runId: string,
   rows: UnmatchedRecord[],
-): Promise<void> {
+): Promise<void> => {
   await client.query(`delete from ops.ingestion_unmatched where run_id = $1`, [runId]);
   if (rows.length === 0) return;
 
@@ -92,4 +92,4 @@ export async function replaceUnmatchedRecords(
      values ${placeholders.join(',')}`,
     values,
   );
-}
+};
