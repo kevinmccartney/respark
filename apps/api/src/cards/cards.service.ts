@@ -4,6 +4,7 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino'
 import { DATABASE, type Database } from '../db/database.module'
 import type {
   CardDetail,
+  CardNameSuggestion,
   CardPrintingSummary,
   CardSearchPage,
   CardSearchResult,
@@ -146,6 +147,27 @@ export class CardsService {
     )
 
     return { cards, total, page, pageSize, totalPages }
+  }
+
+  /**
+   * Deck-builder autocomplete: match card names only, return id + name.
+   */
+  async suggestNames(qRaw: string | undefined, limitRaw?: number): Promise<CardNameSuggestion[]> {
+    const q = (qRaw ?? '').trim()
+    if (q.length < 2) return []
+
+    const limit = Math.min(30, Math.max(1, Math.floor(limitRaw ?? 15)))
+    const pattern = `%${escapeIlike(q)}%`
+
+    const result = await this.db.execute<{ id: string; name: string }>(sql`
+      SELECT c.id, c.name
+      FROM catalog.card c
+      WHERE c.name ILIKE ${pattern} ESCAPE '\\'
+      ORDER BY c.name ASC
+      LIMIT ${limit}
+    `)
+
+    return result.rows.map((row) => ({ id: row.id, name: row.name }))
   }
 
   async getById(id: string): Promise<CardDetail> {

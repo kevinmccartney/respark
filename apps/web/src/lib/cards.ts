@@ -65,3 +65,20 @@ export function searchCards(
 export function fetchCard(getToken: GetToken, id: string): Promise<CardDetail> {
   return apiFetchJson<CardDetail>(`/cards/${id}`, getToken)
 }
+
+export type CardNameSuggestion = {
+  id: string
+  name: string
+}
+
+export function suggestCardNames(
+  getToken: GetToken,
+  q: string,
+  limit = 15,
+): Promise<CardNameSuggestion[]> {
+  const params = new URLSearchParams({ q, limit: String(limit) })
+  return apiFetchJson<{ suggestions: CardNameSuggestion[] }>(
+    `/cards/suggestions?${params}`,
+    getToken,
+  ).then((body) => body.suggestions)
+}

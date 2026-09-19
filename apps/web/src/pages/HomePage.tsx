@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card'
 import { SiteHeader } from '../components/SiteHeader.tsx'
 import { ApiError } from '../lib/api.ts'
-import { fetchDecks, type Deck } from '../lib/decks.ts'
+import { DECK_FORMAT_LABELS, fetchDecks, type Deck } from '../lib/decks.ts'
 
 export function HomePage() {
   const { getToken } = useAuth()
@@ -86,8 +86,18 @@ export function HomePage() {
               <ul className="divide-y">
                 {decks.map((deck) => (
                   <li key={deck.id} className="flex justify-between gap-4 py-2">
-                    <span className="font-medium">{deck.name}</span>
-                    <time className="text-sm text-muted-foreground" dateTime={deck.updatedAt}>
+                    <div className="min-w-0">
+                      <Link
+                        to={`/decks/${deck.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {deck.name}
+                      </Link>
+                      <p className="text-sm text-muted-foreground">
+                        {DECK_FORMAT_LABELS[deck.format]}
+                      </p>
+                    </div>
+                    <time className="shrink-0 text-sm text-muted-foreground" dateTime={deck.updatedAt}>
                       {new Date(deck.updatedAt).toLocaleDateString()}
                     </time>
                   </li>

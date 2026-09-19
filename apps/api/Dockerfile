@@ -11,7 +11,8 @@ COPY apps/api/tsconfig.json apps/api/tsconfig.build.json apps/api/nest-cli.json 
 COPY apps/api/src apps/api/src
 COPY apps/etl/tsconfig.json apps/etl/
 COPY apps/etl/src apps/etl/src
-RUN npm run build -w api && npm run build -w etl
+# etl exports point at dist/; build it before api so Nest can resolve the workspace package.
+RUN npm run build -w etl && npm run build -w api
 
 FROM node:22-alpine AS runtime
 WORKDIR /repo

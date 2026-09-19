@@ -3,6 +3,7 @@ import { AppShell } from './components/AppShell.tsx'
 import { GuestOnly, RequireAuth } from './components/AuthGate.tsx'
 import { SiteHeader } from './components/SiteHeader.tsx'
 import { CardDetailPage } from './pages/CardDetailPage.tsx'
+import { DeckDetailPage } from './pages/DeckDetailPage.tsx'
 import { HomePage } from './pages/HomePage.tsx'
 import { NewDeckPage } from './pages/NewDeckPage.tsx'
 import { SearchPage } from './pages/SearchPage.tsx'
@@ -50,6 +51,14 @@ export default function App() {
           element={
             <RequireAuth>
               <NewDeckPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/decks/:id"
+          element={
+            <RequireAuth>
+              <DeckDetailPage />
             </RequireAuth>
           }
         />

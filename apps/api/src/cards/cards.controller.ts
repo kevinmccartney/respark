@@ -35,6 +35,21 @@ export class CardsController {
     return this.cardsService.search({ q, limit, page })
   }
 
+  /** Name-only autocomplete for deck building (`id` + `name`). */
+  @Get('suggestions')
+  async suggestions(
+    @Query('q') q?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit =
+      limitRaw === undefined || limitRaw === ''
+        ? undefined
+        : Number.parseInt(limitRaw, 10)
+    return {
+      suggestions: await this.cardsService.suggestNames(q, limit),
+    }
+  }
+
   @Get(':id')
   async getById(@Param('id') id: string) {
     if (!UUID_RE.test(id)) {

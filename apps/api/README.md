@@ -62,9 +62,11 @@ task db:migrate   # or restart the Compose API (migrate-on-boot)
 
 Current tables:
 
-- **`app.users`** / **`app.decks`** — app-owned identity and decks (Clerk-synced profile cache).
+- **`app.users`** / **`app.decks`** / **`app.deck_card`** — app-owned identity, decks (`description`, `format`: standard/commander/modern), and deck lines keyed by **printing** (add-by-card picks a default printing).
 - **`GET /cards`** — authenticated keyword search over unique `catalog.card` rows (trigram indexes; `page` + `limit` pagination).
+- **`GET /cards/suggestions`** — name-only autocomplete (`id` + `name`) for deck building.
 - **`GET /cards/:id`** — card detail plus printings (set, collector number, images).
+- **`GET/POST /decks`**, **`GET/PATCH/DELETE /decks/:id`**, **`POST/PATCH/DELETE /decks/:id/cards…`** — deck CRUD + card lines (`POST` accepts `cardId`; deck `PATCH` applies any provided fields — `name`, `description`, `format`; card `PATCH` accepts `quantity` and/or `printingId`).
 - **Pipeline schemas** — `raw`, `catalog`, `market`, `ops`, plus `ops.etl_sync` / `ops.etl_job_run` for ETL sync tracking. Admin starts syncs in-process via the `etl` lib and streams events on `/admin/etl-syncs/ws`. See [`apps/etl/README.md`](../etl/README.md) and `task etl -- --help`.
 
 ## Clerk webhooks

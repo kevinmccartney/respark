@@ -45,3 +45,9 @@ export type CardDetail = {
   reserved: boolean | null
   printings: CardPrintingSummary[]
 }
+
+/** Name-only suggestion for deck builder autocomplete. */
+export type CardNameSuggestion = {
+  id: string
+  name: string
+}

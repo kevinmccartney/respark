@@ -7,6 +7,7 @@ Writing down ideas for the future
 - Auto formatting rules
 - Linting
 - Custom instructions
+- Pipeline
 
 ## Admin
 
@@ -16,4 +17,4 @@ Writing down ideas for the future
 ## UI
 
 - ~~Card details~~
-- MVP deck builder
+- ~~MVP deck builder~~

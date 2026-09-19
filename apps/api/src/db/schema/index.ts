@@ -1,5 +1,6 @@
 export * from './users'
 export * from './decks'
+export * from './deck-cards'
 export * from './pipeline-schemas'
 export * from './ops/ops-schema'
 export * from './ops/etl-sync'
