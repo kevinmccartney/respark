@@ -1,6 +1,17 @@
 terraform {
   required_version = ">= 1.5.0"
 
+  # Remote state for local + CI. Create the bucket/table once:
+  #   bash scripts/bootstrap-tf-backend.sh
+  # then migrate: terraform -chdir=infra/envs/develop init -migrate-state
+  backend "s3" {
+    bucket         = "respark-tfstate"
+    key            = "envs/develop/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "respark-tfstate-lock"
+    encrypt        = true
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"

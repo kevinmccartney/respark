@@ -6,8 +6,9 @@ Writing down ideas for the future
 
 - Auto formatting rules
 - Linting
-- Custom instructions
-- Pipeline
+- Custom LLM instructions
+- ~~Pipeline~~
+- Arch diagrams and mermaid data ERDs
 
 ## Admin
 

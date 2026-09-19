@@ -2,7 +2,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TF_DIR="${ROOT}/infra/envs/develop"
+ENV="${ENV:-develop}"
+if [[ -n "${TF_DIR:-}" ]]; then
+  [[ "${TF_DIR}" = /* ]] || TF_DIR="${ROOT}/${TF_DIR}"
+else
+  TF_DIR="${ROOT}/infra/envs/${ENV}"
+fi
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 
@@ -25,13 +30,13 @@ exec /usr/local/bin/respark-deploy-api.sh '${REPO}' '${IMAGE_TAG}'"
 CMD_ID=$(aws ssm send-command \
   --instance-ids "$INSTANCE" \
   --document-name AWS-RunShellScript \
-  --comment "respark api redeploy" \
+  --comment "respark api redeploy (${ENV})" \
   --parameters "$(jq -n --arg c "$REMOTE_CMD" '{commands: [$c]}')" \
   --region "$AWS_REGION" \
   --query 'Command.CommandId' \
   --output text)
 
-echo "SSM command ${CMD_ID} sent to instance ${INSTANCE}"
+echo "SSM command ${CMD_ID} sent to instance ${INSTANCE} (${ENV})"
 
 echo "Waiting for the redeploy to finish…"
 for _ in $(seq 1 90); do

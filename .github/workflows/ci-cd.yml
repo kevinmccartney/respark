@@ -1,0 +1,281 @@
+name: CI / CD
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment (must match infra/envs/<name> and a GitHub Environment)
+        type: choice
+        options:
+          - develop
+          - production
+        default: develop
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.environment || 'develop' }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: "22"
+  TERRAFORM_VERSION: "1.9.8"
+  TASK_VERSION: "3.x"
+
+jobs:
+  config:
+    name: Resolve environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set.outputs.environment }}
+      deploy: ${{ steps.set.outputs.deploy }}
+    steps:
+      - id: set
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ inputs.environment }}"
+          else
+            # PRs and pushes to main always target develop.
+            ENV="develop"
+          fi
+
+          DEPLOY=false
+          if [ "${{ github.ref }}" = "refs/heads/main" ] && {
+            [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]
+          }; then
+            DEPLOY=true
+          fi
+
+          echo "environment=${ENV}" >> "$GITHUB_OUTPUT"
+          echo "deploy=${DEPLOY}" >> "$GITHUB_OUTPUT"
+          echo "Resolved ENV=${ENV} deploy=${DEPLOY}"
+
+  build:
+    name: Build apps
+    needs: [config]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.config.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: arduino/setup-task@v2
+        with:
+          version: ${{ env.TASK_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (task build)
+        env:
+          # Compile-time check only; deploy jobs rebuild with live api_url from Terraform.
+          VITE_API_URL: ${{ vars.COMPILE_CHECK_API_URL }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+        run: task build ENV=${{ needs.config.outputs.environment }}
+
+  plan:
+    name: Plan infra
+    needs: [config]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.config.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Debug OIDC claims
+        run: |
+          set -euo pipefail
+          echo "AWS_ROLE_ARN=${AWS_ROLE_ARN:-<empty>}"
+          TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")
+          echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+' | awk '{while(length%4){$0=$0"="} print}' | base64 -d 2>/dev/null | jq .
+        env:
+          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - uses: arduino/setup-task@v2
+        with:
+          version: ${{ env.TASK_VERSION }}
+
+      - name: Terraform plan (task infra:plan)
+        run: task infra:plan ENV=${{ needs.config.outputs.environment }}
+
+      - name: Upload plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ needs.config.outputs.environment }}
+          path: infra/envs/${{ needs.config.outputs.environment }}/tfplan
+          if-no-files-found: error
+          retention-days: 5
+
+  apply:
+    name: Apply infra
+    if: needs.config.outputs.deploy == 'true'
+    needs: [config, build, plan]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.config.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - uses: arduino/setup-task@v2
+        with:
+          version: ${{ env.TASK_VERSION }}
+
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ needs.config.outputs.environment }}
+          path: infra/envs/${{ needs.config.outputs.environment }}
+
+      - name: Terraform apply (task infra:apply)
+        run: task infra:apply ENV=${{ needs.config.outputs.environment }}
+
+  deploy-api:
+    name: Deploy API
+    if: needs.config.outputs.deploy == 'true'
+    needs: [config, apply]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.config.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - uses: arduino/setup-task@v2
+        with:
+          version: ${{ env.TASK_VERSION }}
+
+      - name: Set up QEMU (arm64)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Terraform init (outputs for deploy)
+        run: task infra:init ENV=${{ needs.config.outputs.environment }}
+
+      - name: Deploy API (task api:deploy)
+        run: >
+          task api:deploy
+          ENV=${{ needs.config.outputs.environment }}
+          API_IMAGE_TAG=${{ github.sha }}
+          DOCKER_BUILDX=1
+
+  deploy-web:
+    name: Deploy web
+    if: needs.config.outputs.deploy == 'true'
+    needs: [config, apply, deploy-api]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.config.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - uses: arduino/setup-task@v2
+        with:
+          version: ${{ env.TASK_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Terraform init (outputs for deploy)
+        run: task infra:init ENV=${{ needs.config.outputs.environment }}
+
+      - name: Deploy web (task web:deploy)
+        env:
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+        run: task web:deploy ENV=${{ needs.config.outputs.environment }}
+
+  deploy-admin:
+    name: Deploy admin
+    if: needs.config.outputs.deploy == 'true'
+    needs: [config, apply, deploy-api]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.config.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - uses: arduino/setup-task@v2
+        with:
+          version: ${{ env.TASK_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Terraform init (outputs for deploy)
+        run: task infra:init ENV=${{ needs.config.outputs.environment }}
+
+      - name: Deploy admin (task admin:deploy)
+        env:
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+        run: task admin:deploy ENV=${{ needs.config.outputs.environment }}

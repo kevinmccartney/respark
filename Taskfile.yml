@@ -1,8 +1,10 @@
 version: "3"
 
 vars:
+  # Override with ENV=production (or ENV=develop) — same for local and CI.
   ENV: develop
   TF_DIR: infra/envs/{{.ENV}}
+  TF_PLAN_FILE: tfplan
   WEB_DIST: apps/web/dist
   ADMIN_DIST: apps/admin/dist
   API_PORT: "3000"
@@ -10,21 +12,34 @@ vars:
   API_IMAGE_TAG: latest
   AWS_REGION: us-east-1
   COMPOSE_FILE: docker-compose.yml
+  # Set DOCKER_BUILDX=1 in CI to build+push linux/arm64 via buildx.
+  DOCKER_BUILDX: "0"
+  # Local interactive apply unless set (e.g. TF_APPLY_FLAGS=-auto-approve).
+  TF_APPLY_FLAGS: ""
 
 tasks:
   build:
-    desc: Production build web app and API
+    desc: Production build etl, API, web, and admin
     deps:
-      - web:build
+      - etl:build
       - api:build
+      - web:build
+      - admin:build
 
   web:build:
-    desc: Production build of the React web app
+    desc: Production build of the React web app (uses VITE_* from env / .env.local)
     cmds:
       - npm run build:web
 
+  admin:build:
+    desc: Production build of the admin app (uses VITE_* from env / .env.local)
+    cmds:
+      - npm run build:admin
+
   api:build:
-    desc: Compile the NestJS API
+    desc: Compile the NestJS API (depends on etl:build)
+    deps:
+      - etl:build
     cmds:
       - npm run build -w api
 
@@ -107,14 +122,16 @@ tasks:
         fi
 
   db:tunnel:
-    desc: SSM port-forward localhost:15432 to develop RDS via the API EC2 instance
+    desc: SSM port-forward localhost:15432 to {{.ENV}} RDS via the API EC2 instance
     env:
       AWS_REGION: "{{.AWS_REGION}}"
+      ENV: "{{.ENV}}"
+      TF_DIR: "{{.TF_DIR}}"
     cmds:
       - bash scripts/db-tunnel.sh
 
   db:url:
-    desc: Print the develop RDS DATABASE_URL from SSM (contains the password)
+    desc: Print the {{.ENV}} RDS DATABASE_URL from SSM (contains the password)
     env:
       AWS_REGION: "{{.AWS_REGION}}"
     cmds:
@@ -159,22 +176,35 @@ tasks:
       - docker build --platform linux/arm64 -f {{.API_DOCKERFILE}} -t respark-api:{{.API_IMAGE_TAG}} .
 
   api:docker:push:
-    desc: Build and push the API image to ECR (requires infra applied)
-    deps:
-      - api:docker:build
+    desc: Build and push the API image to ECR for {{.ENV}} (set DOCKER_BUILDX=1 in CI)
     cmds:
       - |
         set -euo pipefail
         REPO=$(terraform -chdir={{.TF_DIR}} output -raw api_ecr_repository_url)
         REGISTRY="${REPO%%/*}"
         aws ecr get-login-password --region {{.AWS_REGION}} | docker login --username AWS --password-stdin "$REGISTRY"
-        docker tag respark-api:{{.API_IMAGE_TAG}} "$REPO:{{.API_IMAGE_TAG}}"
-        docker push "$REPO:{{.API_IMAGE_TAG}}"
+        if [ "{{.DOCKER_BUILDX}}" = "1" ]; then
+          docker buildx build \
+            --platform linux/arm64 \
+            -f {{.API_DOCKERFILE}} \
+            --tag "$REPO:{{.API_IMAGE_TAG}}" \
+            --tag "$REPO:latest" \
+            --push \
+            .
+        else
+          docker build --platform linux/arm64 -f {{.API_DOCKERFILE}} -t respark-api:{{.API_IMAGE_TAG}} .
+          docker tag respark-api:{{.API_IMAGE_TAG}} "$REPO:{{.API_IMAGE_TAG}}"
+          docker tag respark-api:{{.API_IMAGE_TAG}} "$REPO:latest"
+          docker push "$REPO:{{.API_IMAGE_TAG}}"
+          docker push "$REPO:latest"
+        fi
 
   api:secrets:push:
-    desc: Push CLERK_SECRET_KEY from apps/api/.env into SSM Parameter Store
+    desc: Push CLERK_SECRET_KEY from apps/api/.env into SSM for {{.ENV}}
     env:
       AWS_REGION: "{{.AWS_REGION}}"
+      ENV: "{{.ENV}}"
+      TF_DIR: "{{.TF_DIR}}"
     cmds:
       - bash scripts/push-api-secrets.sh
 
@@ -183,57 +213,78 @@ tasks:
     env:
       IMAGE_TAG: "{{.API_IMAGE_TAG}}"
       AWS_REGION: "{{.AWS_REGION}}"
+      ENV: "{{.ENV}}"
+      TF_DIR: "{{.TF_DIR}}"
     cmds:
       - bash scripts/redeploy-api-ec2.sh
 
   api:deploy:
-    desc: Push API image to ECR and restart on EC2
-    deps:
-      - api:docker:push
+    desc: Push API image to ECR and restart on EC2 ({{.ENV}})
     cmds:
+      - task: api:docker:push
       - task: api:deploy:ec2
 
-  infra:plan:
-    desc: Terraform plan for the {{.ENV}} environment
+  infra:init:
+    desc: Terraform init for {{.ENV}}
     dir: "{{.TF_DIR}}"
     cmds:
       - terraform init -input=false
-      - terraform plan
+
+  infra:plan:
+    desc: Terraform fmt + validate + plan for {{.ENV}} (writes {{.TF_PLAN_FILE}})
+    dir: "{{.TF_DIR}}"
+    cmds:
+      - terraform init -input=false
+      - terraform fmt -check -recursive ../..
+      - terraform validate
+      - terraform plan -input=false -out={{.TF_PLAN_FILE}}
 
   infra:apply:
-    desc: Terraform apply for the {{.ENV}} environment
+    desc: Terraform apply for {{.ENV}} (uses {{.TF_PLAN_FILE}} when present)
     dir: "{{.TF_DIR}}"
     cmds:
       - terraform init -input=false
-      - terraform apply
+      - |
+        set -euo pipefail
+        if [ -f "{{.TF_PLAN_FILE}}" ]; then
+          terraform apply -input=false -auto-approve "{{.TF_PLAN_FILE}}"
+        else
+          # Local: interactive unless TF_APPLY_FLAGS=-auto-approve
+          terraform apply {{.TF_APPLY_FLAGS}}
+        fi
+
+  deploy:ui:
+    desc: Deploy web and admin in parallel for {{.ENV}}
+    deps:
+      - web:deploy
+      - admin:deploy
 
   deploy:
-    desc: Apply Terraform for {{.ENV}}, then deploy API, web, and admin
+    desc: Apply Terraform for {{.ENV}}, deploy API, then web+admin in parallel
     cmds:
       - task: infra:apply
       - task: api:deploy
-      - task: web:deploy
-      - task: admin:deploy
+      - task: deploy:ui
 
   web:deploy:
-    desc: Build against the deployed API, sync dist to S3, and invalidate CloudFront cache
+    desc: Build against the deployed API, sync dist to S3, and invalidate CloudFront ({{.ENV}})
     cmds:
-      # VITE_API_URL must come from Terraform; without it the bundle would fall back to localhost.
+      # VITE_API_URL from Terraform; VITE_CLERK_PUBLISHABLE_KEY from env or apps/web/.env.local
       - |
         set -euo pipefail
         VITE_API_URL=$(terraform -chdir={{.TF_DIR}} output -raw api_url)
-        echo "Building web against $VITE_API_URL"
+        echo "Building web against $VITE_API_URL (env={{.ENV}})"
         VITE_API_URL="$VITE_API_URL" npm run build:web
       - aws s3 sync {{.WEB_DIST}} s3://$(terraform -chdir={{.TF_DIR}} output -raw bucket_name) --delete
       - aws cloudfront create-invalidation --distribution-id $(terraform -chdir={{.TF_DIR}} output -raw cloudfront_distribution_id) --paths "/*"
 
   admin:deploy:
-    desc: Build admin against the deployed API, sync dist to S3, and invalidate CloudFront cache
+    desc: Build admin against the deployed API, sync dist to S3, and invalidate CloudFront ({{.ENV}})
     cmds:
       - |
         set -euo pipefail
         VITE_API_URL=$(terraform -chdir={{.TF_DIR}} output -raw api_url)
-        echo "Building admin against $VITE_API_URL"
+        echo "Building admin against $VITE_API_URL (env={{.ENV}})"
         VITE_API_URL="$VITE_API_URL" npm run build:admin
       - aws s3 sync {{.ADMIN_DIST}} s3://$(terraform -chdir={{.TF_DIR}} output -raw admin_bucket_name) --delete
       - aws cloudfront create-invalidation --distribution-id $(terraform -chdir={{.TF_DIR}} output -raw admin_cloudfront_distribution_id) --paths "/*"

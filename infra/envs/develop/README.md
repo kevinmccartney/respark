@@ -19,11 +19,17 @@ The `db` module takes the API security group as input, so the `api` module recei
 ## Apply
 
 ```bash
+# Once per AWS account: remote state bucket + lock table, then migrate local state
+bash scripts/bootstrap-tf-backend.sh
+terraform -chdir=infra/envs/develop init -migrate-state
+
 task infra:plan
 task infra:apply
 ```
 
-Or apply infra and deploy API + web + admin in one shot:
+CI/CD (GitHub Actions) plans on every PR and applies + deploys from `main`. See [`docs/ci-cd.md`](../../docs/ci-cd.md).
+
+Or apply infra and deploy API + web + admin in one shot locally:
 
 ```bash
 task deploy

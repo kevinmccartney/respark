@@ -4,7 +4,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TF_DIR="${ROOT}/infra/envs/develop"
+ENV="${ENV:-develop}"
+if [[ -n "${TF_DIR:-}" ]]; then
+  [[ "${TF_DIR}" = /* ]] || TF_DIR="${ROOT}/${TF_DIR}"
+else
+  TF_DIR="${ROOT}/infra/envs/${ENV}"
+fi
 AWS_REGION="${AWS_REGION:-us-east-1}"
 
 if [[ -f "${ROOT}/apps/api/.env" ]]; then
