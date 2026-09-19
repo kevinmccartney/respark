@@ -11,7 +11,7 @@ import {
   type IngestionError,
   type IngestionReconciliation,
   type IngestionUnmatched,
-} from './schemas/etl-sync.ts';
+} from 'schemas/etl-sync';
 
 export const PAGE_SIZE = 50;
 

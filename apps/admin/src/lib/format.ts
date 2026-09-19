@@ -1,4 +1,4 @@
-import type { IngestionRunStatus } from './schemas/etl-sync.ts';
+import type { IngestionRunStatus } from 'schemas/etl-sync';
 
 export const formatDuration = (ms: number | null): string => {
   if (ms == null) return '—';

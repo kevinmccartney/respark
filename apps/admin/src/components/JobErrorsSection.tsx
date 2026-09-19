@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { formatNumber, formatTimestamp } from '@/lib/format.ts';
 import { JOB_LABELS, PAGE_SIZE } from '@/lib/syncs.ts';
-import type { EtlJobRun, IngestionError } from '@/lib/schemas/etl-sync.ts';
+import type { EtlJobRun, IngestionError } from 'schemas/etl-sync';
 
 type JobErrorsSectionProps = {
   job: EtlJobRun;

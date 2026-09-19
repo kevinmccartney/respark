@@ -2,16 +2,15 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { sql, type SQL } from 'drizzle-orm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { DATABASE, type Database } from '../db/database.module';
-import type {
-  CardDetail,
-  CardNameSuggestion,
-  CardPrintingSummary,
-  CardSearchPage,
-  CardSearchResult,
-} from './card.types';
-
-const DEFAULT_LIMIT = 60;
-const MAX_LIMIT = 100;
+import {
+  CARD_SEARCH_DEFAULT_LIMIT,
+  type CardDetail,
+  type CardNameSuggestion,
+  type CardPrintingSummary,
+  type CardSearchPage,
+  type CardSearchResult,
+} from 'schemas/cards';
+import { bestPrintingOrderSql } from '../catalog/printings';
 
 type SearchRow = {
   id: string;
@@ -69,8 +68,8 @@ export class CardsService {
 
   async search(opts: { q?: string; limit?: number; page?: number }): Promise<CardSearchPage> {
     const q = (opts.q ?? '').trim();
-    const pageSize = clampLimit(opts.limit);
-    const requestedPage = clampPage(opts.page);
+    const pageSize = opts.limit ?? CARD_SEARCH_DEFAULT_LIMIT;
+    const requestedPage = opts.page ?? 1;
 
     const pattern = q.length > 0 ? `%${escapeIlike(q)}%` : null;
     const matchPredicate = matchSql(pattern);
@@ -117,10 +116,7 @@ export class CardsService {
         LEFT JOIN catalog.card_face f
           ON f.printing_id = p.id AND f.face_index = 0
         WHERE p.card_id = m.id
-        ORDER BY
-          (p.image_normal IS NOT NULL OR f.image_normal IS NOT NULL) DESC,
-          p.released_at DESC NULLS LAST,
-          p.id
+        ORDER BY ${bestPrintingOrderSql}
         LIMIT 1
       ) img ON true
       ORDER BY m.name ASC, m.id ASC
@@ -151,7 +147,7 @@ export class CardsService {
     const q = (qRaw ?? '').trim();
     if (q.length < 2) return [];
 
-    const limit = Math.min(30, Math.max(1, Math.floor(limitRaw ?? 15)));
+    const limit = limitRaw ?? 15;
     const pattern = `%${escapeIlike(q)}%`;
 
     const result = await this.db.execute<{ id: string; name: string }>(sql`
@@ -263,16 +259,6 @@ const matchSql = (pattern: string | null): SQL => sql`
       )
     )
   `;
-
-const clampLimit = (raw: number | undefined): number => {
-  if (raw === undefined || Number.isNaN(raw)) return DEFAULT_LIMIT;
-  return Math.min(MAX_LIMIT, Math.max(1, Math.floor(raw)));
-};
-
-const clampPage = (raw: number | undefined): number => {
-  if (raw === undefined || Number.isNaN(raw)) return 1;
-  return Math.max(1, Math.floor(raw));
-};
 
 const escapeIlike = (value: string): string =>
   value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');

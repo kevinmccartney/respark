@@ -1,20 +1,17 @@
+import { Body, Controller, Get, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
 import {
-  BadRequestException,
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  Param,
-  ParseUUIDPipe,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+  ADMIN_LIST_DEFAULT_LIMIT,
+  adminListQuerySchema,
+  startEtlSyncBodySchema,
+  type AdminListQuery,
+  type StartEtlSyncBody,
+} from 'schemas/etl-sync';
+import { uuidSchema } from 'schemas/primitives';
 import { AdminRoleGuard } from '../auth/admin-role.guard';
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard';
+import { zodPipe } from '../lib/zod-pipe';
 import { AdminEtlService } from './admin-etl.service';
 import { AdminService } from './admin.service';
-import { ENRICHMENT_JOB_IDS, type EnrichmentJobId } from 'etl';
 
 @Controller('admin')
 @UseGuards(ClerkAuthGuard, AdminRoleGuard)
@@ -26,24 +23,22 @@ export class AdminController {
 
   @Post('etl-syncs')
   @HttpCode(202)
-  async startEtlSync(@Body() body: { catalog?: unknown; enrichmentJobs?: unknown }) {
-    const catalog = Boolean(body?.catalog);
-    const enrichmentJobs = parseEnrichmentJobs(body?.enrichmentJobs);
-    return this.adminEtl.startSync({ catalog, enrichmentJobs });
+  async startEtlSync(@Body(zodPipe(startEtlSyncBodySchema)) body: StartEtlSyncBody) {
+    return this.adminEtl.startSync(body);
   }
 
   @Get('etl-syncs')
-  async listEtlSyncs(@Query('limit') limitRaw?: string, @Query('status') status?: string) {
+  async listEtlSyncs(@Query(zodPipe(adminListQuerySchema)) query: AdminListQuery) {
     return {
       syncs: await this.adminService.listEtlSyncs({
-        limit: parseLimit(limitRaw, 50, 200),
-        status: nonempty(status),
+        limit: query.limit ?? ADMIN_LIST_DEFAULT_LIMIT,
+        status: query.status,
       }),
     };
   }
 
   @Get('etl-syncs/:id')
-  async getEtlSync(@Param('id', ParseUUIDPipe) id: string) {
+  async getEtlSync(@Param('id', zodPipe(uuidSchema)) id: string) {
     return {
       sync: await this.adminService.getEtlSync(id),
     };
@@ -51,14 +46,13 @@ export class AdminController {
 
   @Get('etl-syncs/:id/jobs/:jobRunId/errors')
   async listJobErrors(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('jobRunId', ParseUUIDPipe) jobRunId: string,
-    @Query('limit') limitRaw?: string,
-    @Query('offset') offsetRaw?: string,
+    @Param('id', zodPipe(uuidSchema)) id: string,
+    @Param('jobRunId', zodPipe(uuidSchema)) jobRunId: string,
+    @Query(zodPipe(adminListQuerySchema)) query: AdminListQuery,
   ) {
     const result = await this.adminService.listJobErrors(id, jobRunId, {
-      limit: parseLimit(limitRaw, 50, 200),
-      offset: parseOffset(offsetRaw),
+      limit: query.limit ?? ADMIN_LIST_DEFAULT_LIMIT,
+      offset: query.offset ?? 0,
     });
 
     return {
@@ -69,8 +63,8 @@ export class AdminController {
 
   @Get('etl-syncs/:id/jobs/:jobRunId/reconciliation')
   async getJobReconciliation(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('jobRunId', ParseUUIDPipe) jobRunId: string,
+    @Param('id', zodPipe(uuidSchema)) id: string,
+    @Param('jobRunId', zodPipe(uuidSchema)) jobRunId: string,
   ) {
     return {
       reconciliation: await this.adminService.getJobReconciliation(id, jobRunId),
@@ -79,14 +73,13 @@ export class AdminController {
 
   @Get('etl-syncs/:id/jobs/:jobRunId/unmatched')
   async listJobUnmatched(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('jobRunId', ParseUUIDPipe) jobRunId: string,
-    @Query('limit') limitRaw?: string,
-    @Query('offset') offsetRaw?: string,
+    @Param('id', zodPipe(uuidSchema)) id: string,
+    @Param('jobRunId', zodPipe(uuidSchema)) jobRunId: string,
+    @Query(zodPipe(adminListQuerySchema)) query: AdminListQuery,
   ) {
     const result = await this.adminService.listJobUnmatched(id, jobRunId, {
-      limit: parseLimit(limitRaw, 50, 200),
-      offset: parseOffset(offsetRaw),
+      limit: query.limit ?? ADMIN_LIST_DEFAULT_LIMIT,
+      offset: query.offset ?? 0,
     });
 
     return {
@@ -95,43 +88,3 @@ export class AdminController {
     };
   }
 }
-
-const parseEnrichmentJobs = (raw: unknown): EnrichmentJobId[] => {
-  if (raw === undefined || raw === null) return [];
-  if (!Array.isArray(raw)) {
-    throw new BadRequestException('enrichmentJobs must be an array of strings');
-  }
-  const jobs: EnrichmentJobId[] = [];
-  for (const item of raw) {
-    if (typeof item !== 'string') {
-      throw new BadRequestException('enrichmentJobs must be an array of strings');
-    }
-    const job = item.trim() as EnrichmentJobId;
-    if (!(ENRICHMENT_JOB_IDS as readonly string[]).includes(job)) {
-      throw new BadRequestException(
-        `Unknown enrichment job "${item}". Expected: ${ENRICHMENT_JOB_IDS.join(', ')}`,
-      );
-    }
-    if (!jobs.includes(job)) jobs.push(job);
-  }
-  return jobs;
-};
-
-const parseLimit = (raw: string | undefined, fallback: number, max: number): number => {
-  if (raw === undefined || raw === '') return fallback;
-  const n = Number(raw);
-  if (!Number.isFinite(n) || n < 1) return fallback;
-  return Math.min(Math.floor(n), max);
-};
-
-const parseOffset = (raw: string | undefined): number => {
-  if (raw === undefined || raw === '') return 0;
-  const n = Number(raw);
-  if (!Number.isFinite(n) || n < 0) return 0;
-  return Math.floor(n);
-};
-
-const nonempty = (value: string | undefined): string | undefined => {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
-};

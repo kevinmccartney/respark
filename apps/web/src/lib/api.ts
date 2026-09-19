@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+
 const defaultApiBase = 'http://localhost:3000';
 
 export const apiBaseUrl = (): string => {
@@ -44,18 +46,31 @@ export const apiFetch = async (
   });
 };
 
-export const apiFetchJson = async <T>(
+export const apiFetchJson = async <S extends z.ZodType>(
   path: string,
   getToken: GetToken,
+  schema: S,
   init?: RequestInit,
-): Promise<T> => {
+): Promise<z.infer<S>> => {
   const response = await apiFetch(path, getToken, init);
 
   if (!response.ok) {
     throw new ApiError(await errorMessage(response), response.status);
   }
 
-  return response.json() as Promise<T>;
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch {
+    throw new ApiError('API returned a non-JSON body', response.status);
+  }
+
+  const parsed = schema.safeParse(json);
+  if (!parsed.success) {
+    throw new ApiError(`Invalid API response: ${parsed.error.message}`, response.status);
+  }
+
+  return parsed.data;
 };
 
 /** Nest error responses carry a `message` worth surfacing; fall back to the status text. */

@@ -52,6 +52,7 @@ services:
       - ./apps/api/src:/repo/apps/api/src
       - ./apps/api/drizzle:/repo/apps/api/drizzle
       - ./apps/etl:/repo/apps/etl
+      - ./packages/schemas:/repo/packages/schemas
     depends_on:
       db:
         condition: service_healthy
@@ -76,6 +77,7 @@ services:
       - ./apps/web/src:/repo/apps/web/src
       - ./apps/web/index.html:/repo/apps/web/index.html
       - ./apps/web/vite.config.ts:/repo/apps/web/vite.config.ts
+      - ./packages/schemas:/repo/packages/schemas
     depends_on:
       - api
 
@@ -98,6 +100,7 @@ services:
       - ./apps/admin/src:/repo/apps/admin/src
       - ./apps/admin/index.html:/repo/apps/admin/index.html
       - ./apps/admin/vite.config.ts:/repo/apps/admin/vite.config.ts
+      - ./packages/schemas:/repo/packages/schemas
     depends_on:
       - api
 

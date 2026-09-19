@@ -1,7 +1,7 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import type { Pool, PoolClient } from 'pg';
-import type { SyncEvent } from 'etl';
+import { syncEventSchema } from 'schemas/sync-event';
 import { DATABASE_POOL } from '../db/database.module';
 import { EtlSyncEventsService } from './etl-sync-events.service';
 
@@ -29,8 +29,19 @@ export class EtlSyncNotifyListener implements OnModuleInit, OnModuleDestroy {
       this.client.on('notification', (msg) => {
         if (msg.channel !== CHANNEL || !msg.payload) return;
         try {
-          const event = JSON.parse(msg.payload) as SyncEvent;
-          this.events.publish(event);
+          const parsed = syncEventSchema.safeParse(JSON.parse(msg.payload));
+          if (!parsed.success) {
+            this.logger.warn(
+              {
+                event: 'admin.etl_sync.notify_invalid',
+                issues: parsed.error.issues,
+                payload: msg.payload,
+              },
+              'Dropped invalid etl_sync NOTIFY payload',
+            );
+            return;
+          }
+          this.events.publish(parsed.data);
         } catch (err) {
           this.logger.warn(
             { event: 'admin.etl_sync.notify_parse_failed', err, payload: msg.payload },

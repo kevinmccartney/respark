@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
-import { verifyToken } from '@clerk/backend';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import type { Request } from 'express';
+import { verifyClerkToken } from './clerk';
 
 export type AuthenticatedRequest = Request & {
   auth: {
@@ -11,8 +11,6 @@ export type AuthenticatedRequest = Request & {
 
 @Injectable()
 export class ClerkAuthGuard implements CanActivate {
-  private readonly secretKey = process.env.CLERK_SECRET_KEY;
-
   constructor(
     @InjectPinoLogger(ClerkAuthGuard.name)
     private readonly logger: PinoLogger,
@@ -23,7 +21,7 @@ export class ClerkAuthGuard implements CanActivate {
     const path = request.path;
     const method = request.method;
 
-    if (!this.secretKey) {
+    if (!process.env.CLERK_SECRET_KEY) {
       this.logger.error(
         { event: 'auth.config_missing', path, method },
         'CLERK_SECRET_KEY is not configured',
@@ -41,23 +39,9 @@ export class ClerkAuthGuard implements CanActivate {
     const token = authorization.slice('Bearer '.length);
 
     try {
-      const payload = await verifyToken(token, {
-        secretKey: this.secretKey,
-      });
-
-      if (!payload.sub) {
-        this.logger.warn(
-          { event: 'auth.invalid_token', path, method, reason: 'missing_sub' },
-          'Invalid session token',
-        );
-        throw new UnauthorizedException('Invalid session token');
-      }
-
-      (request as AuthenticatedRequest).auth = { userId: payload.sub };
-      this.logger.debug(
-        { event: 'auth.success', path, method, userId: payload.sub },
-        'Authenticated request',
-      );
+      const userId = await verifyClerkToken(token);
+      (request as AuthenticatedRequest).auth = { userId };
+      this.logger.debug({ event: 'auth.success', path, method, userId }, 'Authenticated request');
       return true;
     } catch (err) {
       if (err instanceof UnauthorizedException) {

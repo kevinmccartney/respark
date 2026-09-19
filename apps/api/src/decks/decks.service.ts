@@ -1,18 +1,22 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql, type SQL } from 'drizzle-orm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import {
+  deckFormatSchema,
+  type CreateDeckInput,
+  type Deck,
+  type DeckCard,
+  type DeckDetail,
+  type DeckFormat,
+  type DeckImportResult,
+  type PatchDeckCardBody,
+  type UpdateDeckInput,
+} from 'schemas/decks';
+import { defaultPrintingId, resolveMoxfieldPrintings } from '../catalog/printings';
 import { DATABASE, type Database } from '../db/database.module';
-import { cards, deckCards, decks, DECK_FORMATS, printings, type DeckFormat } from '../db/schema';
+import { cards, deckCards, decks, printings } from '../db/schema';
 import { UsersService } from '../users/users.service';
-import type {
-  CreateDeckInput,
-  Deck,
-  DeckCard,
-  DeckDetail,
-  DeckImportResult,
-  UpdateDeckInput,
-} from './deck.types';
-import { normalizeCardName, parseMoxfieldExport } from './moxfield-import';
+import { parseMoxfieldExport } from './moxfield-import';
 
 type DeckRow = {
   id: string;
@@ -37,6 +41,14 @@ type DeckCardRow = {
   set_name: string;
   collector_number: string;
   image_normal: string | null;
+};
+
+type DeckLine = {
+  id: string;
+  printingId: string;
+  foil: boolean;
+  sideboard: boolean;
+  quantity: number;
 };
 
 @Injectable()
@@ -72,7 +84,7 @@ export class DecksService {
       'Listed decks for user',
     );
 
-    return rows.map(toDeck);
+    return rows.map((row) => toDeck(row, this.logger));
   }
 
   async createForUser(clerkUserId: string, input: CreateDeckInput): Promise<Deck> {
@@ -104,11 +116,11 @@ export class DecksService {
       'Created deck for user',
     );
 
-    return toDeck(row);
+    return toDeck(row, this.logger);
   }
 
   async updateForUser(clerkUserId: string, deckId: string, input: UpdateDeckInput): Promise<Deck> {
-    const existing = await this.requireOwnedDeck(clerkUserId, deckId);
+    await this.requireOwnedDeck(clerkUserId, deckId);
 
     const patch: {
       name?: string;
@@ -118,18 +130,13 @@ export class DecksService {
     } = {};
 
     if (input.name !== undefined) {
-      patch.name = input.name.trim();
+      patch.name = input.name;
     }
     if (input.description !== undefined) {
-      patch.description =
-        typeof input.description === 'string' ? input.description.trim() || null : null;
+      patch.description = input.description?.trim() || null;
     }
     if (input.format !== undefined) {
       patch.format = input.format;
-    }
-
-    if (Object.keys(patch).length === 0) {
-      return existing;
     }
 
     patch.updatedAt = new Date();
@@ -147,14 +154,11 @@ export class DecksService {
         event: 'decks.update',
         userId: clerkUserId,
         deckId,
-        fields: Object.keys(input).filter(
-          (key) => input[key as keyof UpdateDeckInput] !== undefined,
-        ),
       },
       'Updated deck',
     );
 
-    return toDeck(row);
+    return toDeck(row, this.logger);
   }
 
   async deleteForUser(clerkUserId: string, deckId: string): Promise<void> {
@@ -179,16 +183,13 @@ export class DecksService {
   ): Promise<DeckImportResult> {
     await this.requireOwnedDeck(clerkUserId, deckId);
 
-    const trimmed = text.trim();
-    if (!trimmed) {
-      throw new BadRequestException('import text is required');
-    }
-
-    const { lines, skipped } = parseMoxfieldExport(trimmed);
+    const { lines, skipped } = parseMoxfieldExport(text);
     const unmatched = skipped.map((row) => ({
       line: row.raw,
       reason: row.reason,
     }));
+
+    const printingIds = await resolveMoxfieldPrintings(this.db, lines);
 
     /** Aggregate by printing + foil + board. */
     const quantities = new Map<
@@ -196,8 +197,9 @@ export class DecksService {
       { printingId: string; foil: boolean; sideboard: boolean; quantity: number }
     >();
 
-    for (const line of lines) {
-      const printingId = await this.resolveMoxfieldPrinting(line);
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const printingId = printingIds[i];
       if (!printingId) {
         unmatched.push({
           line: line.raw,
@@ -257,35 +259,11 @@ export class DecksService {
 
   async getForUser(clerkUserId: string, deckId: string): Promise<DeckDetail> {
     const deck = await this.requireOwnedDeck(clerkUserId, deckId);
-    const result = await this.db.execute<DeckCardRow>(sql`
-      SELECT
-        dc.id,
-        c.id AS card_id,
-        p.id AS printing_id,
-        c.name,
-        c.mana_cost,
-        c.mana_value::text AS mana_value,
-        c.type_line,
-        dc.foil,
-        dc.sideboard,
-        dc.quantity,
-        s.code AS set_code,
-        s.name AS set_name,
-        p.collector_number,
-        COALESCE(p.image_normal, f.image_normal) AS image_normal
-      FROM app.deck_card dc
-      JOIN catalog.printing p ON p.id = dc.printing_id
-      JOIN catalog.card c ON c.id = p.card_id
-      JOIN catalog.set s ON s.id = p.set_id
-      LEFT JOIN catalog.card_face f
-        ON f.printing_id = p.id AND f.face_index = 0
-      WHERE dc.deck_id = ${deckId}::uuid
-      ORDER BY dc.sideboard ASC, c.name ASC, s.code ASC, p.collector_number ASC, dc.foil ASC
-    `);
+    const rows = await this.selectDeckCards(sql`dc.deck_id = ${deckId}::uuid`);
 
     return {
       deck,
-      cards: result.rows.map(toDeckCard),
+      cards: rows.map(toDeckCard),
     };
   }
 
@@ -302,7 +280,7 @@ export class DecksService {
       throw new NotFoundException('Card not found');
     }
 
-    const printingId = await this.defaultPrintingId(cardId);
+    const printingId = await defaultPrintingId(this.db, cardId);
     if (!printingId) {
       throw new BadRequestException('Card has no printings');
     }
@@ -326,227 +304,63 @@ export class DecksService {
     return this.requireDeckCard(row.id);
   }
 
-  async setCardQuantity(
+  async patchDeckCard(
     clerkUserId: string,
     deckId: string,
     deckCardId: string,
-    quantity: number,
+    patch: PatchDeckCardBody,
   ): Promise<DeckCard | null> {
-    if (!Number.isInteger(quantity) || quantity < 0) {
-      throw new BadRequestException('quantity must be a non-negative integer');
-    }
-
     await this.requireOwnedDeck(clerkUserId, deckId);
 
-    if (quantity === 0) {
-      await this.removeCard(clerkUserId, deckId, deckCardId);
-      return null;
+    let lineId = deckCardId;
+    let card: DeckCard | null | undefined;
+
+    if (patch.printingId !== undefined) {
+      card = await this.relocateLine(deckId, lineId, { printingId: patch.printingId });
+      lineId = card.id;
     }
 
-    const [row] = await this.db
-      .update(deckCards)
-      .set({ quantity, updatedAt: new Date() })
-      .where(and(eq(deckCards.id, deckCardId), eq(deckCards.deckId, deckId)))
-      .returning({ id: deckCards.id });
-
-    if (!row) {
-      throw new NotFoundException('Deck card not found');
+    if (patch.foil !== undefined) {
+      card = await this.relocateLine(deckId, lineId, { foil: patch.foil });
+      lineId = card.id;
     }
 
-    await this.touchDeck(deckId);
-    return this.requireDeckCard(row.id);
-  }
-
-  async setCardPrinting(
-    clerkUserId: string,
-    deckId: string,
-    deckCardId: string,
-    printingId: string,
-  ): Promise<DeckCard> {
-    await this.requireOwnedDeck(clerkUserId, deckId);
-
-    const [line] = await this.db
-      .select({
-        id: deckCards.id,
-        printingId: deckCards.printingId,
-        foil: deckCards.foil,
-        sideboard: deckCards.sideboard,
-        quantity: deckCards.quantity,
-      })
-      .from(deckCards)
-      .where(and(eq(deckCards.id, deckCardId), eq(deckCards.deckId, deckId)))
-      .limit(1);
-
-    if (!line) {
-      throw new NotFoundException('Deck card not found');
+    if (patch.sideboard !== undefined) {
+      card = await this.relocateLine(deckId, lineId, { sideboard: patch.sideboard });
+      lineId = card.id;
     }
 
-    if (line.printingId === printingId) {
-      return this.requireDeckCard(line.id);
+    if (patch.quantity !== undefined) {
+      card = await this.setLineQuantity(deckId, lineId, patch.quantity);
     }
 
-    const [current] = await this.db
-      .select({ cardId: printings.cardId })
-      .from(printings)
-      .where(eq(printings.id, line.printingId))
-      .limit(1);
-
-    const [next] = await this.db
-      .select({ id: printings.id, cardId: printings.cardId })
-      .from(printings)
-      .where(eq(printings.id, printingId))
-      .limit(1);
-
-    if (!next) {
-      throw new NotFoundException('Printing not found');
+    if (card === undefined) {
+      card = await this.requireDeckCard(lineId);
     }
-    if (!current || next.cardId !== current.cardId) {
-      throw new BadRequestException('Printing must belong to the same card as the deck line');
-    }
-
-    const survivorId = await this.moveLineToPrinting(
-      deckId,
-      line,
-      printingId,
-      line.foil,
-      line.sideboard,
-    );
 
     await this.touchDeck(deckId);
 
     this.logger.info(
       {
-        event: 'decks.card_printing_set',
+        event: 'decks.card_patch',
         userId: clerkUserId,
         deckId,
         deckCardId,
-        printingId,
-        survivorId,
+        lineId,
+        printingId: patch.printingId ?? null,
+        foil: patch.foil ?? null,
+        sideboard: patch.sideboard ?? null,
+        quantity: patch.quantity ?? null,
       },
-      'Changed deck card printing',
+      'Patched deck card',
     );
 
-    return this.requireDeckCard(survivorId);
-  }
-
-  async setCardFoil(
-    clerkUserId: string,
-    deckId: string,
-    deckCardId: string,
-    foil: boolean,
-  ): Promise<DeckCard> {
-    await this.requireOwnedDeck(clerkUserId, deckId);
-
-    const [line] = await this.db
-      .select({
-        id: deckCards.id,
-        printingId: deckCards.printingId,
-        foil: deckCards.foil,
-        sideboard: deckCards.sideboard,
-        quantity: deckCards.quantity,
-      })
-      .from(deckCards)
-      .where(and(eq(deckCards.id, deckCardId), eq(deckCards.deckId, deckId)))
-      .limit(1);
-
-    if (!line) {
-      throw new NotFoundException('Deck card not found');
-    }
-
-    if (line.foil === foil) {
-      return this.requireDeckCard(line.id);
-    }
-
-    const survivorId = await this.moveLineToPrinting(
-      deckId,
-      line,
-      line.printingId,
-      foil,
-      line.sideboard,
-    );
-
-    await this.touchDeck(deckId);
-
-    this.logger.info(
-      {
-        event: 'decks.card_foil_set',
-        userId: clerkUserId,
-        deckId,
-        deckCardId,
-        foil,
-        survivorId,
-      },
-      'Changed deck card foil',
-    );
-
-    return this.requireDeckCard(survivorId);
-  }
-
-  async setCardSideboard(
-    clerkUserId: string,
-    deckId: string,
-    deckCardId: string,
-    sideboard: boolean,
-  ): Promise<DeckCard> {
-    await this.requireOwnedDeck(clerkUserId, deckId);
-
-    const [line] = await this.db
-      .select({
-        id: deckCards.id,
-        printingId: deckCards.printingId,
-        foil: deckCards.foil,
-        sideboard: deckCards.sideboard,
-        quantity: deckCards.quantity,
-      })
-      .from(deckCards)
-      .where(and(eq(deckCards.id, deckCardId), eq(deckCards.deckId, deckId)))
-      .limit(1);
-
-    if (!line) {
-      throw new NotFoundException('Deck card not found');
-    }
-
-    if (line.sideboard === sideboard) {
-      return this.requireDeckCard(line.id);
-    }
-
-    const survivorId = await this.moveLineToPrinting(
-      deckId,
-      line,
-      line.printingId,
-      line.foil,
-      sideboard,
-    );
-
-    await this.touchDeck(deckId);
-
-    this.logger.info(
-      {
-        event: 'decks.card_sideboard_set',
-        userId: clerkUserId,
-        deckId,
-        deckCardId,
-        sideboard,
-        survivorId,
-      },
-      'Changed deck card sideboard',
-    );
-
-    return this.requireDeckCard(survivorId);
+    return card;
   }
 
   async removeCard(clerkUserId: string, deckId: string, deckCardId: string): Promise<void> {
     await this.requireOwnedDeck(clerkUserId, deckId);
-
-    const deleted = await this.db
-      .delete(deckCards)
-      .where(and(eq(deckCards.id, deckCardId), eq(deckCards.deckId, deckId)))
-      .returning({ id: deckCards.id });
-
-    if (deleted.length === 0) {
-      throw new NotFoundException('Deck card not found');
-    }
-
+    await this.deleteLine(deckId, deckCardId);
     await this.touchDeck(deckId);
 
     this.logger.info(
@@ -560,6 +374,103 @@ export class DecksService {
     );
   }
 
+  private async setLineQuantity(
+    deckId: string,
+    deckCardId: string,
+    quantity: number,
+  ): Promise<DeckCard | null> {
+    if (quantity === 0) {
+      await this.deleteLine(deckId, deckCardId);
+      return null;
+    }
+
+    const [row] = await this.db
+      .update(deckCards)
+      .set({ quantity, updatedAt: new Date() })
+      .where(and(eq(deckCards.id, deckCardId), eq(deckCards.deckId, deckId)))
+      .returning({ id: deckCards.id });
+
+    if (!row) {
+      throw new NotFoundException('Deck card not found');
+    }
+
+    return this.requireDeckCard(row.id);
+  }
+
+  private async relocateLine(
+    deckId: string,
+    deckCardId: string,
+    next: { printingId?: string; foil?: boolean; sideboard?: boolean },
+  ): Promise<DeckCard> {
+    const line = await this.loadLine(deckId, deckCardId);
+    const printingId = next.printingId ?? line.printingId;
+    const foil = next.foil ?? line.foil;
+    const sideboard = next.sideboard ?? line.sideboard;
+
+    if (line.printingId === printingId && line.foil === foil && line.sideboard === sideboard) {
+      return this.requireDeckCard(line.id);
+    }
+
+    if (next.printingId !== undefined) {
+      await this.assertSameCard(line.printingId, printingId);
+    }
+
+    const survivorId = await this.moveLineToPrinting(deckId, line, printingId, foil, sideboard);
+    return this.requireDeckCard(survivorId);
+  }
+
+  private async assertSameCard(currentPrintingId: string, nextPrintingId: string): Promise<void> {
+    const [current] = await this.db
+      .select({ cardId: printings.cardId })
+      .from(printings)
+      .where(eq(printings.id, currentPrintingId))
+      .limit(1);
+
+    const [next] = await this.db
+      .select({ id: printings.id, cardId: printings.cardId })
+      .from(printings)
+      .where(eq(printings.id, nextPrintingId))
+      .limit(1);
+
+    if (!next) {
+      throw new NotFoundException('Printing not found');
+    }
+    if (!current || next.cardId !== current.cardId) {
+      throw new BadRequestException('Printing must belong to the same card as the deck line');
+    }
+  }
+
+  private async loadLine(deckId: string, deckCardId: string): Promise<DeckLine> {
+    const [line] = await this.db
+      .select({
+        id: deckCards.id,
+        printingId: deckCards.printingId,
+        foil: deckCards.foil,
+        sideboard: deckCards.sideboard,
+        quantity: deckCards.quantity,
+      })
+      .from(deckCards)
+      .where(and(eq(deckCards.id, deckCardId), eq(deckCards.deckId, deckId)))
+      .limit(1);
+
+    if (!line) {
+      throw new NotFoundException('Deck card not found');
+    }
+
+    return line;
+  }
+
+  private async deleteLine(deckId: string, deckCardId: string): Promise<void> {
+    const deleted = await this.db
+      .delete(deckCards)
+      .where(and(eq(deckCards.id, deckCardId), eq(deckCards.deckId, deckId)))
+      .returning({ id: deckCards.id });
+
+    if (deleted.length === 0) {
+      throw new NotFoundException('Deck card not found');
+    }
+  }
+
   private async upsertPrintingLine(
     deckId: string,
     printingId: string,
@@ -567,21 +478,7 @@ export class DecksService {
     foil: boolean,
     sideboard: boolean,
   ): Promise<{ id: string; quantity: number }> {
-    const [existing] = await this.db
-      .select({
-        id: deckCards.id,
-        quantity: deckCards.quantity,
-      })
-      .from(deckCards)
-      .where(
-        and(
-          eq(deckCards.deckId, deckId),
-          eq(deckCards.printingId, printingId),
-          eq(deckCards.foil, foil),
-          eq(deckCards.sideboard, sideboard),
-        ),
-      )
-      .limit(1);
+    const existing = await this.findLineByKey(deckId, printingId, foil, sideboard);
 
     if (existing) {
       const [updated] = await this.db
@@ -610,21 +507,7 @@ export class DecksService {
     foil: boolean,
     sideboard: boolean,
   ): Promise<string> {
-    const [existing] = await this.db
-      .select({
-        id: deckCards.id,
-        quantity: deckCards.quantity,
-      })
-      .from(deckCards)
-      .where(
-        and(
-          eq(deckCards.deckId, deckId),
-          eq(deckCards.printingId, printingId),
-          eq(deckCards.foil, foil),
-          eq(deckCards.sideboard, sideboard),
-        ),
-      )
-      .limit(1);
+    const existing = await this.findLineByKey(deckId, printingId, foil, sideboard);
 
     if (existing && existing.id !== line.id) {
       const [merged] = await this.db
@@ -647,81 +530,31 @@ export class DecksService {
     return updated.id;
   }
 
-  private async defaultPrintingId(cardId: string): Promise<string | null> {
-    const result = await this.db.execute<{ id: string }>(sql`
-      SELECT p.id
-      FROM catalog.printing p
-      LEFT JOIN catalog.card_face f
-        ON f.printing_id = p.id AND f.face_index = 0
-      WHERE p.card_id = ${cardId}::uuid
-      ORDER BY
-        (p.image_normal IS NOT NULL OR f.image_normal IS NOT NULL) DESC,
-        p.released_at DESC NULLS LAST,
-        p.id
-      LIMIT 1
-    `);
-    return result.rows[0]?.id ?? null;
+  private async findLineByKey(
+    deckId: string,
+    printingId: string,
+    foil: boolean,
+    sideboard: boolean,
+  ): Promise<{ id: string; quantity: number } | undefined> {
+    const [existing] = await this.db
+      .select({
+        id: deckCards.id,
+        quantity: deckCards.quantity,
+      })
+      .from(deckCards)
+      .where(
+        and(
+          eq(deckCards.deckId, deckId),
+          eq(deckCards.printingId, printingId),
+          eq(deckCards.foil, foil),
+          eq(deckCards.sideboard, sideboard),
+        ),
+      )
+      .limit(1);
+    return existing;
   }
 
-  private async resolveMoxfieldPrinting(line: {
-    name: string;
-    setCode: string;
-    collectorNumber: string;
-  }): Promise<string | null> {
-    const wantedName = normalizeCardName(line.name);
-
-    const bySetAndNumber = await this.db.execute<{
-      id: string;
-      name: string;
-      language: string | null;
-    }>(sql`
-      SELECT p.id, c.name, p.language
-      FROM catalog.printing p
-      JOIN catalog.set s ON s.id = p.set_id
-      JOIN catalog.card c ON c.id = p.card_id
-      WHERE lower(s.code) = lower(${line.setCode})
-        AND lower(p.collector_number) = lower(${line.collectorNumber})
-      ORDER BY
-        CASE WHEN p.language = 'en' THEN 0 ELSE 1 END,
-        p.id
-    `);
-
-    if (bySetAndNumber.rows.length > 0) {
-      const nameMatch = bySetAndNumber.rows.find(
-        (row) => normalizeCardName(row.name) === wantedName,
-      );
-      return (nameMatch ?? bySetAndNumber.rows[0]).id;
-    }
-
-    // Fallback: match oracle name, then prefer the requested set's printing.
-    const byName = await this.db.execute<{ id: string }>(sql`
-      SELECT c.id
-      FROM catalog.card c
-      WHERE lower(c.name) = ${wantedName}
-      LIMIT 1
-    `);
-    const cardId = byName.rows[0]?.id;
-    if (!cardId) return null;
-
-    const inSet = await this.db.execute<{ id: string }>(sql`
-      SELECT p.id
-      FROM catalog.printing p
-      JOIN catalog.set s ON s.id = p.set_id
-      WHERE p.card_id = ${cardId}::uuid
-        AND lower(s.code) = lower(${line.setCode})
-      ORDER BY
-        CASE WHEN lower(p.collector_number) = lower(${line.collectorNumber}) THEN 0 ELSE 1 END,
-        CASE WHEN p.language = 'en' THEN 0 ELSE 1 END,
-        p.released_at DESC NULLS LAST,
-        p.id
-      LIMIT 1
-    `);
-    if (inSet.rows[0]?.id) return inSet.rows[0].id;
-
-    return this.defaultPrintingId(cardId);
-  }
-
-  private async requireDeckCard(deckCardId: string): Promise<DeckCard> {
+  private async selectDeckCards(whereSql: SQL): Promise<DeckCardRow[]> {
     const result = await this.db.execute<DeckCardRow>(sql`
       SELECT
         dc.id,
@@ -744,10 +577,15 @@ export class DecksService {
       JOIN catalog.set s ON s.id = p.set_id
       LEFT JOIN catalog.card_face f
         ON f.printing_id = p.id AND f.face_index = 0
-      WHERE dc.id = ${deckCardId}::uuid
-      LIMIT 1
+      WHERE ${whereSql}
+      ORDER BY dc.sideboard ASC, c.name ASC, s.code ASC, p.collector_number ASC, dc.foil ASC
     `);
-    const row = result.rows[0];
+    return result.rows;
+  }
+
+  private async requireDeckCard(deckCardId: string): Promise<DeckCard> {
+    const rows = await this.selectDeckCards(sql`dc.id = ${deckCardId}::uuid`);
+    const row = rows[0];
     if (!row) {
       throw new NotFoundException('Deck card not found');
     }
@@ -772,7 +610,7 @@ export class DecksService {
       throw new NotFoundException('Deck not found');
     }
 
-    return toDeck(row);
+    return toDeck(row, this.logger);
   }
 
   private async touchDeck(deckId: string): Promise<void> {
@@ -780,20 +618,24 @@ export class DecksService {
   }
 }
 
-export const parseDeckFormat = (raw: unknown): DeckFormat => {
-  if (typeof raw !== 'string' || !(DECK_FORMATS as readonly string[]).includes(raw)) {
-    throw new BadRequestException(`format must be one of: ${DECK_FORMATS.join(', ')}`);
+const toDeck = (row: DeckRow, logger: PinoLogger): Deck => {
+  const format = deckFormatSchema.safeParse(row.format);
+  if (!format.success) {
+    logger.warn(
+      { event: 'decks.invalid_format', deckId: row.id, format: row.format },
+      'Deck has an unknown format; expected a known enum value',
+    );
+    throw new Error(`Invalid deck format "${row.format}"`);
   }
-  return raw as DeckFormat;
-};
 
-const toDeck = (row: DeckRow): Deck => ({
-  id: row.id,
-  name: row.name,
-  description: row.description,
-  format: normalizeFormat(row.format),
-  updatedAt: row.updatedAt.toISOString(),
-});
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    format: format.data,
+    updatedAt: row.updatedAt.toISOString(),
+  };
+};
 
 const toDeckCard = (row: DeckCardRow): DeckCard => ({
   id: row.id,
@@ -811,10 +653,3 @@ const toDeckCard = (row: DeckCardRow): DeckCard => ({
   collectorNumber: row.collector_number,
   imageNormal: row.image_normal,
 });
-
-const normalizeFormat = (raw: string): DeckFormat => {
-  if ((DECK_FORMATS as readonly string[]).includes(raw)) {
-    return raw as DeckFormat;
-  }
-  return 'standard';
-};

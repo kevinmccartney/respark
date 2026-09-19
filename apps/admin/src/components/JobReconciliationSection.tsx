@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatNumber } from '@/lib/format.ts';
-import type { IngestionReconciliation } from '@/lib/schemas/etl-sync.ts';
+import type { IngestionReconciliation } from 'schemas/etl-sync';
 
 type JobReconciliationSectionProps = {
   reconciliation: IngestionReconciliation;

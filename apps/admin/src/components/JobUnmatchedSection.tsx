@@ -8,7 +8,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatNumber } from '@/lib/format.ts';
-import type { IngestionUnmatched } from '@/lib/schemas/etl-sync.ts';
+import type { IngestionUnmatched } from 'schemas/etl-sync';
 import { PAGE_SIZE } from '@/lib/syncs.ts';
 
 type JobUnmatchedSectionProps = {

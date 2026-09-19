@@ -1,7 +1,8 @@
 import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { createLogger, ENRICHMENT_JOB_IDS, runEtlSync, type EnrichmentJobId } from 'etl';
+import { createLogger, runEtlSync } from 'etl';
+import type { EnrichmentJobId } from 'schemas/etl-sync';
 import type { Pool } from 'pg';
 import { DATABASE, DATABASE_POOL, type Database } from '../db/database.module';
 import { etlSyncs } from '../db/schema';
@@ -33,14 +34,6 @@ export class AdminEtlService {
   ): Promise<{ accepted: true; catalog: boolean; enrichmentJobs: string[] }> {
     if (!input.catalog && input.enrichmentJobs.length === 0) {
       throw new BadRequestException('At least one of catalog or enrichmentJobs is required');
-    }
-
-    for (const job of input.enrichmentJobs) {
-      if (!ENRICHMENT_JOB_IDS.includes(job)) {
-        throw new BadRequestException(
-          `Unknown enrichment job "${job}". Expected: ${ENRICHMENT_JOB_IDS.join(', ')}`,
-        );
-      }
     }
 
     const [running] = await this.db

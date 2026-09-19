@@ -5,14 +5,12 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { createClerkClient } from '@clerk/backend';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { assertAdminUser } from './clerk';
 import type { AuthenticatedRequest } from './clerk-auth.guard';
 
 @Injectable()
 export class AdminRoleGuard implements CanActivate {
-  private readonly secretKey = process.env.CLERK_SECRET_KEY;
-
   constructor(
     @InjectPinoLogger(AdminRoleGuard.name)
     private readonly logger: PinoLogger,
@@ -28,23 +26,17 @@ export class AdminRoleGuard implements CanActivate {
       throw new UnauthorizedException('Missing authenticated user');
     }
 
-    if (!this.secretKey) {
-      this.logger.error(
-        { event: 'admin.config_missing', path, method },
-        'CLERK_SECRET_KEY is not configured',
-      );
-      throw new UnauthorizedException('CLERK_SECRET_KEY is not configured');
+    try {
+      await assertAdminUser(userId);
+      return true;
+    } catch (err) {
+      if (err instanceof ForbiddenException) {
+        this.logger.warn(
+          { event: 'admin.forbidden', path, method, userId },
+          'User is not an admin',
+        );
+      }
+      throw err;
     }
-
-    const clerk = createClerkClient({ secretKey: this.secretKey });
-    const user = await clerk.users.getUser(userId);
-    const role = user.publicMetadata?.role;
-
-    if (role !== 'admin') {
-      this.logger.warn({ event: 'admin.forbidden', path, method, userId }, 'User is not an admin');
-      throw new ForbiddenException('Admin role required');
-    }
-
-    return true;
   }
 }

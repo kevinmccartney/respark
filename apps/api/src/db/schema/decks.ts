@@ -10,9 +10,6 @@ type _DrizzlePortableColumnBuilder = ColumnBuilderExtraConfig;
 export type { _DrizzlePortableColumn as _DecksPortableColumn };
 export type { _DrizzlePortableColumnBuilder as _DecksPortableColumnBuilder };
 
-export const DECK_FORMATS = ['standard', 'commander', 'modern'] as const;
-export type DeckFormat = (typeof DECK_FORMATS)[number];
-
 export const decks = appSchema.table(
   'decks',
   {

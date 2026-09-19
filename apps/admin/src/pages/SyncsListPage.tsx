@@ -15,8 +15,8 @@ import {
 import { applyAdminLoadError, apiErrorMessage } from '@/lib/errors.ts';
 import { connectEtlSyncWs } from '@/lib/etl-ws.ts';
 import { formatDuration, formatTimestamp, statusBadgeProps } from '@/lib/format.ts';
-import type { EtlSync } from '@/lib/schemas/etl-sync.ts';
-import type { SyncEvent } from '@/lib/schemas/sync-event.ts';
+import type { EtlSync } from 'schemas/etl-sync';
+import type { SyncEvent } from 'schemas/sync-event';
 import { patchSyncInList, upsertStartedSync } from '@/lib/sync-state.ts';
 import { fetchEtlSyncs, startEtlSync, syncDurationMs, syncStagesLabel } from '@/lib/syncs.ts';
 

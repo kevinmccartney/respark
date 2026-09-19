@@ -14,13 +14,15 @@ import {
   type IngestionReconciliationRow,
   type IngestionUnmatchedRow,
 } from '../db/schema';
-import type {
-  EtlJobRun,
-  EtlSync,
-  IngestionError,
-  IngestionReconciliation,
-  IngestionUnmatched,
-} from './admin.types';
+import {
+  ingestionRunStatusSchema,
+  type EtlJobRun,
+  type EtlSync,
+  type IngestionError,
+  type IngestionReconciliation,
+  type IngestionRunStatus,
+  type IngestionUnmatched,
+} from 'schemas/etl-sync';
 
 @Injectable()
 export class AdminService {
@@ -31,7 +33,7 @@ export class AdminService {
     private readonly logger: PinoLogger,
   ) {}
 
-  async listEtlSyncs(input: { limit: number; status?: string }): Promise<EtlSync[]> {
+  async listEtlSyncs(input: { limit: number; status?: IngestionRunStatus }): Promise<EtlSync[]> {
     const filters: SQL[] = [];
     if (input.status) filters.push(eq(etlSyncs.status, input.status));
 
@@ -235,7 +237,7 @@ const toEtlSync = (row: EtlSyncRow, jobs: EtlJobRunRow[]): EtlSync => {
 
   return {
     id: row.id,
-    status: row.status,
+    status: ingestionRunStatusSchema.parse(row.status),
     includeCatalog: row.includeCatalog,
     includeEnrichment: row.includeEnrichment,
     enrichmentJobs: row.enrichmentJobs ?? [],
@@ -252,7 +254,7 @@ const toEtlJobRun = (row: EtlJobRunRow): EtlJobRun => ({
   syncId: row.syncId,
   stage: row.stage,
   job: row.job,
-  status: row.status,
+  status: ingestionRunStatusSchema.parse(row.status),
   startedAt: row.startedAt.toISOString(),
   completedAt: row.completedAt?.toISOString() ?? null,
   sourceVersion: row.sourceVersion,

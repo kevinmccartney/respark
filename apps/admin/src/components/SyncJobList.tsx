@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { formatDuration, formatNumber, statusBadgeProps } from '@/lib/format.ts';
-import type { EtlJobRun, EtlSync } from '@/lib/schemas/etl-sync.ts';
+import type { EtlJobRun, EtlSync } from 'schemas/etl-sync';
 import { JOB_LABELS, STAGE_LABELS } from '@/lib/syncs.ts';
 
 type SyncJobListProps = {

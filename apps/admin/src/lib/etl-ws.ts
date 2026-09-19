@@ -1,6 +1,6 @@
 import type { GetToken } from './api.ts';
 import { apiBaseUrl } from './api.ts';
-import { etlWsEnvelopeSchema, syncEventSchema, type SyncEvent } from './schemas/sync-event.ts';
+import { etlWsEnvelopeSchema, syncEventSchema, type SyncEvent } from 'schemas/sync-event';
 
 export type EtlWsHandlers = {
   onEvent?: (event: SyncEvent) => void;

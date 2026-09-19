@@ -7,10 +7,12 @@ WORKDIR /repo
 
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
+COPY packages/schemas/package.json packages/schemas/
 ENV HUSKY=0
-RUN npm ci --workspace=web
+RUN npm ci --workspace=web --workspace=schemas
 
 COPY apps/web apps/web
+COPY packages/schemas packages/schemas
 
 WORKDIR /repo/apps/web
 ENV NODE_ENV=development

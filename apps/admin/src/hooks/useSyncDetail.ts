@@ -8,9 +8,9 @@ import type {
   IngestionError,
   IngestionReconciliation,
   IngestionUnmatched,
-} from '@/lib/schemas/etl-sync.ts';
-import type { LogLevel } from '@/lib/schemas/primitives.ts';
-import type { SyncEvent } from '@/lib/schemas/sync-event.ts';
+} from 'schemas/etl-sync';
+import type { LogLevel } from 'schemas/primitives';
+import type { SyncEvent } from 'schemas/sync-event';
 import {
   liveErrorFromEvent,
   liveUnmatchedFromEvent,

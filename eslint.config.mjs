@@ -61,7 +61,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/api/**/*.ts', 'apps/etl/**/*.ts'],
+    files: ['apps/api/**/*.ts', 'apps/etl/**/*.ts', 'packages/schemas/**/*.ts'],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.node,

@@ -8,13 +8,16 @@ WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/etl/package.json apps/etl/
+COPY packages/schemas/package.json packages/schemas/
 ENV HUSKY=0
-RUN npm ci --workspace=api --workspace=etl
+RUN npm ci --workspace=api --workspace=etl --workspace=schemas
 
 COPY apps/api/tsconfig.json apps/api/tsconfig.build.json apps/api/nest-cli.json apps/api/drizzle.config.ts apps/api/
 COPY apps/api/src apps/api/src
 COPY apps/api/drizzle apps/api/drizzle
 COPY apps/etl apps/etl
+COPY packages/schemas packages/schemas
+RUN npm run build -w schemas
 
 WORKDIR /repo/apps/api
 ENV NODE_ENV=development

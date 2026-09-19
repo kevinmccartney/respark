@@ -80,7 +80,7 @@ Two things keep redelivery safe, since Svix retries and does not guarantee order
 - Writes are upserts keyed on `clerk_user_id`, so replays are idempotent.
 - A sync is skipped when the event's `updated_at` is older than the stored `clerk_updated_at`, so a delayed event cannot clobber newer data.
 
-Deletes are **soft** — decks survive, and a mistaken or replayed `user.deleted` is recoverable. Purging is a deliberate, separate operation.
+Deletes are **soft** — decks survive, and a mistaken or replayed `user.deleted` is recoverable via a deliberate restore (out of band). While `deleted_at` is set, authenticated API requests that resolve the local user return **403**. Purging is a separate operation.
 
 Webhooks are eventually consistent, so nothing in the request path waits on them: `UsersService.resolveLocalId` still creates the row on first authenticated request, and the webhook fills in the profile when it lands.
 

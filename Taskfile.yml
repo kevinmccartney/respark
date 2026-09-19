@@ -80,6 +80,7 @@ tasks:
   build:
     desc: Production build etl, API, web, and admin
     deps:
+      - schemas:build
       - etl:build
       - api:build
       - web:build
@@ -87,17 +88,22 @@ tasks:
 
   web:build:
     desc: Production build of the React web app (uses VITE_* from env / .env.local)
+    deps:
+      - schemas:build
     cmds:
       - npm run build:web
 
   admin:build:
     desc: Production build of the admin app (uses VITE_* from env / .env.local)
+    deps:
+      - schemas:build
     cmds:
       - npm run build:admin
 
   api:build:
-    desc: Compile the NestJS API (depends on etl:build)
+    desc: Compile the NestJS API (depends on schemas:build and etl:build)
     deps:
+      - schemas:build
       - etl:build
     cmds:
       - npm run build -w api
@@ -164,6 +170,11 @@ tasks:
     cmds:
       - npm run build -w etl
 
+  schemas:build:
+    desc: Compile shared Zod wire schemas to packages/schemas/dist
+    cmds:
+      - npm run build -w schemas
+
   docs:diagrams:
     desc: Render docs/**/*.mmd Mermaid sources to sibling .svg files
     cmds:
@@ -205,6 +216,8 @@ tasks:
 
   api:dev:
     desc: Run the API in watch mode on PORT (default {{.API_PORT}})
+    deps:
+      - schemas:build
     env:
       PORT: '{{.API_PORT}}'
     cmds:
@@ -217,6 +230,8 @@ tasks:
 
   api:debug:
     desc: Run the API with Node inspector on 9229 (or use VS Code "API debug (launch)")
+    deps:
+      - schemas:build
     env:
       PORT: '{{.API_PORT}}'
     cmds:

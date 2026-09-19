@@ -1,5 +1,5 @@
-import { ingestionRunStatusSchema } from './etl-sync.ts';
-import { isoDateTimeSchema, logLevelSchema, uuidSchema } from './primitives.ts';
+import { ingestionRunStatusSchema } from './etl-sync.js';
+import { isoDateTimeSchema, logLevelSchema, uuidSchema } from './primitives.js';
 import { z } from 'zod';
 
 const syncSummarySchema = z.object({
@@ -133,3 +133,14 @@ export const etlWsEnvelopeSchema = z.object({
   event: z.string(),
   data: z.unknown().optional(),
 });
+
+export const etlWsSubscribeSchema = z
+  .object({
+    channel: z.enum(['list', 'sync']).optional(),
+    syncId: uuidSchema.optional(),
+  })
+  .strict();
+
+export type EtlWsSubscribe = z.infer<typeof etlWsSubscribeSchema>;
+
+export type EtlWsEnvelope = z.infer<typeof etlWsEnvelopeSchema>;

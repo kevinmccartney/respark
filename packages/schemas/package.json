@@ -1,0 +1,70 @@
+{
+  "name": "schemas",
+  "private": true,
+  "version": "0.1.0",
+  "main": "./dist/primitives.js",
+  "types": "./dist/primitives.d.ts",
+  "exports": {
+    "./primitives": {
+      "types": "./dist/primitives.d.ts",
+      "import": "./src/primitives.ts",
+      "require": "./dist/primitives.js",
+      "default": "./dist/primitives.js"
+    },
+    "./decks": {
+      "types": "./dist/decks.d.ts",
+      "import": "./src/decks.ts",
+      "require": "./dist/decks.js",
+      "default": "./dist/decks.js"
+    },
+    "./cards": {
+      "types": "./dist/cards.d.ts",
+      "import": "./src/cards.ts",
+      "require": "./dist/cards.js",
+      "default": "./dist/cards.js"
+    },
+    "./etl-sync": {
+      "types": "./dist/etl-sync.d.ts",
+      "import": "./src/etl-sync.ts",
+      "require": "./dist/etl-sync.js",
+      "default": "./dist/etl-sync.js"
+    },
+    "./sync-event": {
+      "types": "./dist/sync-event.d.ts",
+      "import": "./src/sync-event.ts",
+      "require": "./dist/sync-event.js",
+      "default": "./dist/sync-event.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "primitives": [
+        "./dist/primitives.d.ts"
+      ],
+      "decks": [
+        "./dist/decks.d.ts"
+      ],
+      "cards": [
+        "./dist/cards.d.ts"
+      ],
+      "etl-sync": [
+        "./dist/etl-sync.d.ts"
+      ],
+      "sync-event": [
+        "./dist/sync-event.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.3"
+  }
+}

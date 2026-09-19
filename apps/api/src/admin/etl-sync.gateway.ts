@@ -1,3 +1,4 @@
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -8,12 +9,12 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { createClerkClient, verifyToken } from '@clerk/backend';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import type { IncomingMessage } from 'node:http';
 import type { Server, WebSocket } from 'ws';
 import { Subscription } from 'rxjs';
-import type { SyncEvent } from 'etl';
+import { etlWsSubscribeSchema, type EtlWsSubscribe, type SyncEvent } from 'schemas/sync-event';
+import { assertAdminUser, verifyClerkToken } from '../auth/clerk';
 import { EtlSyncEventsService } from './etl-sync-events.service';
 
 type ClientState = {
@@ -22,8 +23,6 @@ type ClientState = {
   syncIds: Set<string>;
   sub: Subscription;
 };
-
-type SubscribePayload = { channel?: string; syncId?: string };
 
 @WebSocketGateway({ path: '/admin/etl-syncs/ws' })
 export class EtlSyncGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
@@ -56,32 +55,12 @@ export class EtlSyncGateway implements OnGatewayInit, OnGatewayConnection, OnGat
       return;
     }
 
-    const secretKey = process.env.CLERK_SECRET_KEY;
-    if (!secretKey) {
-      client.close(4500, 'Auth not configured');
-      return;
-    }
-
     try {
-      const payload = await verifyToken(token, { secretKey });
-      if (!payload.sub) {
-        client.close(4401, 'Invalid token');
-        return;
-      }
-
-      const clerk = createClerkClient({ secretKey });
-      const user = await clerk.users.getUser(payload.sub);
-      if (user.publicMetadata?.role !== 'admin') {
-        this.logger.warn(
-          { event: 'admin.etl_sync.ws.forbidden', userId: payload.sub },
-          'WS connect rejected: not admin',
-        );
-        client.close(4403, 'Admin role required');
-        return;
-      }
+      const userId = await verifyClerkToken(token);
+      await assertAdminUser(userId);
 
       const state: ClientState = {
-        userId: payload.sub,
+        userId,
         // Default to list so progress reaches the syncs table even if
         // subscribe frames are delayed/missed.
         list: true,
@@ -98,12 +77,21 @@ export class EtlSyncGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         this.handleRawMessage(client, raw);
       });
 
-      this.logger.info(
-        { event: 'admin.etl_sync.ws.connected', userId: payload.sub },
-        'WS client connected',
-      );
+      this.logger.info({ event: 'admin.etl_sync.ws.connected', userId }, 'WS client connected');
       this.safeSend(client, { event: 'ready', data: { ok: true } });
     } catch (err) {
+      if (err instanceof ForbiddenException) {
+        this.logger.warn(
+          { event: 'admin.etl_sync.ws.forbidden' },
+          'WS connect rejected: not admin',
+        );
+        client.close(4403, 'Admin role required');
+        return;
+      }
+      if (err instanceof UnauthorizedException && err.message.includes('not configured')) {
+        client.close(4500, 'Auth not configured');
+        return;
+      }
       this.logger.warn({ event: 'admin.etl_sync.ws.auth_failed', err }, 'WS auth failed');
       client.close(4401, 'Invalid token');
     }
@@ -124,7 +112,7 @@ export class EtlSyncGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   @SubscribeMessage('subscribe')
   handleSubscribe(
     @ConnectedSocket() client: WebSocket,
-    @MessageBody() data: SubscribePayload,
+    @MessageBody() data: EtlWsSubscribe,
   ): { event: string; data: { ok: boolean; error?: string } } {
     return {
       event: 'subscribe',
@@ -135,7 +123,7 @@ export class EtlSyncGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   @SubscribeMessage('unsubscribe')
   handleUnsubscribe(
     @ConnectedSocket() client: WebSocket,
-    @MessageBody() data: SubscribePayload,
+    @MessageBody() data: EtlWsSubscribe,
   ): { event: string; data: { ok: boolean } } {
     return {
       event: 'unsubscribe',
@@ -144,31 +132,32 @@ export class EtlSyncGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   }
 
   private handleRawMessage(client: WebSocket, raw: Buffer | ArrayBuffer | Buffer[]) {
-    let parsed: { event?: string; data?: SubscribePayload };
+    let parsed: { event?: string; data?: unknown };
     try {
       parsed = JSON.parse(String(raw)) as typeof parsed;
     } catch {
       return;
     }
     if (parsed.event === 'subscribe') {
-      const result = this.applySubscribe(client, parsed.data ?? {});
+      const result = this.applySubscribe(client, parsed.data);
       this.safeSend(client, { event: 'subscribe', data: result });
       return;
     }
     if (parsed.event === 'unsubscribe') {
-      const result = this.applyUnsubscribe(client, parsed.data ?? {});
+      const result = this.applyUnsubscribe(client, parsed.data);
       this.safeSend(client, { event: 'unsubscribe', data: result });
     }
   }
 
-  private applySubscribe(
-    client: WebSocket,
-    data: SubscribePayload,
-  ): { ok: boolean; error?: string } {
+  private applySubscribe(client: WebSocket, raw: unknown): { ok: boolean; error?: string } {
     const state = this.clients.get(client);
     if (!state) return { ok: false, error: 'not authenticated' };
 
-    if (data?.channel === 'list') {
+    const parsed = etlWsSubscribeSchema.safeParse(raw ?? {});
+    if (!parsed.success) return { ok: false, error: 'invalid subscribe' };
+    const data = parsed.data;
+
+    if (data.channel === 'list') {
       state.list = true;
       this.logger.debug(
         { event: 'admin.etl_sync.ws.subscribe_list', userId: state.userId },
@@ -176,7 +165,7 @@ export class EtlSyncGateway implements OnGatewayInit, OnGatewayConnection, OnGat
       );
       return { ok: true };
     }
-    if (data?.channel === 'sync' && data.syncId) {
+    if (data.channel === 'sync' && data.syncId) {
       state.syncIds.add(data.syncId);
       this.logger.debug(
         {
@@ -191,14 +180,18 @@ export class EtlSyncGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     return { ok: false, error: 'invalid subscribe' };
   }
 
-  private applyUnsubscribe(client: WebSocket, data: SubscribePayload): { ok: boolean } {
+  private applyUnsubscribe(client: WebSocket, raw: unknown): { ok: boolean } {
     const state = this.clients.get(client);
     if (!state) return { ok: false };
 
-    if (data?.channel === 'list') {
+    const parsed = etlWsSubscribeSchema.safeParse(raw ?? {});
+    if (!parsed.success) return { ok: false };
+    const data = parsed.data;
+
+    if (data.channel === 'list') {
       state.list = false;
     }
-    if (data?.channel === 'sync' && data.syncId) {
+    if (data.channel === 'sync' && data.syncId) {
       state.syncIds.delete(data.syncId);
     }
     return { ok: true };

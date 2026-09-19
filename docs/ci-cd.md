@@ -34,9 +34,9 @@ Production deploys are intentional: use **Actions → CI / CD → Run workflow**
 | Flag    | Paths (also triggered by root `package.json` / lockfile / `Taskfile.yml` / tsconfig as “shared”) |
 | ------- | ------------------------------------------------------------------------------------------------ |
 | `etl`   | `apps/etl/**`                                                                                    |
-| `api`   | `apps/api/**`, API deploy scripts (etl changes count as API)                                     |
-| `web`   | `apps/web/**`                                                                                    |
-| `admin` | `apps/admin/**`                                                                                  |
+| `api`   | `apps/api/**`, API deploy scripts (etl and `packages/schemas` changes count as API)              |
+| `web`   | `apps/web/**` (also `packages/schemas`)                                                          |
+| `admin` | `apps/admin/**` (also `packages/schemas`)                                                        |
 | `infra` | `infra/**`, TF backend bootstrap script                                                          |
 
 - **Build** runs only the matching `task *:build` steps.

@@ -1,5 +1,5 @@
-import type { EtlJobRun, EtlSync, IngestionError, IngestionUnmatched } from './schemas/etl-sync.ts';
-import type { SyncEvent } from './schemas/sync-event.ts';
+import type { EtlJobRun, EtlSync, IngestionError, IngestionUnmatched } from 'schemas/etl-sync';
+import type { SyncEvent } from 'schemas/sync-event';
 
 export const upsertJobOnSync = (
   sync: EtlSync,

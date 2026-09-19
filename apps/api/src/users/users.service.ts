@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { eq, isNull, or, sql } from 'drizzle-orm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { DATABASE, type Database } from '../db/database.module';
@@ -32,7 +32,11 @@ export class UsersService {
       .insert(users)
       .values({ clerkUserId })
       .onConflictDoUpdate({ target: users.clerkUserId, set: { clerkUserId } })
-      .returning({ id: users.id });
+      .returning({ id: users.id, deletedAt: users.deletedAt });
+
+    if (user.deletedAt) {
+      throw new ForbiddenException('Account is deleted');
+    }
 
     return user.id;
   }
@@ -69,7 +73,8 @@ export class UsersService {
 
   /**
    * Soft delete. Decks stay intact so a mistaken or replayed `user.deleted` is
-   * recoverable; purging is a deliberate, separate operation.
+   * recoverable via a deliberate restore; authenticated API requests are rejected
+   * while `deletedAt` is set.
    */
   async markDeleted(clerkUserId: string): Promise<void> {
     const result = await this.db
