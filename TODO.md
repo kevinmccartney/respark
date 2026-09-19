@@ -6,7 +6,7 @@ Writing down ideas for the future
 
 - ~~Auto formatting rules~~
 - ~~Linting~~
-- Custom LLM instructions
+- ~~Custom LLM instructions~~ (`.cursor/rules/` + `AGENTS.md`)
 - ~~Pipeline~~
 - Arch diagrams and mermaid data ERDs
 

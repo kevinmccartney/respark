@@ -2,10 +2,13 @@
 
 | Doc                                 | Description                                                  |
 | ----------------------------------- | ------------------------------------------------------------ |
+| [CI / CD](ci-cd.md)                 | GitHub Actions, Task isomorphism, OIDC, change detection     |
 | [ETL overview](etl/overview.md)     | Sync / stage / job model, architecture, sources of truth     |
 | [ETL data model](etl/data-model.md) | Postgres schemas and tables (`raw`, `catalog`, `ops`, `app`) |
 | [ETL operations](etl/operations.md) | Running syncs (CLI + admin), reports, env                    |
 | [ETL streaming](etl/streaming.md)   | In-process lib events and admin WebSocket                    |
+
+Agent standing orders (thin; point here for depth): [`.cursor/rules/`](../.cursor/rules/), [`AGENTS.md`](../AGENTS.md).
 
 Package-level READMEs (`apps/etl`, `apps/api`, `apps/admin`) stay short and point here for pipeline detail.
 

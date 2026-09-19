@@ -1,0 +1,41 @@
+---
+description: Terraform naming, file layout, and quality conventions under infra/
+globs: infra/**/*.tf,infra/**/*.md,scripts/*.sh
+alwaysApply: false
+---
+
+# Terraform quality & naming
+
+Format with `terraform fmt` (`task format:terraform`). Validate with `task infra:validate`.
+
+## Layout
+
+```
+infra/
+  envs/<environment>/   # roots (develop, …) — backend, providers, module wiring
+  modules/<name>/       # reusable modules (api, db, ui)
+```
+
+- Split module files by concern: `ec2.tf`, `acm.tf`, `s3.tf`, `iam.tf`, `variables.tf`, `outputs.tf`, `versions.tf`.
+- Env roots wire modules; put reusable logic in `modules/`, not copy-paste across envs.
+
+## Naming
+
+| Kind | Convention | Examples |
+| --- | --- | --- |
+| Resources, data, modules, variables, locals, outputs | `snake_case` | `api_parameter_prefix`, `cloudfront_price_class` |
+| Module directories | short `snake` / single token | `api`, `db`, `ui` |
+| Env directories | environment name | `develop`, `production` |
+| AWS name tags / Name values | include `project` + `environment` (+ component) | via variables `project`, `environment` |
+
+- Variables: always set `description` and `type`; defaults only when safe.
+- Locals: computed names and shared prefixes (`local.api_parameter_prefix`), not raw duplication.
+- Outputs: stable, useful names for Task/scripts (`api_url`, `api_ecr_repository_url`).
+
+## Quality
+
+- Prefer **modules + variables** over hard-coded account-specific values in modules.
+- Don’t put secrets in Terraform state when avoidable (Clerk secret → SSM via `task api:secrets:push`).
+- Security groups / IAM: least privilege; comment non-obvious couplings (see develop `main.tf` parameter-prefix note).
+- After structural changes, run `task infra:validate ENV=…` (and plan before apply).
+- Keep provider aliases explicit (`aws.us_east_1` for ACM/CloudFront certs).

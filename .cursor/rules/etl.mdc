@@ -1,0 +1,27 @@
+---
+description: MTG ETL pipeline — sync model, schemas, CLI, and admin streaming
+globs: apps/etl/**,docs/etl/**
+alwaysApply: false
+---
+
+# ETL
+
+Docs (read these; don’t reinvent the model):
+
+| Doc | Topic |
+| --- | --- |
+| [`docs/etl/overview.md`](../../docs/etl/overview.md) | Sync / stage / architecture |
+| [`docs/etl/data-model.md`](../../docs/etl/data-model.md) | Postgres `raw` / `catalog` / `ops` / `app` |
+| [`docs/etl/operations.md`](../../docs/etl/operations.md) | CLI + admin syncs |
+| [`docs/etl/streaming.md`](../../docs/etl/streaming.md) | In-process events + admin WS |
+
+## Commands
+
+- CLI: `task etl -- <args>` (e.g. `sync --catalog`, `report`)
+- Build: `task etl:build` (API build depends on this)
+
+## Conventions
+
+- Treat documented schemas and sync semantics as source of truth.
+- Prefer extending the existing lib + CLI over new pipelines.
+- Regenerate Mermaid SVGs with `task docs:diagrams` when editing `.mmd` sources.

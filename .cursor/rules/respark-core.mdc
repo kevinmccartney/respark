@@ -1,0 +1,40 @@
+---
+description: Respark monorepo standing orders — Task orchestration, ENV, docs vs rules
+alwaysApply: true
+---
+
+# Respark core
+
+MTG companion monorepo: `apps/web`, `apps/admin`, `apps/api`, `apps/etl`, plus `infra/` and `docs/`.
+
+## Orchestration
+
+- **Taskfile is the source of truth** for build, format, lint, infra, and deploy (`task --list`).
+- npm scripts exist for package binaries only. Task may call `npm run …`; **do not** put `task` inside `package.json`.
+- In CI/CD, prefer `task …` over raw `npm` / ad-hoc shell (see `docs/ci-cd.md`).
+
+## Environments
+
+- Default `ENV=develop` → `infra/envs/develop`. Override with `ENV=production` when that root exists.
+- Same Task commands locally and in GitHub Actions.
+
+## Quality gates
+
+- Format: Prettier + `terraform fmt` (`task format` / `task format:check`).
+- Lint: ESLint + `terraform validate` (`task lint`).
+- Pre-commit: husky → `task precommit` (staged format/lint + validate).
+
+## Docs vs rules
+
+- **Rules** (this folder): short standing orders for agents.
+- **Docs**: deep reference — read them when the task touches that area; do not paste runbooks into rules.
+- Index: `docs/README.md`, root `README.md`, package READMEs under `apps/*/`.
+
+## Habits
+
+- Build things as simply as possible
+- Avoid assumptions, ask questions when unsure
+- Prefer editing existing patterns over new abstractions.
+- Follow naming/quality rules in `js-ts-quality` and `terraform-quality` when touching those trees.
+- Do not commit secrets (`.env`, Clerk secret keys, tfvars with credentials).
+- Clerk publishable keys are frontend-only; secret keys stay in API env / SSM.

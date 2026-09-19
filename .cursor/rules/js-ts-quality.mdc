@@ -1,0 +1,36 @@
+---
+description: TypeScript/JavaScript quality and naming for apps (web, admin, api, etl)
+globs: apps/**/*.{ts,tsx,js,jsx,mjs,cjs}
+alwaysApply: false
+---
+
+# JS / TS quality & naming
+
+Style is enforced by Prettier + ESLint (`task format`, `task lint`). Do not bikeshed formatting in review — fix via those tools.
+
+## Naming
+
+| Kind | Convention | Examples |
+| --- | --- | --- |
+| Variables, functions, fields | `camelCase` | `deckCard`, `listForUser` |
+| Types, interfaces, classes, React components | `PascalCase` | `DeckDetail`, `DecksService`, `DeckDetailPage` |
+| Constants / const unions | `SCREAMING_SNAKE` or `PascalCase` type + `camel` values | `DECK_FORMATS`, `DeckFormat` |
+| Files — React components / pages | `PascalCase.tsx` | `PrintingPickerDialog.tsx`, `HomePage.tsx` |
+| Files — Nest modules & multi-word utils | `kebab-case.ts` | `clerk-auth.guard.ts`, `moxfield-import.ts` |
+| Files — small libs / single concept | `camelCase.ts` OK | `decks.ts`, `demoMismatches.ts` |
+| Nest symbols | Match Nest idioms | `decks.module.ts`, `DecksService`, `DecksController` |
+
+- Prefer **domain words** (`deck`, `printing`, `etlSync`) over vague names (`data`, `info`, `manager`).
+- Booleans: `is` / `has` / `should` prefixes (`isFoil`, `hasSideboard`).
+- Event / log keys: dotted lowercase (`decks.list`, `etl.sync`).
+
+## Quality
+
+- **TypeScript strict**: no `any` unless unavoidable and localized; prefer `unknown` + narrow.
+- **Explicit domain types** next to the feature (`deck.types.ts`, `card.types.ts`); share across web/API only when shapes truly match.
+- **Early returns** over deep nesting; keep functions focused.
+- **Avoid** new wrappers, indirection, or “utils gods” — extend the nearest module.
+- React: function components; hooks at top level; don’t add `useMemo` / `useCallback` unless the codebase already needs them for a measured reason.
+- Nest: keep business logic in services; controllers stay thin; inject `PinoLogger` for structured logs.
+- ETL: keep stages/jobs aligned with `docs/etl/`; repository functions named after the table/domain they touch.
+- Don’t fight generated `components/ui/**` (shadcn) unless fixing a real bug.

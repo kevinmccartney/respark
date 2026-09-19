@@ -1,0 +1,27 @@
+---
+description: NestJS API, Drizzle, Clerk backend, and local Compose conventions
+globs: apps/api/**
+alwaysApply: false
+---
+
+# API (`apps/api`)
+
+Package README: [`apps/api/README.md`](../../apps/api/README.md). ETL that the API embeds: [`docs/etl/`](../../docs/etl/).
+
+## Stack
+
+- NestJS + Drizzle ORM + Postgres; auth via Clerk backend SDK.
+- Migrations live under `apps/api` Drizzle folders; apply with `task db:migrate` (or migrate-on-boot in containers).
+
+## Commands
+
+- Dev: `task api:dev` / `task api:debug`
+- Build: `task api:build` (depends on `etl:build`)
+- Local stack: `task docker:up`
+- Deployed DB: `task db:tunnel` + `task db:url` (never open RDS publicly)
+
+## Conventions
+
+- Keep Clerk **secret** keys out of web/admin bundles and Terraform state; use env / SSM.
+- Prefer extending existing Nest modules (`decks`, etc.) over new top-level packages.
+- API Docker image is `linux/arm64` (Graviton) for EC2.

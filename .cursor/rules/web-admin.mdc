@@ -1,0 +1,25 @@
+---
+description: Vite React web and admin apps — Clerk publishable key, Task builds
+globs: apps/web/**,apps/admin/**
+alwaysApply: false
+---
+
+# Web & admin UI
+
+- **Web** (`apps/web`): player-facing Vite + React + Clerk.
+- **Admin** (`apps/admin`): ops dashboard; same Clerk app; requires user public metadata `{ "role": "admin" }`.
+
+READMEs: [`apps/web`](../../apps/web) (via root README), [`apps/admin/README.md`](../../apps/admin/README.md).
+
+## Commands
+
+- Dev: `npm run dev` / `task admin:dev` (or root npm scripts).
+- Build: `task web:build` / `task admin:build`
+- Deploy: `task web:deploy` / `task admin:deploy` (bake `VITE_API_URL` from Terraform `api_url`)
+
+## Conventions
+
+- Only `VITE_CLERK_PUBLISHABLE_KEY` in Vite apps — never the secret key.
+- Prefer existing UI primitives under `src/components/ui` (shadcn-style); avoid one-off card chrome in heroes/marketing unless the design system requires it.
+- Match Prettier (no semicolons, single quotes) and ESLint flat config at repo root.
+- ESLint ignores generated `components/ui/**`; don’t fight shadcn output unless necessary.

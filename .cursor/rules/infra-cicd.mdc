@@ -1,0 +1,23 @@
+---
+description: Terraform, GitHub Actions, and deploy scripts — ENV, OIDC, Task isomorphism
+globs: infra/**,.github/workflows/**,scripts/**,Taskfile.yml,docs/ci-cd.md
+alwaysApply: false
+---
+
+# Infra & CI/CD
+
+Deep reference: [`docs/ci-cd.md`](../../docs/ci-cd.md). Develop env notes: [`infra/envs/develop/README.md`](../../infra/envs/develop/README.md).
+
+## Commands
+
+- Plan / apply / validate: `task infra:plan|apply|validate ENV=…`
+- Deploy: `task api:deploy`, `task web:deploy`, `task admin:deploy` (web/admin after API in CI).
+- Secrets to SSM: `task api:secrets:push ENV=…` (not Terraform).
+
+## Conventions
+
+- Remote state in S3; do not rely on local-only `terraform.tfstate` for shared work.
+- GitHub Actions assumes AWS via OIDC; trust `repository` + `environment:*` claims (see ci-cd docs) — GitHub `sub` embeds owner/repo IDs.
+- Workflow jobs should call **Task**, not duplicate shell orchestration.
+- Path filters skip unchanged apps; `workflow_dispatch` force-deploys all for the chosen env.
+- `infra:validate` uses `terraform init -backend=false` so hooks/CI work without AWS credentials.
