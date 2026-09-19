@@ -21,6 +21,7 @@ concurrency:
 permissions:
   contents: read
   id-token: write
+  pull-requests: read
 
 env:
   AWS_REGION: us-east-1
@@ -35,15 +36,19 @@ jobs:
     outputs:
       environment: ${{ steps.set.outputs.environment }}
       deploy: ${{ steps.set.outputs.deploy }}
+      force: ${{ steps.set.outputs.force }}
     steps:
       - id: set
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             ENV="${{ inputs.environment }}"
+            # Manual runs always rebuild/redeploy everything for the chosen env.
+            FORCE=true
           else
             # PRs and pushes to main always target develop.
             ENV="develop"
+            FORCE=false
           fi
 
           DEPLOY=false
@@ -55,11 +60,104 @@ jobs:
 
           echo "environment=${ENV}" >> "$GITHUB_OUTPUT"
           echo "deploy=${DEPLOY}" >> "$GITHUB_OUTPUT"
-          echo "Resolved ENV=${ENV} deploy=${DEPLOY}"
+          echo "force=${FORCE}" >> "$GITHUB_OUTPUT"
+          echo "Resolved ENV=${ENV} deploy=${DEPLOY} force=${FORCE}"
+
+  changes:
+    name: Detect changes
+    needs: [config]
+    runs-on: ubuntu-latest
+    outputs:
+      etl: ${{ steps.flags.outputs.etl }}
+      api: ${{ steps.flags.outputs.api }}
+      web: ${{ steps.flags.outputs.web }}
+      admin: ${{ steps.flags.outputs.admin }}
+      infra: ${{ steps.flags.outputs.infra }}
+      build: ${{ steps.flags.outputs.build }}
+      deploy_api: ${{ steps.flags.outputs.deploy_api }}
+      deploy_web: ${{ steps.flags.outputs.deploy_web }}
+      deploy_admin: ${{ steps.flags.outputs.deploy_admin }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: needs.config.outputs.force != 'true'
+        with:
+          filters: |
+            shared:
+              - 'package.json'
+              - 'package-lock.json'
+              - 'tsconfig*.json'
+              - 'Taskfile.yml'
+            etl:
+              - 'apps/etl/**'
+            api:
+              - 'apps/api/**'
+              - 'scripts/redeploy-api-ec2.sh'
+              - 'scripts/push-api-secrets.sh'
+            web:
+              - 'apps/web/**'
+            admin:
+              - 'apps/admin/**'
+            infra:
+              - 'infra/**'
+              - 'scripts/bootstrap-tf-backend.sh'
+
+      - id: flags
+        env:
+          FORCE: ${{ needs.config.outputs.force }}
+          F_SHARED: ${{ steps.filter.outputs.shared || 'false' }}
+          F_ETL: ${{ steps.filter.outputs.etl || 'false' }}
+          F_API: ${{ steps.filter.outputs.api || 'false' }}
+          F_WEB: ${{ steps.filter.outputs.web || 'false' }}
+          F_ADMIN: ${{ steps.filter.outputs.admin || 'false' }}
+          F_INFRA: ${{ steps.filter.outputs.infra || 'false' }}
+        run: |
+          set -euo pipefail
+          true_if() { [ "$1" = "true" ] && echo true || echo false; }
+          or() {
+            for v in "$@"; do
+              if [ "$v" = "true" ]; then echo true; return; fi
+            done
+            echo false
+          }
+
+          if [ "$FORCE" = "true" ]; then
+            ETL=true; API=true; WEB=true; ADMIN=true; INFRA=true
+          else
+            ETL=$(or "$F_ETL" "$F_SHARED")
+            # API image includes etl; treat etl changes as API build/deploy.
+            API=$(or "$F_API" "$F_ETL" "$F_SHARED")
+            WEB=$(or "$F_WEB" "$F_SHARED")
+            ADMIN=$(or "$F_ADMIN" "$F_SHARED")
+            INFRA=$(true_if "$F_INFRA")
+          fi
+
+          BUILD=$(or "$ETL" "$API" "$WEB" "$ADMIN")
+          # Infra changes may replace EC2 / CDN; redeploy affected surfaces.
+          DEPLOY_API=$(or "$API" "$INFRA")
+          DEPLOY_WEB=$(or "$WEB" "$INFRA")
+          DEPLOY_ADMIN=$(or "$ADMIN" "$INFRA")
+
+          {
+            echo "etl=${ETL}"
+            echo "api=${API}"
+            echo "web=${WEB}"
+            echo "admin=${ADMIN}"
+            echo "infra=${INFRA}"
+            echo "build=${BUILD}"
+            echo "deploy_api=${DEPLOY_API}"
+            echo "deploy_web=${DEPLOY_WEB}"
+            echo "deploy_admin=${DEPLOY_ADMIN}"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Changes etl=${ETL} api=${API} web=${WEB} admin=${ADMIN} infra=${INFRA} build=${BUILD}"
 
   build:
     name: Build apps
-    needs: [config]
+    if: needs.changes.outputs.build == 'true'
+    needs: [config, changes]
     runs-on: ubuntu-latest
     environment: ${{ needs.config.outputs.environment }}
     steps:
@@ -77,29 +175,37 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build (task build)
+      - name: Build etl
+        if: needs.changes.outputs.etl == 'true'
+        run: task etl:build
+
+      - name: Build API
+        if: needs.changes.outputs.api == 'true'
+        run: task api:build
+
+      - name: Build web
+        if: needs.changes.outputs.web == 'true'
         env:
           # Compile-time check only; deploy jobs rebuild with live api_url from Terraform.
           VITE_API_URL: ${{ vars.COMPILE_CHECK_API_URL }}
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
-        run: task build ENV=${{ needs.config.outputs.environment }}
+        run: task web:build
+
+      - name: Build admin
+        if: needs.changes.outputs.admin == 'true'
+        env:
+          VITE_API_URL: ${{ vars.COMPILE_CHECK_API_URL }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+        run: task admin:build
 
   plan:
     name: Plan infra
-    needs: [config]
+    if: needs.changes.outputs.infra == 'true'
+    needs: [config, changes]
     runs-on: ubuntu-latest
     environment: ${{ needs.config.outputs.environment }}
     steps:
       - uses: actions/checkout@v4
-      - name: Debug OIDC claims
-        run: |
-          set -euo pipefail
-          echo "AWS_ROLE_ARN=${AWS_ROLE_ARN:-<empty>}"
-          TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")
-          echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+' | awk '{while(length%4){$0=$0"="} print}' | base64 -d 2>/dev/null | jq .
-        env:
-          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -129,8 +235,14 @@ jobs:
 
   apply:
     name: Apply infra
-    if: needs.config.outputs.deploy == 'true'
-    needs: [config, build, plan]
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.config.outputs.deploy == 'true' &&
+      needs.changes.outputs.infra == 'true' &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
+      needs.plan.result == 'success'
+    needs: [config, changes, build, plan]
     runs-on: ubuntu-latest
     environment: ${{ needs.config.outputs.environment }}
     steps:
@@ -162,8 +274,14 @@ jobs:
 
   deploy-api:
     name: Deploy API
-    if: needs.config.outputs.deploy == 'true'
-    needs: [config, apply]
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.config.outputs.deploy == 'true' &&
+      needs.changes.outputs.deploy_api == 'true' &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
+      (needs.apply.result == 'success' || needs.apply.result == 'skipped')
+    needs: [config, changes, build, apply]
     runs-on: ubuntu-latest
     environment: ${{ needs.config.outputs.environment }}
     steps:
@@ -202,8 +320,14 @@ jobs:
 
   deploy-web:
     name: Deploy web
-    if: needs.config.outputs.deploy == 'true'
-    needs: [config, apply, deploy-api]
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.config.outputs.deploy == 'true' &&
+      needs.changes.outputs.deploy_web == 'true' &&
+      (needs.apply.result == 'success' || needs.apply.result == 'skipped') &&
+      (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped')
+    needs: [config, changes, apply, deploy-api]
     runs-on: ubuntu-latest
     environment: ${{ needs.config.outputs.environment }}
     steps:
@@ -242,8 +366,14 @@ jobs:
 
   deploy-admin:
     name: Deploy admin
-    if: needs.config.outputs.deploy == 'true'
-    needs: [config, apply, deploy-api]
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.config.outputs.deploy == 'true' &&
+      needs.changes.outputs.deploy_admin == 'true' &&
+      (needs.apply.result == 'success' || needs.apply.result == 'skipped') &&
+      (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped')
+    needs: [config, changes, apply, deploy-api]
     runs-on: ubuntu-latest
     environment: ${{ needs.config.outputs.environment }}
     steps:

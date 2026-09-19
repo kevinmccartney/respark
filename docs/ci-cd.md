@@ -1,20 +1,38 @@
 # CI / CD (GitHub Actions)
 
-Pipeline: **build apps** and **plan infra** in parallel → on deployable refs, **apply infra** → **deploy API** → **deploy web** ∥ **admin**.
+Pipeline: **detect changes** → **build** (changed apps) and **plan** (if infra) in parallel → on deployable refs, **apply** (if infra) → **deploy API** (if needed) → **web** ∥ **admin** (if needed).
 
-Orchestration lives in [`Taskfile.yml`](../Taskfile.yml). The workflow only wires GitHub Environments, OIDC, and artifacts, then runs the same `task … ENV=<name>` commands you use locally.
+Orchestration lives in [`Taskfile.yml`](../Taskfile.yml). The workflow only wires GitHub Environments, OIDC, path filters, and artifacts, then runs the same `task … ENV=<name>` commands you use locally.
 
 Workflow file: [`.github/workflows/ci-cd.yml`](../.github/workflows/ci-cd.yml).
 
 ## Triggers
 
-| Event                         | Environment                        | What runs                                                                 |
-| ----------------------------- | ---------------------------------- | ------------------------------------------------------------------------- |
-| Pull request                  | `develop`                          | `build` + `plan`                                                          |
-| Push to `main`                | `develop`                          | `build` + `plan` → `apply` → `deploy-api` → `deploy-web` ∥ `deploy-admin` |
-| `workflow_dispatch` on `main` | choice (`develop` or `production`) | Same deploy path for the selected env                                         |
+| Event                         | Environment                        | What runs                                                                                         |
+| ----------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Pull request                  | `develop`                          | `build` + `plan` for changed paths only                                                           |
+| Push to `main`                | `develop`                          | changed paths: `build` / `plan` → `apply` → `deploy-api` → `deploy-web` ∥ `deploy-admin`          |
+| `workflow_dispatch` on `main` | choice (`develop` or `production`) | **Force all** paths for the selected env (full rebuild + plan/apply + deploy)                     |
 
 Production deploys are intentional: use **Actions → CI / CD → Run workflow** and pick `production`.
+
+## Change detection
+
+[`dorny/paths-filter`](https://github.com/dorny/paths-filter) maps the git diff to flags:
+
+| Flag | Paths (also triggered by root `package.json` / lockfile / `Taskfile.yml` / tsconfig as “shared”) |
+| --- | --- |
+| `etl` | `apps/etl/**` |
+| `api` | `apps/api/**`, API deploy scripts (etl changes count as API) |
+| `web` | `apps/web/**` |
+| `admin` | `apps/admin/**` |
+| `infra` | `infra/**`, TF backend bootstrap script |
+
+- **Build** runs only the matching `task *:build` steps.
+- **Plan / apply** run only when `infra` changed (or on force).
+- **Deploy** runs for the matching app; an `infra` change also redeploys API/web/admin (EC2 / CDN may have moved).
+- Skipped upstream jobs do not block later deploys (e.g. web-only change skips plan/apply/API, then deploys web).
+- Web/admin still wait on API when API *is* deploying.
 
 ## Local ↔ CI isomorphism
 
