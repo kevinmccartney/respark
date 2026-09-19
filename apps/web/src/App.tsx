@@ -4,6 +4,7 @@ import { GuestOnly, RequireAuth } from './components/AuthGate.tsx'
 import { SiteHeader } from './components/SiteHeader.tsx'
 import { HomePage } from './pages/HomePage.tsx'
 import { NewDeckPage } from './pages/NewDeckPage.tsx'
+import { SearchPage } from './pages/SearchPage.tsx'
 import { WelcomePage } from './pages/WelcomePage.tsx'
 
 export default function App() {
@@ -24,6 +25,14 @@ export default function App() {
           element={
             <RequireAuth>
               <HomePage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/search"
+          element={
+            <RequireAuth>
+              <SearchPage />
             </RequireAuth>
           }
         />

@@ -1,0 +1,164 @@
+import { Inject, Injectable } from '@nestjs/common'
+import { sql, type SQL } from 'drizzle-orm'
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino'
+import { DATABASE, type Database } from '../db/database.module'
+import type { CardSearchPage, CardSearchResult } from './card.types'
+
+const DEFAULT_LIMIT = 60
+const MAX_LIMIT = 100
+
+type SearchRow = {
+  id: string
+  oracle_id: string
+  name: string
+  mana_cost: string | null
+  type_line: string | null
+  oracle_text: string | null
+  image_normal: string | null
+}
+
+type CountRow = {
+  total: string | number
+}
+
+@Injectable()
+export class CardsService {
+  constructor(
+    @Inject(DATABASE)
+    private readonly db: Database,
+    @InjectPinoLogger(CardsService.name)
+    private readonly logger: PinoLogger,
+  ) {}
+
+  async search(opts: {
+    q?: string
+    limit?: number
+    page?: number
+  }): Promise<CardSearchPage> {
+    const q = (opts.q ?? '').trim()
+    const pageSize = clampLimit(opts.limit)
+    const requestedPage = clampPage(opts.page)
+
+    const pattern = q.length > 0 ? `%${escapeIlike(q)}%` : null
+    const matchPredicate = matchSql(pattern)
+
+    const countResult = await this.db.execute<CountRow>(sql`
+      SELECT count(*)::int AS total
+      FROM catalog.card c
+      WHERE ${matchPredicate}
+    `)
+    const total = Number(countResult.rows[0]?.total ?? 0)
+    const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize)
+    const page =
+      totalPages === 0 ? 1 : Math.min(requestedPage, totalPages)
+    const offset = (page - 1) * pageSize
+
+    const pageResult = await this.db.execute<SearchRow>(sql`
+      WITH matched AS (
+        SELECT
+          c.id,
+          c.oracle_id,
+          c.name,
+          c.mana_cost,
+          c.type_line,
+          c.oracle_text
+        FROM catalog.card c
+        WHERE ${matchPredicate}
+        ORDER BY c.name ASC, c.id ASC
+        LIMIT ${pageSize}
+        OFFSET ${offset}
+      )
+      SELECT
+        m.id,
+        m.oracle_id,
+        m.name,
+        m.mana_cost,
+        m.type_line,
+        m.oracle_text,
+        COALESCE(img.image_normal, img.face_image_normal) AS image_normal
+      FROM matched m
+      LEFT JOIN LATERAL (
+        SELECT
+          p.image_normal,
+          f.image_normal AS face_image_normal
+        FROM catalog.printing p
+        LEFT JOIN catalog.card_face f
+          ON f.printing_id = p.id AND f.face_index = 0
+        WHERE p.card_id = m.id
+        ORDER BY
+          (p.image_normal IS NOT NULL OR f.image_normal IS NOT NULL) DESC,
+          p.released_at DESC NULLS LAST,
+          p.id
+        LIMIT 1
+      ) img ON true
+      ORDER BY m.name ASC, m.id ASC
+    `)
+
+    const cards = pageResult.rows.map(toCard)
+
+    this.logger.info(
+      {
+        event: 'cards.search',
+        qLength: q.length,
+        page,
+        pageSize,
+        resultCount: cards.length,
+        total,
+        totalPages,
+      },
+      'Searched cards',
+    )
+
+    return { cards, total, page, pageSize, totalPages }
+  }
+}
+
+function matchSql(pattern: string | null): SQL {
+  return sql`
+    (
+      ${pattern}::text IS NULL
+      OR c.name ILIKE ${pattern} ESCAPE '\\'
+      OR c.type_line ILIKE ${pattern} ESCAPE '\\'
+      OR c.oracle_text ILIKE ${pattern} ESCAPE '\\'
+      OR c.mana_cost ILIKE ${pattern} ESCAPE '\\'
+      OR catalog.immutable_array_to_string(c.keywords, ' ') ILIKE ${pattern} ESCAPE '\\'
+      OR EXISTS (
+        SELECT 1
+        FROM catalog.printing p
+        JOIN catalog.card_face f ON f.printing_id = p.id
+        WHERE p.card_id = c.id
+          AND (
+            f.name ILIKE ${pattern} ESCAPE '\\'
+            OR f.type_line ILIKE ${pattern} ESCAPE '\\'
+            OR f.oracle_text ILIKE ${pattern} ESCAPE '\\'
+          )
+      )
+    )
+  `
+}
+
+function clampLimit(raw: number | undefined): number {
+  if (raw === undefined || Number.isNaN(raw)) return DEFAULT_LIMIT
+  return Math.min(MAX_LIMIT, Math.max(1, Math.floor(raw)))
+}
+
+function clampPage(raw: number | undefined): number {
+  if (raw === undefined || Number.isNaN(raw)) return 1
+  return Math.max(1, Math.floor(raw))
+}
+
+function escapeIlike(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
+}
+
+function toCard(row: SearchRow): CardSearchResult {
+  return {
+    id: row.id,
+    oracleId: row.oracle_id,
+    name: row.name,
+    manaCost: row.mana_cost,
+    typeLine: row.type_line,
+    oracleText: row.oracle_text,
+    imageNormal: row.image_normal,
+  }
+}

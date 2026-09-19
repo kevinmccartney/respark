@@ -47,7 +47,7 @@ export function NewDeckPage() {
         <header className="max-w-lg">
           <h1 className="font-heading text-3xl tracking-tight">New deck</h1>
           <p className="mt-2 leading-relaxed text-muted-foreground">
-            Name it now — you can add cards once the catalog lands.
+            Name it now — you can add cards from search soon.
           </p>
         </header>
 
