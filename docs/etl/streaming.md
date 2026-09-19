@@ -27,7 +27,7 @@ Important event types:
 
 The CLI does not require a stream protocol; it uses normal pino + stderr progress. The API always passes `onEvent` and publishes into `EtlSyncEventsService`.
 
-Notable events (`job.log`, `job.started`, `job.completed`, `sync.completed`) are also written to `ops.etl_sync_log` so the admin detail page can show the log after the run. `job.progress` is not stored.
+Notable events (`job.log`, `job.started`, `job.completed`, `sync.completed`) are also written to `ops.etl_sync_log` so the admin detail page can show the log after the run. `job.progress` snapshots (counters + percent) are written to `ops.etl_job_run` about once a second so a refresh mid-run still has current numbers; they are not stored as log lines.
 
 ## WebSocket
 

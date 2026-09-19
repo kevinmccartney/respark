@@ -1,0 +1,1 @@
+ALTER TABLE "ops"."etl_job_run" ADD COLUMN "progress_percent" double precision;

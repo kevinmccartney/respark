@@ -1,6 +1,6 @@
 import type { Column } from 'drizzle-orm';
 import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder';
-import { bigint, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { bigint, doublePrecision, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { etlSyncs } from './etl-sync';
 import { opsSchema } from './ops-schema';
 
@@ -31,6 +31,7 @@ export const etlJobRuns = opsSchema.table('etl_job_run', {
   recordsUpdated: bigint('records_updated', { mode: 'number' }).notNull().default(0),
   recordsUnchanged: bigint('records_unchanged', { mode: 'number' }).notNull().default(0),
   recordsFailed: bigint('records_failed', { mode: 'number' }).notNull().default(0),
+  progressPercent: doublePrecision('progress_percent'),
   downloadBytes: bigint('download_bytes', { mode: 'number' }),
   durationMs: bigint('duration_ms', { mode: 'number' }),
   errorMessage: text('error_message'),

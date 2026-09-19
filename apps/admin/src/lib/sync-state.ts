@@ -31,6 +31,7 @@ export const upsertJobOnSync = (
       recordsUpdated: patch.recordsUpdated ?? 0,
       recordsUnchanged: patch.recordsUnchanged ?? 0,
       recordsFailed: patch.recordsFailed ?? 0,
+      progressPercent: patch.progressPercent ?? null,
       downloadBytes: patch.downloadBytes ?? null,
       durationMs: patch.durationMs ?? null,
       errorMessage: patch.errorMessage ?? null,

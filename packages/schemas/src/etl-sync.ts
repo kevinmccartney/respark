@@ -25,6 +25,7 @@ export const etlJobRunSchema = z.object({
   recordsUpdated: z.number(),
   recordsUnchanged: z.number(),
   recordsFailed: z.number(),
+  progressPercent: z.number().nullable(),
   downloadBytes: z.number().nullable(),
   durationMs: z.number().nullable(),
   errorMessage: z.string().nullable(),

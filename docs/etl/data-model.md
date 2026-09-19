@@ -31,12 +31,12 @@ One row per sync.
 
 One row per job inside a sync.
 
-| Column                          | Notes                                                |
-| ------------------------------- | ---------------------------------------------------- |
-| `sync_id`                       | FK → `etl_sync` (CASCADE)                            |
-| `stage` / `job`                 | e.g. `catalog`/`catalog`, `enrichment`/`identifiers` |
-| metrics                         | `records_*`, `download_bytes`, `duration_ms`         |
-| `source_version` / `source_url` | Provider bulk metadata                               |
+| Column                          | Notes                                                            |
+| ------------------------------- | ---------------------------------------------------------------- |
+| `sync_id`                       | FK → `etl_sync` (CASCADE)                                        |
+| `stage` / `job`                 | e.g. `catalog`/`catalog`, `enrichment`/`identifiers`             |
+| metrics                         | `records_*`, `progress_percent`, `download_bytes`, `duration_ms` |
+| `source_version` / `source_url` | Provider bulk metadata                                           |
 
 ### `ops.etl_sync_log`
 

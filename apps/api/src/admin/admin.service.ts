@@ -315,6 +315,7 @@ const toEtlJobRun = (row: EtlJobRunRow): EtlJobRun => ({
   recordsUpdated: row.recordsUpdated,
   recordsUnchanged: row.recordsUnchanged,
   recordsFailed: row.recordsFailed,
+  progressPercent: row.progressPercent,
   downloadBytes: row.downloadBytes,
   durationMs: row.durationMs,
   errorMessage: row.errorMessage,

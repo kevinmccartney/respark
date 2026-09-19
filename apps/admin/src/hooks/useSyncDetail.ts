@@ -93,7 +93,13 @@ export const useSyncDetail = (id: string | undefined) => {
         const syncRow = await fetchEtlSync(getToken, id!);
         if (controller.signal.aborted) return;
         setSync(syncRow);
-        setProgressByJobId({});
+        setProgressByJobId(
+          Object.fromEntries(
+            syncRow.stages
+              .flatMap((stage) => stage.jobs)
+              .map((job) => [job.id, { percent: job.progressPercent }]),
+          ),
+        );
 
         const allJobs = syncRow.stages.flatMap((s) => s.jobs);
         const preferred = allJobs.find((j) => j.job === 'identifiers') ?? allJobs[0] ?? null;
@@ -253,6 +259,7 @@ export const useSyncDetail = (id: string | undefined) => {
           recordsUpdated: event.progress.updated,
           recordsUnchanged: event.progress.unchanged,
           recordsFailed: event.progress.failed,
+          progressPercent: event.progress.percent,
         });
         setProgressByJobId((prev) => ({
           ...prev,

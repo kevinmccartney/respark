@@ -33,6 +33,41 @@ export const startJobRun = async (pool: Pool, input: StartJobRunInput): Promise<
   return result.rows[0].id;
 };
 
+export type UpdateJobRunProgressInput = {
+  runId: string;
+  recordsSeen: number;
+  recordsInserted: number;
+  recordsUpdated: number;
+  recordsUnchanged: number;
+  recordsFailed: number;
+  progressPercent: number | null;
+};
+
+export const updateJobRunProgress = async (
+  pool: Pool,
+  input: UpdateJobRunProgressInput,
+): Promise<void> => {
+  await pool.query(
+    `update ops.etl_job_run set
+       records_seen = $2,
+       records_inserted = $3,
+       records_updated = $4,
+       records_unchanged = $5,
+       records_failed = $6,
+       progress_percent = $7
+     where id = $1`,
+    [
+      input.runId,
+      input.recordsSeen,
+      input.recordsInserted,
+      input.recordsUpdated,
+      input.recordsUnchanged,
+      input.recordsFailed,
+      input.progressPercent,
+    ],
+  );
+};
+
 export const finishJobRun = async (pool: Pool, input: FinishJobRunInput): Promise<void> => {
   await pool.query(
     `update ops.etl_job_run set

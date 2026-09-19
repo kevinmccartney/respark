@@ -4,6 +4,7 @@ import { emitSyncEvent, type SyncEventHandler } from '../core/stream-events';
 import type { GlobalFlags, IngestionRunStatus } from '../core/types';
 import { insertEtlSyncLog, syncLogFromEvent } from '../repositories/etlSyncLogs';
 import { finishEtlSync, rollupSyncStatus, startEtlSync } from '../repositories/etlSyncs';
+import { updateJobRunProgress } from '../repositories/ingestionRuns';
 import { runMtgjsonImport } from '../sources/mtgjson/importer';
 import { runScryfallImport } from '../sources/scryfall/importer';
 
@@ -56,6 +57,27 @@ export const runEtlSync = async (
             err: err instanceof Error ? err.message : String(err),
           },
           'Failed to persist sync log',
+        );
+      });
+    }
+    if (event.type === 'job.progress') {
+      void updateJobRunProgress(pool, {
+        runId: event.jobRunId,
+        recordsSeen: event.progress.cards,
+        recordsInserted: event.progress.inserted,
+        recordsUpdated: event.progress.updated,
+        recordsUnchanged: event.progress.unchanged,
+        recordsFailed: event.progress.failed,
+        progressPercent: event.progress.percent,
+      }).catch((err) => {
+        logger.warn(
+          {
+            event: 'etl.sync.progress_persist_failed',
+            syncId,
+            jobRunId: event.jobRunId,
+            err: err instanceof Error ? err.message : String(err),
+          },
+          'Failed to persist job progress',
         );
       });
     }

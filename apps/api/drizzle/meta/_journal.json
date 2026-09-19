@@ -127,6 +127,13 @@
       "when": 1789855614456,
       "tag": "0017_living_power_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1789861121688,
+      "tag": "0018_loving_red_ghost",
+      "breakpoints": true
     }
   ]
 }

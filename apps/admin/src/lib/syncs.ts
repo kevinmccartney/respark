@@ -249,13 +249,24 @@ export const syncJobSlots = (sync: EtlSync): SyncStageSlots[] => {
   return stages;
 };
 
+export const runningJobProgress = (
+  sync: EtlSync,
+): { percent: number | null; job: string } | undefined => {
+  const running = sync.stages
+    .flatMap((stage) => stage.jobs)
+    .find((job) => job.status === 'running');
+  if (!running) return undefined;
+  return { job: running.job, percent: running.progressPercent };
+};
+
 export const syncListProgressLabel = (
   sync: EtlSync,
   prog?: { percent: number | null; job: string },
 ): string => {
   if (sync.status !== 'running') return 'Done';
-  if (!prog) return 'Starting…';
-  return `${JOB_LABELS[prog.job] ?? prog.job} ${formatProgressPercent(prog.percent)}`;
+  const liveOrPersisted = prog ?? runningJobProgress(sync);
+  if (!liveOrPersisted) return 'Starting…';
+  return `${JOB_LABELS[liveOrPersisted.job] ?? liveOrPersisted.job} ${formatProgressPercent(liveOrPersisted.percent)}`;
 };
 
 export const syncDurationMs = (sync: EtlSync): number | null => {
