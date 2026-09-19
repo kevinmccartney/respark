@@ -2,6 +2,8 @@
 
 Pipeline and app data use dedicated Postgres schemas. Application tables (`users`, `decks`) live in `app`.
 
+Business-object write-ups and Mermaid ERDs: [Domain model](../domain.md). This page is the compact schema/table list.
+
 ## Schemas
 
 | Schema    | Purpose                                                                      |

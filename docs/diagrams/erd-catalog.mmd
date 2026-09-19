@@ -1,0 +1,55 @@
+erDiagram
+  catalog_card ||--o{ catalog_printing : "card_id CASCADE"
+  catalog_set ||--o{ catalog_printing : "set_id RESTRICT"
+  catalog_printing ||--o{ catalog_card_face : "printing_id CASCADE"
+  catalog_printing ||--o{ catalog_printing_identifier : "printing_id CASCADE"
+
+  catalog_card {
+    uuid id PK
+    uuid oracle_id UK
+    text name
+    text mana_cost
+    numeric mana_value
+    text type_line
+    text oracle_text
+    text_arr colors
+    text_arr color_identity
+    text layout
+  }
+
+  catalog_set {
+    uuid id PK
+    text code UK
+    uuid scryfall_id UK
+    text name
+    text set_type
+    date released_at
+    bool digital
+  }
+
+  catalog_printing {
+    uuid id PK
+    uuid card_id FK
+    uuid set_id FK
+    uuid scryfall_id UK
+    text collector_number
+    text language
+    text rarity
+    text artist
+    text image_normal
+  }
+
+  catalog_card_face {
+    uuid id PK
+    uuid printing_id FK
+    int face_index
+    text name
+    text oracle_text
+    text image_normal
+  }
+
+  catalog_printing_identifier {
+    uuid printing_id PK
+    text provider PK
+    text external_id PK
+  }

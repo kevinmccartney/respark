@@ -135,6 +135,13 @@ Develop web (0.x) is at **https://dev.respark.kevinmccartney.is**; admin at **ht
 
 Both deploy tasks inject **`VITE_API_URL`** from the Terraform `api_url` output at build time. Build either SPA any other way for deployment and the bundle will target `http://localhost:3000`, so each visitor would call their own machine — production builds now fail loudly instead.
 
+## Documentation
+
+| Doc                                | Topic                                  |
+| ---------------------------------- | -------------------------------------- |
+| [`docs/domain.md`](docs/domain.md) | Business objects, system diagram, ERDs |
+| [`docs/README.md`](docs/README.md) | Full index (CI/CD, ETL)                |
+
 ## Contributing
 
 Contribution guidelines and development workflow will be documented as the codebase grows.

@@ -1,0 +1,33 @@
+erDiagram
+  app_users ||--o{ app_decks : "user_id CASCADE"
+  app_decks ||--o{ app_deck_card : "deck_id CASCADE"
+  catalog_printing ||--o{ app_deck_card : "printing_id RESTRICT"
+
+  app_users {
+    uuid id PK
+    text clerk_user_id UK
+    text email
+    text first_name
+    text last_name
+    text image_url
+    timestamptz clerk_updated_at
+    timestamptz deleted_at
+  }
+
+  app_decks {
+    uuid id PK
+    uuid user_id FK
+    text name
+    text description
+    text format
+    timestamptz updated_at
+  }
+
+  app_deck_card {
+    uuid id PK
+    uuid deck_id FK
+    uuid printing_id FK
+    bool foil
+    bool sideboard
+    int quantity
+  }

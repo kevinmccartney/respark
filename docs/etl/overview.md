@@ -60,6 +60,7 @@ DDL and Drizzle schemas live in `apps/api` (`task db:migrate`).
 
 ## Related docs
 
+- [Domain model (objects + ERDs)](../domain.md)
 - [Data model](data-model.md)
 - [Operations](operations.md)
 - [Streaming](streaming.md)

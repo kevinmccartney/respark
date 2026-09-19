@@ -1,0 +1,16 @@
+erDiagram
+  raw_scryfall_card {
+    uuid scryfall_id PK
+    uuid oracle_id
+    jsonb payload
+    text payload_hash
+    timestamptz ingested_at
+  }
+
+  raw_mtgjson_card {
+    text mtgjson_uuid PK
+    text scryfall_id
+    jsonb payload
+    text payload_hash
+    timestamptz ingested_at
+  }

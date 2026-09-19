@@ -1,0 +1,32 @@
+flowchart TB
+  subgraph clients [Browsers]
+    Web["Web SPA<br/>decks and catalog"]
+    Admin["Admin SPA<br/>ETL ops"]
+  end
+
+  Clerk["Clerk<br/>auth and user profile"]
+  CFWeb["CloudFront + S3<br/>web"]
+  CFAdmin["CloudFront + S3<br/>admin"]
+  CFApi["CloudFront<br/>API"]
+
+  subgraph apiHost [API EC2]
+    Nest["Nest API"]
+    EtlLib["etl lib"]
+  end
+
+  RDS[("Postgres<br/>raw catalog ops app")]
+  SSM["SSM<br/>DATABASE_URL<br/>Clerk secret"]
+
+  Web --> CFWeb
+  Admin --> CFAdmin
+  Web -->|"Bearer JWT"| CFApi
+  Admin -->|"Bearer JWT + WS"| CFApi
+  Clerk -->|"user webhooks"| Nest
+  Web --> Clerk
+  Admin --> Clerk
+  CFApi --> Nest
+  Nest --> EtlLib
+  Nest --> RDS
+  EtlLib --> RDS
+  Nest --> SSM
+  Nest -->|"LISTEN etl_sync"| RDS

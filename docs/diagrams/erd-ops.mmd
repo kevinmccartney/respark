@@ -1,0 +1,56 @@
+erDiagram
+  ops_etl_sync ||--o{ ops_etl_job_run : "sync_id CASCADE"
+  ops_etl_job_run ||--o| ops_ingestion_reconciliation : "run_id CASCADE"
+  ops_etl_job_run ||--o{ ops_ingestion_unmatched : "run_id CASCADE"
+  ops_etl_job_run ||--o{ ops_ingestion_error : "run_id logical"
+
+  ops_etl_sync {
+    uuid id PK
+    text status
+    bool include_catalog
+    bool include_enrichment
+    text_arr enrichment_jobs
+    timestamptz started_at
+    timestamptz completed_at
+    text error_message
+  }
+
+  ops_etl_job_run {
+    uuid id PK
+    uuid sync_id FK
+    text stage
+    text job
+    text status
+    int records_seen
+    int records_failed
+    text source_version
+  }
+
+  ops_ingestion_error {
+    bigint id PK
+    uuid run_id
+    text source
+    text external_id
+    text stage
+    text error_message
+    jsonb payload
+  }
+
+  ops_ingestion_reconciliation {
+    uuid run_id PK
+    int matched
+    int unmatched
+    int ambiguous
+    int identifiers_added
+    bool dry_run
+  }
+
+  ops_ingestion_unmatched {
+    bigint id PK
+    uuid run_id FK
+    text external_id
+    text name
+    text set_code
+    text collector_number
+    text reason
+  }

@@ -1,0 +1,12 @@
+erDiagram
+  app_users ||--o{ app_decks : owns
+  app_decks ||--o{ app_deck_card : contains
+  catalog_printing ||--o{ app_deck_card : "listed as"
+  catalog_card ||--o{ catalog_printing : "has printings"
+  catalog_set ||--o{ catalog_printing : "contains"
+  catalog_printing ||--o{ catalog_card_face : "has faces"
+  catalog_printing ||--o{ catalog_printing_identifier : "external ids"
+  ops_etl_sync ||--o{ ops_etl_job_run : "runs jobs"
+  ops_etl_job_run ||--o| ops_ingestion_reconciliation : "summarizes"
+  ops_etl_job_run ||--o{ ops_ingestion_unmatched : "samples"
+  ops_etl_job_run ||--o{ ops_ingestion_error : "records failures"
