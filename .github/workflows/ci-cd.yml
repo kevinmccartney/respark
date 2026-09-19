@@ -220,14 +220,14 @@ jobs:
         env:
           # Compile-time check only; deploy jobs rebuild with live api_url from Terraform.
           VITE_API_URL: ${{ vars.COMPILE_CHECK_API_URL }}
-          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
         run: task web:build
 
       - name: Build admin
         if: needs.changes.outputs.admin == 'true'
         env:
           VITE_API_URL: ${{ vars.COMPILE_CHECK_API_URL }}
-          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
         run: task admin:build
 
   plan:
@@ -393,7 +393,7 @@ jobs:
 
       - name: Deploy web (task web:deploy)
         env:
-          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
         run: task web:deploy ENV=${{ needs.config.outputs.environment }}
 
   deploy-admin:
@@ -439,5 +439,5 @@ jobs:
 
       - name: Deploy admin (task admin:deploy)
         env:
-          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
         run: task admin:deploy ENV=${{ needs.config.outputs.environment }}

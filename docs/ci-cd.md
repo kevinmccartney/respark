@@ -85,7 +85,7 @@ Per environment, set:
 | -------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Variable | `AWS_ROLE_ARN`               | IAM role ARN assumed via OIDC for this env                                                                       |
 | Variable | `COMPILE_CHECK_API_URL`      | Placeholder `VITE_API_URL` for the compile-check `task build` (e.g. `https://dev.api.respark.kevinmccartney.is`) |
-| Secret   | `VITE_CLERK_PUBLISHABLE_KEY` | Clerk **publishable** key for that Clerk instance (dev vs prod)                                                  |
+| Variable | `VITE_CLERK_PUBLISHABLE_KEY` | Clerk **publishable** key for that Clerk instance (dev vs prod). Public; baked into the web/admin bundle.        |
 
 Clerk **secret** keys stay in SSM (`task api:secrets:push ENV=…`); the workflow does not push them.
 
@@ -144,6 +144,6 @@ Alternatively, pin the exact `sub` from a debug JWT decode (includes `@ownerId` 
 ## Notes
 
 - API images are built for **`linux/arm64`** (Graviton) and tagged with the git SHA and `latest`.
-- Web/admin deploy tasks rebuild with `VITE_API_URL` from Terraform `api_url` and `VITE_CLERK_PUBLISHABLE_KEY` from the environment secret (locally: env or `apps/web/.env.local`).
+- Web/admin deploy tasks rebuild with `VITE_API_URL` from Terraform `api_url` and `VITE_CLERK_PUBLISHABLE_KEY` from the **GitHub Environment variable** of the same name (locally: `apps/web/.env.local` / `apps/admin/.env.local`). Web and admin share one Clerk app, so they share one publishable key. Production Vite builds fail if it is unset. Clerk **secret** keys stay in SSM.
 - `terraform apply` uses the exact plan artifact from the matching `plan` job (`tfplan-<env>`).
 - Overlapping runs on the same ref + env are serialized via workflow concurrency; PR runs cancel superseded builds.

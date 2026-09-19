@@ -348,9 +348,14 @@ tasks:
   web:deploy:
     desc: Build against the deployed API, sync dist to S3, and invalidate CloudFront ({{.ENV}})
     cmds:
-      # VITE_API_URL from Terraform; VITE_CLERK_PUBLISHABLE_KEY from env or apps/web/.env.local
+      # VITE_API_URL from Terraform; VITE_CLERK_PUBLISHABLE_KEY from the GitHub
+      # Environment variable (CI) or apps/web/.env.local (local Vite loadEnv).
       - |
         set -euo pipefail
+        if [[ -n "${GITHUB_ACTIONS:-}" && -z "${VITE_CLERK_PUBLISHABLE_KEY:-}" ]]; then
+          echo "VITE_CLERK_PUBLISHABLE_KEY is required in CI. Add it as a GitHub Environment variable on '{{.ENV}}'." >&2
+          exit 1
+        fi
         VITE_API_URL=$(terraform -chdir={{.TF_DIR}} output -raw api_url)
         echo "Building web against $VITE_API_URL (env={{.ENV}})"
         VITE_API_URL="$VITE_API_URL" npm run build:web
@@ -362,6 +367,10 @@ tasks:
     cmds:
       - |
         set -euo pipefail
+        if [[ -n "${GITHUB_ACTIONS:-}" && -z "${VITE_CLERK_PUBLISHABLE_KEY:-}" ]]; then
+          echo "VITE_CLERK_PUBLISHABLE_KEY is required in CI. Add it as a GitHub Environment variable on '{{.ENV}}'." >&2
+          exit 1
+        fi
         VITE_API_URL=$(terraform -chdir={{.TF_DIR}} output -raw api_url)
         echo "Building admin against $VITE_API_URL (env={{.ENV}})"
         VITE_API_URL="$VITE_API_URL" npm run build:admin
