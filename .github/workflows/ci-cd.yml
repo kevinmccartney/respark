@@ -64,7 +64,7 @@ jobs:
           echo "Resolved ENV=${ENV} deploy=${DEPLOY} force=${FORCE}"
 
   format:
-    name: Format check
+    name: Format & lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -88,6 +88,9 @@ jobs:
 
       - name: Check formatting (task format:check)
         run: task format:check
+
+      - name: Lint (task lint)
+        run: task lint
 
   changes:
     name: Detect changes

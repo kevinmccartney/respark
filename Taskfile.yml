@@ -60,6 +60,23 @@ tasks:
     cmds:
       - terraform fmt -check -recursive infra/
 
+  lint:
+    desc: Run ESLint + terraform validate
+    deps:
+      - lint:eslint
+      - infra:validate
+
+  lint:eslint:
+    desc: Lint JS/TS with ESLint
+    cmds:
+      - npm run eslint
+
+  precommit:
+    desc: Format staged files, ESLint on staged files, terraform validate (husky)
+    cmds:
+      - task: format:staged
+      - task: infra:validate
+
   build:
     desc: Production build etl, API, web, and admin
     deps:
@@ -272,12 +289,18 @@ tasks:
     cmds:
       - terraform init -input=false
 
+  infra:validate:
+    desc: Terraform validate for {{.ENV}} (local init, no remote backend — safe for hooks/CI without AWS)
+    dir: '{{.TF_DIR}}'
+    cmds:
+      - terraform init -backend=false -input=false
+      - terraform validate
+
   infra:plan:
-    desc: Terraform validate + plan for {{.ENV}} (writes {{.TF_PLAN_FILE}}; fmt is via format:check)
+    desc: Terraform plan for {{.ENV}} (writes {{.TF_PLAN_FILE}}; fmt/validate via format:check + infra:validate)
     dir: '{{.TF_DIR}}'
     cmds:
       - terraform init -input=false
-      - terraform validate
       - terraform plan -input=false -out={{.TF_PLAN_FILE}}
 
   infra:apply:

@@ -74,7 +74,11 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 | `task install`          | Install JS deps (`npm ci`)                                           |
 | `task format`           | Write Prettier + `terraform fmt`                                     |
 | `task format:check`     | Check formatting (CI); does not write                                |
-| `task format:staged`    | Format staged files only (husky pre-commit)                          |
+| `task format:staged`    | Format + ESLint staged files (lint-staged)                           |
+| `task lint`             | ESLint + `terraform validate`                                        |
+| `task lint:eslint`      | ESLint only                                                          |
+| `task infra:validate`   | `terraform validate` for `$ENV` (no remote backend)                  |
+| `task precommit`        | Husky hook: staged format/lint + infra validate                      |
 | `task build`            | Production build etl, API, web, and admin                            |
 | `task etl:build`        | Compile the ETL CLI                                                  |
 | `task web:build`        | Production build of the web app                                      |

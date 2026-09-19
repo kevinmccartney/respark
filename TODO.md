@@ -5,7 +5,7 @@ Writing down ideas for the future
 ## Repo
 
 - ~~Auto formatting rules~~
-- Linting
+- ~~Linting~~
 - Custom LLM instructions
 - ~~Pipeline~~
 - Arch diagrams and mermaid data ERDs

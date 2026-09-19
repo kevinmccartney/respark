@@ -1,3 +1,8 @@
 {
-  "recommendations": ["esbenp.prettier-vscode", "hashicorp.terraform", "task.vscode-task"]
+  "recommendations": [
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "hashicorp.terraform",
+    "task.vscode-task"
+  ]
 }

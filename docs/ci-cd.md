@@ -6,15 +6,16 @@ Orchestration lives in [`Taskfile.yml`](../Taskfile.yml). The workflow only wire
 
 Workflow file: [`.github/workflows/ci-cd.yml`](../.github/workflows/ci-cd.yml).
 
-## Formatting
+## Formatting & lint
 
-| Goal         | Local                                                                  | CI / git                 |
-| ------------ | ---------------------------------------------------------------------- | ------------------------ |
-| Write format | `task format`                                                          | —                        |
-| Check format | `task format:check`                                                    | `format` job always runs |
-| On commit    | husky → `task format:staged` (lint-staged: Prettier + `terraform fmt`) | —                        |
+| Goal                 | Local                                                                                         | CI / git                   |
+| -------------------- | --------------------------------------------------------------------------------------------- | -------------------------- |
+| Write format         | `task format`                                                                                 | —                          |
+| Check format         | `task format:check`                                                                           | `format` job               |
+| ESLint + TF validate | `task lint`                                                                                   | `format` job (`task lint`) |
+| On commit            | husky → `task precommit` (lint-staged Prettier/ESLint/`terraform fmt`, then `infra:validate`) | —                          |
 
-Prettier covers JS/TS/JSON/MD/YAML/CSS; Terraform uses `terraform fmt` under `infra/`.
+Prettier covers JS/TS/JSON/MD/YAML/CSS; ESLint covers apps; Terraform uses `terraform fmt` + `terraform validate` under `infra/`.
 
 ## Triggers
 
@@ -50,6 +51,7 @@ Production deploys are intentional: use **Actions → CI / CD → Run workflow**
 | ------------------ | --------------------------------------- | ------------------------------------------------ |
 | Format (write)     | `task format`                           | —                                                |
 | Format (check)     | `task format:check`                     | `format` job                                     |
+| Lint               | `task lint`                             | `format` job                                     |
 | Build apps         | `task build`                            | conditional `task *:build`                       |
 | Plan               | `task infra:plan ENV=develop`           | same                                             |
 | Apply              | `task infra:apply ENV=develop`          | same (applies uploaded `tfplan`)                 |
