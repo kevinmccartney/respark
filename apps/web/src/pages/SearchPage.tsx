@@ -1,6 +1,6 @@
 import { useAuth } from '@clerk/react'
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -206,27 +206,32 @@ export function SearchPage() {
             </div>
             <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {cards.map((card) => (
-                <li key={card.id} className="flex flex-col gap-2 text-left">
-                  <div className="aspect-5/7 overflow-hidden rounded-md bg-muted">
-                    {card.imageNormal ? (
-                      <img
-                        src={card.imageNormal}
-                        alt={card.name}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center p-3 text-center text-sm text-muted-foreground">
-                        No image
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate font-medium leading-tight">{card.name}</p>
-                    {card.typeLine ? (
-                      <p className="truncate text-sm text-muted-foreground">{card.typeLine}</p>
-                    ) : null}
-                  </div>
+                <li key={card.id}>
+                  <Link
+                    to={`/cards/${card.id}`}
+                    className="flex flex-col gap-2 text-left transition-opacity hover:opacity-90"
+                  >
+                    <div className="aspect-5/7 overflow-hidden rounded-md bg-muted">
+                      {card.imageNormal ? (
+                        <img
+                          src={card.imageNormal}
+                          alt={card.name}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center p-3 text-center text-sm text-muted-foreground">
+                          No image
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium leading-tight">{card.name}</p>
+                      {card.typeLine ? (
+                        <p className="truncate text-sm text-muted-foreground">{card.typeLine}</p>
+                      ) : null}
+                    </div>
+                  </Link>
                 </li>
               ))}
             </ul>

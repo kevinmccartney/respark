@@ -1,8 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common'
+import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { sql, type SQL } from 'drizzle-orm'
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino'
 import { DATABASE, type Database } from '../db/database.module'
-import type { CardSearchPage, CardSearchResult } from './card.types'
+import type {
+  CardDetail,
+  CardPrintingSummary,
+  CardSearchPage,
+  CardSearchResult,
+} from './card.types'
 
 const DEFAULT_LIMIT = 60
 const MAX_LIMIT = 100
@@ -19,6 +24,37 @@ type SearchRow = {
 
 type CountRow = {
   total: string | number
+}
+
+type CardDetailRow = {
+  id: string
+  oracle_id: string
+  name: string
+  mana_cost: string | null
+  mana_value: string | null
+  type_line: string | null
+  oracle_text: string | null
+  colors: string[] | null
+  color_identity: string[] | null
+  keywords: string[] | null
+  layout: string | null
+  reserved: boolean | null
+}
+
+type PrintingDetailRow = {
+  id: string
+  scryfall_id: string
+  collector_number: string
+  language: string | null
+  rarity: string | null
+  artist: string | null
+  released_at: string | null
+  set_code: string
+  set_name: string
+  image_normal: string | null
+  image_large: string | null
+  face_image_normal: string | null
+  face_image_large: string | null
 }
 
 @Injectable()
@@ -111,6 +147,82 @@ export class CardsService {
 
     return { cards, total, page, pageSize, totalPages }
   }
+
+  async getById(id: string): Promise<CardDetail> {
+    const cardResult = await this.db.execute<CardDetailRow>(sql`
+      SELECT
+        c.id,
+        c.oracle_id,
+        c.name,
+        c.mana_cost,
+        c.mana_value::text AS mana_value,
+        c.type_line,
+        c.oracle_text,
+        c.colors,
+        c.color_identity,
+        c.keywords,
+        c.layout,
+        c.reserved
+      FROM catalog.card c
+      WHERE c.id = ${id}::uuid
+      LIMIT 1
+    `)
+
+    const cardRow = cardResult.rows[0]
+    if (!cardRow) {
+      throw new NotFoundException('Card not found')
+    }
+
+    const printingResult = await this.db.execute<PrintingDetailRow>(sql`
+      SELECT
+        p.id,
+        p.scryfall_id,
+        p.collector_number,
+        p.language,
+        p.rarity,
+        p.artist,
+        p.released_at::text AS released_at,
+        s.code AS set_code,
+        s.name AS set_name,
+        p.image_normal,
+        p.image_large,
+        f.image_normal AS face_image_normal,
+        f.image_large AS face_image_large
+      FROM catalog.printing p
+      JOIN catalog.set s ON s.id = p.set_id
+      LEFT JOIN catalog.card_face f
+        ON f.printing_id = p.id AND f.face_index = 0
+      WHERE p.card_id = ${id}::uuid
+      ORDER BY p.released_at DESC NULLS LAST, s.code ASC, p.collector_number ASC
+    `)
+
+    const printings = printingResult.rows.map(toPrinting)
+
+    this.logger.info(
+      {
+        event: 'cards.get',
+        cardId: id,
+        printingCount: printings.length,
+      },
+      'Fetched card detail',
+    )
+
+    return {
+      id: cardRow.id,
+      oracleId: cardRow.oracle_id,
+      name: cardRow.name,
+      manaCost: cardRow.mana_cost,
+      manaValue: cardRow.mana_value,
+      typeLine: cardRow.type_line,
+      oracleText: cardRow.oracle_text,
+      colors: cardRow.colors,
+      colorIdentity: cardRow.color_identity,
+      keywords: cardRow.keywords,
+      layout: cardRow.layout,
+      reserved: cardRow.reserved,
+      printings,
+    }
+  }
 }
 
 function matchSql(pattern: string | null): SQL {
@@ -160,5 +272,21 @@ function toCard(row: SearchRow): CardSearchResult {
     typeLine: row.type_line,
     oracleText: row.oracle_text,
     imageNormal: row.image_normal,
+  }
+}
+
+function toPrinting(row: PrintingDetailRow): CardPrintingSummary {
+  return {
+    id: row.id,
+    scryfallId: row.scryfall_id,
+    collectorNumber: row.collector_number,
+    language: row.language,
+    rarity: row.rarity,
+    artist: row.artist,
+    releasedAt: row.released_at,
+    setCode: row.set_code,
+    setName: row.set_name,
+    imageNormal: row.image_normal ?? row.face_image_normal,
+    imageLarge: row.image_large ?? row.face_image_large ?? row.image_normal ?? row.face_image_normal,
   }
 }
