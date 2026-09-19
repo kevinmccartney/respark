@@ -1,7 +1,16 @@
-import { index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import type { Column } from 'drizzle-orm'
+import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder'
+import { index, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { appSchema } from './pipeline-schemas'
 import { users } from './users'
 
-export const decks = pgTable(
+// Keep these in scope so `declaration: true` can name inferred table types.
+type _DrizzlePortableColumn = Column
+type _DrizzlePortableColumnBuilder = ColumnBuilderExtraConfig
+export type { _DrizzlePortableColumn as _DecksPortableColumn }
+export type { _DrizzlePortableColumnBuilder as _DecksPortableColumnBuilder }
+
+export const decks = appSchema.table(
   'decks',
   {
     id: uuid('id').primaryKey().defaultRandom(),

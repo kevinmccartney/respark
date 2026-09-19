@@ -139,38 +139,6 @@ program
     await runSyncCommand(opts)
   })
 
-// Deprecated aliases — keep for one release
-program
-  .command('scryfall')
-  .description('[deprecated] Alias for: sync --catalog')
-  .action(async () => {
-    await runSyncCommand({ catalog: true })
-  })
-
-program
-  .command('mtgjson')
-  .description('[deprecated] Alias for: sync --enrichment identifiers')
-  .option(
-    '--demo-mismatches',
-    'Skip download; inject synthetic unmatched + ambiguous cases for local review',
-    false,
-  )
-  .action(async (opts: { demoMismatches?: boolean }) => {
-    await runSyncCommand({
-      enrichment: 'identifiers',
-      demoMismatches: opts.demoMismatches,
-    })
-  })
-
-program
-  .command('full')
-  .description(
-    '[deprecated] Alias for: sync --catalog --enrichment identifiers',
-  )
-  .action(async () => {
-    await runSyncCommand({ catalog: true, enrichment: 'identifiers' })
-  })
-
 program
   .command('report')
   .description(

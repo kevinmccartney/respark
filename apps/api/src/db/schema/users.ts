@@ -1,4 +1,13 @@
-import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import type { Column } from 'drizzle-orm'
+import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder'
+import { text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { appSchema } from './pipeline-schemas'
+
+// Keep these in scope so `declaration: true` can name inferred table types.
+type _DrizzlePortableColumn = Column
+type _DrizzlePortableColumnBuilder = ColumnBuilderExtraConfig
+export type { _DrizzlePortableColumn as _UsersPortableColumn }
+export type { _DrizzlePortableColumnBuilder as _UsersPortableColumnBuilder }
 
 /**
  * Local identity for a Clerk user. Clerk owns authentication; this row owns the
@@ -7,7 +16,7 @@ import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
  * Profile columns are a cache of Clerk's copy, kept fresh by the user.* webhooks.
  * Treat Clerk as the source of truth and never write them from app code.
  */
-export const users = pgTable('users', {
+export const users = appSchema.table('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   clerkUserId: text('clerk_user_id').notNull().unique(),
 

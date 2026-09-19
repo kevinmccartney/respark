@@ -1,8 +1,8 @@
 import { pgSchema } from 'drizzle-orm/pg-core'
 
 /**
- * Named schemas for the MTG data pipeline. Tables land here in later phases.
- * `app` will eventually hold users/decks (still in public for now).
+ * Named Postgres schemas. Pipeline tables live in raw/catalog/market/ops;
+ * app-owned domain tables (users, decks, …) live in `app`.
  * CREATE SCHEMA statements live in the Drizzle SQL migration.
  */
 export const rawSchema = pgSchema('raw')

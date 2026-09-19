@@ -13,5 +13,8 @@
     "build:api": "npm run build -w api",
     "build:admin": "npm run build -w admin",
     "preview": "npm run preview -w web"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.17.0"
   }
 }

@@ -26,8 +26,9 @@ respark/
 ├── apps/
 │   ├── admin/                  # Admin ops dashboard (Vite + Clerk)
 │   ├── api/                    # NestJS API
-│   ├── etl/                    # MTG data pipeline CLI
+│   ├── etl/                    # MTG data pipeline (lib + CLI)
 │   └── web/                    # React web app (Vite)
+├── docs/                       # Product / pipeline documentation
 ├── infra/
 │   ├── envs/develop/           # Terraform root (develop)
 │   └── modules/ui/             # S3 + CloudFront + HTTPS UI module
@@ -85,7 +86,7 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 | `task deploy`           | Apply Terraform, then deploy API + web + admin                    |
 | `task db:up`            | Start local Postgres only                                         |
 | `task db:migrate`       | Apply Drizzle migrations                                          |
-| `task etl -- <cmd>`     | MTG ETL CLI (`scryfall --limit 1000`, `ping`, …) — see `apps/etl` |
+| `task etl -- <cmd>`     | MTG ETL CLI — see [`docs/etl/operations.md`](docs/etl/operations.md) |
 | `task db:tunnel`        | SSM tunnel to develop RDS (`localhost:15432`)                     |
 | `task db:url`           | Print develop `DATABASE_URL` from SSM (has password)              |
 | `task api:secrets:push` | Push `CLERK_SECRET_KEY` to SSM Parameter Store                    |

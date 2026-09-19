@@ -90,6 +90,22 @@ tasks:
     cmds:
       - npm run build -w etl
 
+  docs:diagrams:
+    desc: Render docs/**/*.mmd Mermaid sources to sibling .svg files
+    cmds:
+      - |
+        set -euo pipefail
+        count=0
+        for src in $(find docs -type f -name '*.mmd' | sort); do
+          out="${src%.mmd}.svg"
+          echo "mmdc $src → $out"
+          npx --no-install mmdc -i "$src" -o "$out" -b transparent -t dark
+          count=$((count + 1))
+        done
+        if [ "$count" -eq 0 ]; then
+          echo "No .mmd files under docs/"
+        fi
+
   db:tunnel:
     desc: SSM port-forward localhost:15432 to develop RDS via the API EC2 instance
     env:

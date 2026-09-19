@@ -1,0 +1,13 @@
+flowchart LR
+  AdminUI["Admin UI<br/>list / detail"]
+  NestAPI["Nest API<br/>AdminEtlService"]
+  EtlLib["etl lib<br/>apps/etl"]
+  OpsDB[("ops.etl_sync<br/>ops.etl_job_run")]
+  DataDB[("raw.* + catalog.*")]
+
+  AdminUI -->|"POST /admin/etl-syncs"| NestAPI
+  NestAPI -->|"WebSocket events"| AdminUI
+  NestAPI -->|"runEtlSync(pool, opts, onEvent)"| EtlLib
+  EtlLib --> OpsDB
+  EtlLib --> DataDB
+  EtlLib -->|"onEvent"| NestAPI
