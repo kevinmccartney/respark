@@ -1,21 +1,12 @@
-import { useAuth } from "@clerk/react";
-import { useEffect, useMemo, useState } from "react";
-import {
-  Link,
-  useLocation,
-  useParams,
-  useSearchParams,
-} from "react-router-dom";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { SiteHeader } from "../components/SiteHeader.tsx";
-import { ApiError } from "../lib/api.ts";
-import {
-  fetchCard,
-  type CardDetail,
-  type CardPrintingSummary,
-} from "../lib/cards.ts";
+import { useAuth } from '@clerk/react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { SiteHeader } from '../components/SiteHeader.tsx';
+import { ApiError } from '../lib/api.ts';
+import { fetchCard, type CardDetail, type CardPrintingSummary } from '../lib/cards.ts';
 
 type CardDetailLocationState = {
   fromSearch?: string;
@@ -24,23 +15,23 @@ type CardDetailLocationState = {
 function searchBackPath(state: unknown): string {
   if (
     state &&
-    typeof state === "object" &&
-    "fromSearch" in state &&
-    typeof (state as CardDetailLocationState).fromSearch === "string" &&
-    (state as CardDetailLocationState).fromSearch!.startsWith("/search")
+    typeof state === 'object' &&
+    'fromSearch' in state &&
+    typeof (state as CardDetailLocationState).fromSearch === 'string' &&
+    (state as CardDetailLocationState).fromSearch!.startsWith('/search')
   ) {
     return (state as CardDetailLocationState).fromSearch!;
   }
-  return "/search";
+  return '/search';
 }
 
 export function CardDetailPage() {
-  const { id = "" } = useParams<{ id: string }>();
+  const { id = '' } = useParams<{ id: string }>();
   const location = useLocation();
   const backToSearch = searchBackPath(location.state);
   const { getToken } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const printingParam = searchParams.get("printing");
+  const printingParam = searchParams.get('printing');
 
   const [card, setCard] = useState<CardDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +50,7 @@ export function CardDetailPage() {
         setCard(detail);
       } catch (err) {
         if (controller.signal.aborted) return;
-        setError(err instanceof ApiError ? err.message : "Could not load card");
+        setError(err instanceof ApiError ? err.message : 'Could not load card');
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -71,32 +62,25 @@ export function CardDetailPage() {
 
   const selectedPrinting = useMemo(() => {
     if (!card || card.printings.length === 0) return null;
-    return (
-      card.printings.find((p) => p.id === printingParam) ?? card.printings[0]
-    );
+    return card.printings.find((p) => p.id === printingParam) ?? card.printings[0];
   }, [card, printingParam]);
 
   function selectPrinting(printing: CardPrintingSummary) {
     const next = new URLSearchParams(searchParams);
     // Default printing is the first (newest); omit param when selected.
-    if (card && printing.id === card.printings[0]?.id) next.delete("printing");
-    else next.set("printing", printing.id);
+    if (card && printing.id === card.printings[0]?.id) next.delete('printing');
+    else next.set('printing', printing.id);
     setSearchParams(next, { replace: true });
   }
 
-  const imageSrc =
-    selectedPrinting?.imageLarge ?? selectedPrinting?.imageNormal ?? null;
+  const imageSrc = selectedPrinting?.imageLarge ?? selectedPrinting?.imageNormal ?? null;
 
   return (
     <>
       <SiteHeader />
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-8 text-left">
         <div>
-          <Button
-            variant="outline"
-            size="sm"
-            render={<Link to={backToSearch} />}
-          >
+          <Button variant="outline" size="sm" render={<Link to={backToSearch} />}>
             Back to search
           </Button>
         </div>
@@ -118,11 +102,7 @@ export function CardDetailPage() {
             <div className="grid gap-8 md:grid-cols-[minmax(0,280px)_1fr]">
               <div className="overflow-hidden rounded-md bg-muted">
                 {imageSrc ? (
-                  <img
-                    src={imageSrc}
-                    alt={card.name}
-                    className="h-auto w-full"
-                  />
+                  <img src={imageSrc} alt={card.name} className="h-auto w-full" />
                 ) : (
                   <div className="flex aspect-5/7 items-center justify-center p-6 text-sm text-muted-foreground">
                     No image
@@ -133,60 +113,40 @@ export function CardDetailPage() {
               <div className="space-y-4">
                 <header className="space-y-1">
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <h1 className="font-heading text-3xl tracking-tight">
-                      {card.name}
-                    </h1>
+                    <h1 className="font-heading text-3xl tracking-tight">{card.name}</h1>
                     {card.manaCost ? (
                       <span className="font-mono text-lg text-muted-foreground">
                         {card.manaCost}
                       </span>
                     ) : null}
                   </div>
-                  {card.typeLine ? (
-                    <p className="text-muted-foreground">{card.typeLine}</p>
-                  ) : null}
+                  {card.typeLine ? <p className="text-muted-foreground">{card.typeLine}</p> : null}
                 </header>
 
                 {card.oracleText ? (
-                  <p className="whitespace-pre-wrap leading-relaxed">
-                    {card.oracleText}
-                  </p>
+                  <p className="whitespace-pre-wrap leading-relaxed">{card.oracleText}</p>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No oracle text.
-                  </p>
+                  <p className="text-sm text-muted-foreground">No oracle text.</p>
                 )}
 
                 <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
                   <Meta label="Layout" value={card.layout} />
                   <Meta
                     label="Colors"
-                    value={card.colors?.length ? card.colors.join(", ") : null}
+                    value={card.colors?.length ? card.colors.join(', ') : null}
                   />
                   <Meta
                     label="Color identity"
-                    value={
-                      card.colorIdentity?.length
-                        ? card.colorIdentity.join(", ")
-                        : null
-                    }
+                    value={card.colorIdentity?.length ? card.colorIdentity.join(', ') : null}
                   />
                   <Meta
                     label="Keywords"
-                    value={
-                      card.keywords?.length ? card.keywords.join(", ") : null
-                    }
+                    value={card.keywords?.length ? card.keywords.join(', ') : null}
                   />
                   <Meta label="Mana value" value={card.manaValue} />
                   <Meta
                     label="Reserved"
-                    value={
-                      card.reserved === null
-                        ? null
-                        : card.reserved
-                          ? "Yes"
-                          : "No"
-                    }
+                    value={card.reserved === null ? null : card.reserved ? 'Yes' : 'No'}
                   />
                 </dl>
 
@@ -195,9 +155,7 @@ export function CardDetailPage() {
                     <p>
                       {selectedPrinting.setName} ({selectedPrinting.setCode}) #
                       {selectedPrinting.collectorNumber}
-                      {selectedPrinting.rarity
-                        ? ` · ${selectedPrinting.rarity}`
-                        : ""}
+                      {selectedPrinting.rarity ? ` · ${selectedPrinting.rarity}` : ''}
                     </p>
                     {selectedPrinting.artist ? (
                       <p>Illustrated by {selectedPrinting.artist}</p>
@@ -215,9 +173,7 @@ export function CardDetailPage() {
                 <Badge variant="secondary">{card.printings.length}</Badge>
               </div>
               {card.printings.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No printings found.
-                </p>
+                <p className="text-sm text-muted-foreground">No printings found.</p>
               ) : (
                 <ul className="divide-y rounded-md border">
                   {card.printings.map((printing) => {
@@ -228,7 +184,7 @@ export function CardDetailPage() {
                           type="button"
                           onClick={() => selectPrinting(printing)}
                           className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60 ${
-                            active ? "bg-muted" : ""
+                            active ? 'bg-muted' : ''
                           }`}
                         >
                           <div className="size-10 shrink-0 overflow-hidden rounded bg-muted">
@@ -243,17 +199,15 @@ export function CardDetailPage() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate font-medium">
-                              {printing.setName}{" "}
+                              {printing.setName}{' '}
                               <span className="font-normal text-muted-foreground">
                                 ({printing.setCode})
                               </span>
                             </p>
                             <p className="truncate text-muted-foreground">
                               #{printing.collectorNumber}
-                              {printing.rarity ? ` · ${printing.rarity}` : ""}
-                              {printing.releasedAt
-                                ? ` · ${printing.releasedAt}`
-                                : ""}
+                              {printing.rarity ? ` · ${printing.rarity}` : ''}
+                              {printing.releasedAt ? ` · ${printing.releasedAt}` : ''}
                             </p>
                           </div>
                         </button>
@@ -270,13 +224,7 @@ export function CardDetailPage() {
   );
 }
 
-function Meta({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | null | undefined;
-}) {
+function Meta({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value) return null;
   return (
     <>

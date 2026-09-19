@@ -1,15 +1,12 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-import type { Pool } from "pg";
-import type { Logger } from "../core/logger";
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import type { Pool } from 'pg';
+import type { Logger } from '../core/logger';
 
-const PIPELINE_SCHEMAS = ["raw", "catalog", "market", "ops", "app"] as const;
+const PIPELINE_SCHEMAS = ['raw', 'catalog', 'market', 'ops', 'app'] as const;
 
-const repoRoot = resolve(__dirname, "../../../..");
-export const DEFAULT_REPORT_PATH = resolve(
-  repoRoot,
-  "reports/etl-size-report.json",
-);
+const repoRoot = resolve(__dirname, '../../../..');
+export const DEFAULT_REPORT_PATH = resolve(repoRoot, 'reports/etl-size-report.json');
 
 export type SizeReport = {
   generatedAt: string;
@@ -24,7 +21,7 @@ export type SizeReport = {
     totalBytes: number;
     pretty: string;
   }>;
-  largestTables: SizeReport["tables"];
+  largestTables: SizeReport['tables'];
   latestRuns: Array<{
     id: string;
     source: string;
@@ -43,7 +40,7 @@ export type SizeReport = {
 
 function prettyBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
-  const units = ["KB", "MB", "GB", "TB"];
+  const units = ['KB', 'MB', 'GB', 'TB'];
   let value = bytes;
   let unit = -1;
   do {
@@ -71,7 +68,7 @@ export async function collectSizeReport(pool: Pool): Promise<SizeReport> {
     [PIPELINE_SCHEMAS],
   );
 
-  const schemas: SizeReport["schemas"] = {};
+  const schemas: SizeReport['schemas'] = {};
   for (const name of PIPELINE_SCHEMAS) {
     const row = schemaRows.rows.find((r) => r.schema === name);
     const bytes = row ? Number(row.bytes) : 0;
@@ -120,7 +117,7 @@ export async function collectSizeReport(pool: Pool): Promise<SizeReport> {
     exactCounts.rows.map((r) => [`${r.schema}.${r.table}`, Number(r.rows)]),
   );
 
-  const tables: SizeReport["tables"] = tableRows.rows.map((r) => {
+  const tables: SizeReport['tables'] = tableRows.rows.map((r) => {
     const dataBytes = Number(r.data_bytes);
     const indexBytes = Number(r.index_bytes);
     const totalBytes = Number(r.total_bytes);
@@ -202,11 +199,11 @@ export async function writeSizeReport(
 ): Promise<SizeReport> {
   const report = await collectSizeReport(pool);
   await mkdir(dirname(outPath), { recursive: true });
-  await writeFile(outPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  await writeFile(outPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 
   logger.info(
     {
-      event: "etl.report",
+      event: 'etl.report',
       path: outPath,
       databaseBytes: report.database.bytes,
       databasePretty: report.database.pretty,

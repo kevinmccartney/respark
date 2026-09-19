@@ -1,9 +1,9 @@
-import { useAuth } from '@clerk/react'
-import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { useAuth } from '@clerk/react';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -11,11 +11,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { ApiError } from '../lib/api.ts'
-import { connectEtlSyncWs } from '../lib/etl-ws.ts'
-import { formatDuration, formatTimestamp, statusBadgeProps } from '../lib/format.ts'
-import type { SyncEvent } from '../lib/sync-events.ts'
+} from '@/components/ui/table';
+import { ApiError } from '../lib/api.ts';
+import { connectEtlSyncWs } from '../lib/etl-ws.ts';
+import { formatDuration, formatTimestamp, statusBadgeProps } from '../lib/format.ts';
+import type { SyncEvent } from '../lib/sync-events.ts';
 import {
   fetchEtlSyncs,
   isForbidden,
@@ -23,65 +23,63 @@ import {
   syncDurationMs,
   syncStagesLabel,
   type EtlSync,
-} from '../lib/syncs.ts'
+} from '../lib/syncs.ts';
 
 export function SyncsListPage() {
-  const { getToken } = useAuth()
-  const navigate = useNavigate()
-  const [syncs, setSyncs] = useState<EtlSync[]>([])
+  const { getToken } = useAuth();
+  const navigate = useNavigate();
+  const [syncs, setSyncs] = useState<EtlSync[]>([]);
   const [progressBySync, setProgressBySync] = useState<
     Record<string, { percent: number | null; job: string }>
-  >({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [forbidden, setForbidden] = useState(false)
-  const [includeCatalog, setIncludeCatalog] = useState(true)
-  const [includeEnrichment, setIncludeEnrichment] = useState(false)
-  const [starting, setStarting] = useState(false)
-  const [startMessage, setStartMessage] = useState<string | null>(null)
-  const [live, setLive] = useState(false)
+  >({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
+  const [includeCatalog, setIncludeCatalog] = useState(true);
+  const [includeEnrichment, setIncludeEnrichment] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [startMessage, setStartMessage] = useState<string | null>(null);
+  const [live, setLive] = useState(false);
 
-  const enrichmentOnly = includeEnrichment && !includeCatalog
+  const enrichmentOnly = includeEnrichment && !includeCatalog;
 
   const loadSyncs = useCallback(
     async (signal?: AbortSignal) => {
-      setLoading(true)
-      setError(null)
-      setForbidden(false)
+      setLoading(true);
+      setError(null);
+      setForbidden(false);
       try {
-        const list = await fetchEtlSyncs(getToken, { limit: 100 })
-        if (!signal?.aborted) setSyncs(list)
+        const list = await fetchEtlSyncs(getToken, { limit: 100 });
+        if (!signal?.aborted) setSyncs(list);
       } catch (err) {
-        if (signal?.aborted) return
+        if (signal?.aborted) return;
         if (isForbidden(err)) {
-          setForbidden(true)
-          setError(
-            'Your account is not an admin. Set publicMetadata.role to "admin" in Clerk.',
-          )
+          setForbidden(true);
+          setError('Your account is not an admin. Set publicMetadata.role to "admin" in Clerk.');
         } else if (err instanceof ApiError) {
-          setError(err.message)
+          setError(err.message);
         } else {
-          setError('Could not load ETL syncs')
+          setError('Could not load ETL syncs');
         }
       } finally {
-        if (!signal?.aborted) setLoading(false)
+        if (!signal?.aborted) setLoading(false);
       }
     },
     [getToken],
-  )
+  );
 
   useEffect(() => {
-    const controller = new AbortController()
-    void loadSyncs(controller.signal)
-    return () => controller.abort()
-  }, [loadSyncs])
+    const controller = new AbortController();
+    void loadSyncs(controller.signal);
+    return () => controller.abort();
+  }, [loadSyncs]);
 
   useEffect(() => {
-    if (forbidden) return
+    if (forbidden) return;
 
     const applyEvent = (event: SyncEvent) => {
       if (event.type === 'sync.started') {
-        const s = event.sync
+        const s = event.sync;
         setSyncs((prev) => {
           if (prev.some((x) => x.id === s.id)) {
             return prev.map((x) =>
@@ -97,7 +95,7 @@ export function SyncsListPage() {
                     errorMessage: s.errorMessage,
                   }
                 : x,
-            )
+            );
           }
           const row: EtlSync = {
             id: s.id,
@@ -110,10 +108,10 @@ export function SyncsListPage() {
             errorMessage: s.errorMessage,
             createdAt: s.startedAt,
             stages: [],
-          }
-          return [row, ...prev].slice(0, 100)
-        })
-        return
+          };
+          return [row, ...prev].slice(0, 100);
+        });
+        return;
       }
 
       if (event.type === 'sync.updated' || event.type === 'sync.completed') {
@@ -128,15 +126,15 @@ export function SyncsListPage() {
                 }
               : x,
           ),
-        )
+        );
         if (event.type === 'sync.completed') {
           setProgressBySync((prev) => {
-            const next = { ...prev }
-            delete next[event.syncId]
-            return next
-          })
+            const next = { ...prev };
+            delete next[event.syncId];
+            return next;
+          });
         }
-        return
+        return;
       }
 
       if (event.type === 'job.progress') {
@@ -146,40 +144,40 @@ export function SyncsListPage() {
             percent: event.progress.percent,
             job: event.job,
           },
-        }))
+        }));
       }
-    }
+    };
 
     const ws = connectEtlSyncWs(getToken, {
       onOpen: () => {
-        setLive(true)
-        ws.subscribeList()
+        setLive(true);
+        ws.subscribeList();
       },
       onClose: () => setLive(false),
       onEvent: applyEvent,
-    })
+    });
 
-    return () => ws.close()
-  }, [getToken, forbidden])
+    return () => ws.close();
+  }, [getToken, forbidden]);
 
   async function onStartSync() {
     if (!includeCatalog && !includeEnrichment) {
-      setStartMessage('Select Catalog and/or Enrichment')
-      return
+      setStartMessage('Select Catalog and/or Enrichment');
+      return;
     }
-    setStarting(true)
-    setStartMessage(null)
+    setStarting(true);
+    setStartMessage(null);
     try {
       await startEtlSync(getToken, {
         catalog: includeCatalog,
         enrichmentJobs: includeEnrichment ? ['identifiers'] : [],
-      })
-      setStartMessage('Sync started — live updates will appear below.')
+      });
+      setStartMessage('Sync started — live updates will appear below.');
     } catch (err) {
-      if (err instanceof ApiError) setStartMessage(err.message)
-      else setStartMessage('Could not start ETL sync')
+      if (err instanceof ApiError) setStartMessage(err.message);
+      else setStartMessage('Could not start ETL sync');
     } finally {
-      setStarting(false)
+      setStarting(false);
     }
   }
 
@@ -190,16 +188,14 @@ export function SyncsListPage() {
           <h1 className="font-heading text-2xl tracking-tight">ETL syncs</h1>
           <p className="mt-1 text-muted-foreground">
             Pipeline executions (catalog + enrichment stages)
-            {live ? (
-              <span className="ml-2 text-xs text-emerald-700">· live</span>
-            ) : null}
+            {live ? <span className="ml-2 text-xs text-emerald-700">· live</span> : null}
           </p>
         </div>
         <form
           className="flex flex-col items-end gap-2"
           onSubmit={(e) => {
-            e.preventDefault()
-            void onStartSync()
+            e.preventDefault();
+            void onStartSync();
           }}
         >
           <div className="flex flex-wrap items-center gap-4">
@@ -228,8 +224,8 @@ export function SyncsListPage() {
           {enrichmentOnly ? (
             <Alert className="max-w-md">
               <AlertDescription>
-                Enrichment requires an existing catalog. Prefer running Catalog
-                first or select both.
+                Enrichment requires an existing catalog. Prefer running Catalog first or select
+                both.
               </AlertDescription>
             </Alert>
           ) : null}
@@ -266,7 +262,7 @@ export function SyncsListPage() {
               </TableHeader>
               <TableBody>
                 {syncs.map((sync) => {
-                  const prog = progressBySync[sync.id]
+                  const prog = progressBySync[sync.id];
                   return (
                     <TableRow
                       key={sync.id}
@@ -276,15 +272,13 @@ export function SyncsListPage() {
                       onClick={() => navigate(`/syncs/${sync.id}`)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          navigate(`/syncs/${sync.id}`)
+                          e.preventDefault();
+                          navigate(`/syncs/${sync.id}`);
                         }
                       }}
                     >
                       <TableCell>
-                        <Badge {...statusBadgeProps(sync.status)}>
-                          {sync.status}
-                        </Badge>
+                        <Badge {...statusBadgeProps(sync.status)}>{sync.status}</Badge>
                       </TableCell>
                       <TableCell>{syncStagesLabel(sync)}</TableCell>
                       <TableCell className="text-muted-foreground">
@@ -295,11 +289,9 @@ export function SyncsListPage() {
                           : '—'}
                       </TableCell>
                       <TableCell>{formatTimestamp(sync.startedAt)}</TableCell>
-                      <TableCell>
-                        {formatDuration(syncDurationMs(sync))}
-                      </TableCell>
+                      <TableCell>{formatDuration(syncDurationMs(sync))}</TableCell>
                     </TableRow>
-                  )
+                  );
                 })}
               </TableBody>
             </Table>
@@ -307,5 +299,5 @@ export function SyncsListPage() {
         )
       ) : null}
     </main>
-  )
+  );
 }

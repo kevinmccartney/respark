@@ -7,68 +7,65 @@
  *   SB: 1 Relic of Progenitus (EMA) 232
  */
 export type MoxfieldLine = {
-  raw: string
-  quantity: number
-  name: string
-  setCode: string
-  collectorNumber: string
-  tags: string[]
-  sideboard: boolean
-}
+  raw: string;
+  quantity: number;
+  name: string;
+  setCode: string;
+  collectorNumber: string;
+  tags: string[];
+  sideboard: boolean;
+};
 
 /** qty  name  (SET)  collector  [*tags…] */
 const MOXFIELD_LINE_RE =
-  /^(\d+)\s+(.+?)\s+\(([A-Za-z0-9]+)\)\s+(\S+)(?:\s+((?:\*[^*\s]+\*\s*)+))?\s*$/
+  /^(\d+)\s+(.+?)\s+\(([A-Za-z0-9]+)\)\s+(\S+)(?:\s+((?:\*[^*\s]+\*\s*)+))?\s*$/;
 
-type BoardSection = 'main' | 'sideboard' | 'skip'
+type BoardSection = 'main' | 'sideboard' | 'skip';
 
 export function parseMoxfieldExport(text: string): {
-  lines: MoxfieldLine[]
-  skipped: { raw: string; reason: string }[]
+  lines: MoxfieldLine[];
+  skipped: { raw: string; reason: string }[];
 } {
-  const lines: MoxfieldLine[] = []
-  const skipped: { raw: string; reason: string }[] = []
-  let section: BoardSection = 'main'
+  const lines: MoxfieldLine[] = [];
+  const skipped: { raw: string; reason: string }[] = [];
+  let section: BoardSection = 'main';
 
   for (const rawLine of text.split(/\r?\n/)) {
-    const raw = rawLine.trim()
-    if (!raw) continue
+    const raw = rawLine.trim();
+    if (!raw) continue;
 
-    const header = parseSectionHeader(raw)
+    const header = parseSectionHeader(raw);
     if (header) {
-      section = header
-      continue
+      section = header;
+      continue;
     }
 
-    let lineText = raw
-    let sideboard = section === 'sideboard'
+    let lineText = raw;
+    let sideboard = section === 'sideboard';
 
     if (/^sb:\s*/i.test(lineText)) {
-      lineText = lineText.replace(/^sb:\s*/i, '').trim()
-      sideboard = true
+      lineText = lineText.replace(/^sb:\s*/i, '').trim();
+      sideboard = true;
     }
 
     if (section === 'skip') {
-      skipped.push({ raw, reason: 'maybeboard line ignored' })
-      continue
+      skipped.push({ raw, reason: 'maybeboard line ignored' });
+      continue;
     }
 
-    const match = MOXFIELD_LINE_RE.exec(lineText)
+    const match = MOXFIELD_LINE_RE.exec(lineText);
     if (!match) {
-      skipped.push({ raw, reason: 'unrecognized line format' })
-      continue
+      skipped.push({ raw, reason: 'unrecognized line format' });
+      continue;
     }
 
-    const quantity = Number.parseInt(match[1], 10)
+    const quantity = Number.parseInt(match[1], 10);
     if (!Number.isFinite(quantity) || quantity < 1) {
-      skipped.push({ raw, reason: 'invalid quantity' })
-      continue
+      skipped.push({ raw, reason: 'invalid quantity' });
+      continue;
     }
 
-    const tags =
-      match[5]
-        ?.match(/\*[^*\s]+\*/g)
-        ?.map((tag) => tag.slice(1, -1)) ?? []
+    const tags = match[5]?.match(/\*[^*\s]+\*/g)?.map((tag) => tag.slice(1, -1)) ?? [];
 
     lines.push({
       raw,
@@ -78,17 +75,17 @@ export function parseMoxfieldExport(text: string): {
       collectorNumber: match[4],
       tags,
       sideboard,
-    })
+    });
   }
 
-  return { lines, skipped }
+  return { lines, skipped };
 }
 
 function parseSectionHeader(raw: string): BoardSection | null {
-  if (/^sideboard\s*:?\s*$/i.test(raw)) return 'sideboard'
-  if (/^(deck|mainboard|commander)\s*:?\s*$/i.test(raw)) return 'main'
-  if (/^maybeboard\s*:?\s*$/i.test(raw)) return 'skip'
-  return null
+  if (/^sideboard\s*:?\s*$/i.test(raw)) return 'sideboard';
+  if (/^(deck|mainboard|commander)\s*:?\s*$/i.test(raw)) return 'main';
+  if (/^maybeboard\s*:?\s*$/i.test(raw)) return 'skip';
+  return null;
 }
 
 /** Normalize DFC slash variants and casing for comparison. */
@@ -97,5 +94,5 @@ export function normalizeCardName(name: string): string {
     .replace(/\s*\/\/\s*/g, ' // ')
     .replace(/\s+\/\s+/g, ' // ')
     .trim()
-    .toLowerCase()
+    .toLowerCase();
 }

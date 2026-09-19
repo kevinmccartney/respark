@@ -1,7 +1,7 @@
-import { Show, SignInButton, UserButton } from '@clerk/react'
-import { Link } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import { ThemeToggle } from '@/components/ThemeToggle'
+import { Show, SignInButton, UserButton } from '@clerk/react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export function AdminHeader() {
   return (
@@ -28,5 +28,5 @@ export function AdminHeader() {
         </nav>
       </div>
     </header>
-  )
+  );
 }

@@ -1,14 +1,14 @@
-import type { PoolClient } from 'pg'
-import type { CanonicalRecord } from '../sources/scryfall/transformer'
+import type { PoolClient } from 'pg';
+import type { CanonicalRecord } from '../sources/scryfall/transformer';
 
 export type CatalogUpsertResult = {
-  inserted: number
-  updated: number
-  unchanged: number
-}
+  inserted: number;
+  updated: number;
+  unchanged: number;
+};
 
 async function upsertSet(client: PoolClient, record: CanonicalRecord): Promise<string> {
-  const s = record.set
+  const s = record.set;
   const result = await client.query<{ id: string }>(
     `insert into catalog.set as t
        (scryfall_id, code, name, set_type, released_at, digital, updated_at)
@@ -27,19 +27,19 @@ async function upsertSet(client: PoolClient, record: CanonicalRecord): Promise<s
         or t.digital is distinct from excluded.digital
      returning id`,
     [s.scryfallId, s.code, s.name, s.setType, s.releasedAt, s.digital],
-  )
+  );
 
-  if (result.rows[0]) return result.rows[0].id
+  if (result.rows[0]) return result.rows[0].id;
 
   const existing = await client.query<{ id: string }>(
     `select id from catalog.set where code = $1`,
     [s.code],
-  )
-  return existing.rows[0].id
+  );
+  return existing.rows[0].id;
 }
 
 async function upsertCard(client: PoolClient, record: CanonicalRecord): Promise<string> {
-  const c = record.card
+  const c = record.card;
   const result = await client.query<{ id: string }>(
     `insert into catalog.card as t
        (oracle_id, name, mana_cost, mana_value, type_line, oracle_text,
@@ -81,18 +81,18 @@ async function upsertCard(client: PoolClient, record: CanonicalRecord): Promise<
       c.layout,
       c.reserved,
     ],
-  )
+  );
 
-  if (result.rows[0]) return result.rows[0].id
+  if (result.rows[0]) return result.rows[0].id;
 
   const existing = await client.query<{ id: string }>(
     `select id from catalog.card where oracle_id = $1`,
     [c.oracleId],
-  )
-  return existing.rows[0].id
+  );
+  return existing.rows[0].id;
 }
 
-type PrintingWrite = { id: string; changed: boolean; inserted: boolean }
+type PrintingWrite = { id: string; changed: boolean; inserted: boolean };
 
 async function upsertPrinting(
   client: PoolClient,
@@ -100,11 +100,11 @@ async function upsertPrinting(
   setId: string,
   record: CanonicalRecord,
 ): Promise<PrintingWrite> {
-  const p = record.printing
+  const p = record.printing;
   const existing = await client.query<{ id: string }>(
     `select id from catalog.printing where scryfall_id = $1`,
     [p.scryfallId],
-  )
+  );
 
   if (!existing.rowCount) {
     const inserted = await client.query<{ id: string }>(
@@ -135,11 +135,11 @@ async function upsertPrinting(
         p.imageLarge,
         p.imagePng,
       ],
-    )
-    return { id: inserted.rows[0].id, changed: true, inserted: true }
+    );
+    return { id: inserted.rows[0].id, changed: true, inserted: true };
   }
 
-  const printingId = existing.rows[0].id
+  const printingId = existing.rows[0].id;
   const updated = await client.query<{ id: string }>(
     `update catalog.printing set
        card_id = $2,
@@ -204,13 +204,13 @@ async function upsertPrinting(
       p.imageLarge,
       p.imagePng,
     ],
-  )
+  );
 
   return {
     id: printingId,
     changed: (updated.rowCount ?? 0) > 0,
     inserted: false,
-  }
+  };
 }
 
 async function replaceFaces(
@@ -218,7 +218,7 @@ async function replaceFaces(
   printingId: string,
   record: CanonicalRecord,
 ): Promise<void> {
-  await client.query(`delete from catalog.card_face where printing_id = $1`, [printingId])
+  await client.query(`delete from catalog.card_face where printing_id = $1`, [printingId]);
   for (const face of record.faces) {
     await client.query(
       `insert into catalog.card_face
@@ -240,7 +240,7 @@ async function replaceFaces(
         face.imageNormal,
         face.imageLarge,
       ],
-    )
+    );
   }
 }
 
@@ -258,7 +258,7 @@ async function upsertIdentifiers(
          updated_at = now()
        where catalog.printing_identifier.printing_id is distinct from excluded.printing_id`,
       [printingId, id.provider, id.externalId],
-    )
+    );
   }
 }
 
@@ -269,29 +269,29 @@ export async function upsertCatalogRecord(
   client: PoolClient,
   record: CanonicalRecord,
 ): Promise<CatalogUpsertResult> {
-  const setId = await upsertSet(client, record)
-  const cardId = await upsertCard(client, record)
-  const printing = await upsertPrinting(client, cardId, setId, record)
+  const setId = await upsertSet(client, record);
+  const cardId = await upsertCard(client, record);
+  const printing = await upsertPrinting(client, cardId, setId, record);
 
   // Faces/identifiers always reconciled; cheap relative to download.
-  await replaceFaces(client, printing.id, record)
-  await upsertIdentifiers(client, printing.id, record)
+  await replaceFaces(client, printing.id, record);
+  await upsertIdentifiers(client, printing.id, record);
 
-  if (printing.inserted) return { inserted: 1, updated: 0, unchanged: 0 }
-  if (printing.changed) return { inserted: 0, updated: 1, unchanged: 0 }
-  return { inserted: 0, updated: 0, unchanged: 1 }
+  if (printing.inserted) return { inserted: 1, updated: 0, unchanged: 0 };
+  if (printing.changed) return { inserted: 0, updated: 1, unchanged: 0 };
+  return { inserted: 0, updated: 0, unchanged: 1 };
 }
 
 export async function upsertCatalogRecords(
   client: PoolClient,
   records: CanonicalRecord[],
 ): Promise<CatalogUpsertResult> {
-  const totals: CatalogUpsertResult = { inserted: 0, updated: 0, unchanged: 0 }
+  const totals: CatalogUpsertResult = { inserted: 0, updated: 0, unchanged: 0 };
   for (const record of records) {
-    const result = await upsertCatalogRecord(client, record)
-    totals.inserted += result.inserted
-    totals.updated += result.updated
-    totals.unchanged += result.unchanged
+    const result = await upsertCatalogRecord(client, record);
+    totals.inserted += result.inserted;
+    totals.updated += result.updated;
+    totals.unchanged += result.unchanged;
   }
-  return totals
+  return totals;
 }

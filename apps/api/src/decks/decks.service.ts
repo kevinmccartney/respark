@@ -1,21 +1,9 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common'
-import { and, desc, eq, sql } from 'drizzle-orm'
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino'
-import { DATABASE, type Database } from '../db/database.module'
-import {
-  cards,
-  deckCards,
-  decks,
-  DECK_FORMATS,
-  printings,
-  type DeckFormat,
-} from '../db/schema'
-import { UsersService } from '../users/users.service'
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, desc, eq, sql } from 'drizzle-orm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { DATABASE, type Database } from '../db/database.module';
+import { cards, deckCards, decks, DECK_FORMATS, printings, type DeckFormat } from '../db/schema';
+import { UsersService } from '../users/users.service';
 import type {
   CreateDeckInput,
   Deck,
@@ -23,33 +11,33 @@ import type {
   DeckDetail,
   DeckImportResult,
   UpdateDeckInput,
-} from './deck.types'
-import { normalizeCardName, parseMoxfieldExport } from './moxfield-import'
+} from './deck.types';
+import { normalizeCardName, parseMoxfieldExport } from './moxfield-import';
 
 type DeckRow = {
-  id: string
-  name: string
-  description: string | null
-  format: string
-  updatedAt: Date
-}
+  id: string;
+  name: string;
+  description: string | null;
+  format: string;
+  updatedAt: Date;
+};
 
 type DeckCardRow = {
-  id: string
-  card_id: string
-  printing_id: string
-  name: string
-  mana_cost: string | null
-  mana_value: string | null
-  type_line: string | null
-  foil: boolean
-  sideboard: boolean
-  quantity: number
-  set_code: string
-  set_name: string
-  collector_number: string
-  image_normal: string | null
-}
+  id: string;
+  card_id: string;
+  printing_id: string;
+  name: string;
+  mana_cost: string | null;
+  mana_value: string | null;
+  type_line: string | null;
+  foil: boolean;
+  sideboard: boolean;
+  quantity: number;
+  set_code: string;
+  set_name: string;
+  collector_number: string;
+  image_normal: string | null;
+};
 
 @Injectable()
 export class DecksService {
@@ -62,7 +50,7 @@ export class DecksService {
   ) {}
 
   async listForUser(clerkUserId: string): Promise<Deck[]> {
-    const userId = await this.users.resolveLocalId(clerkUserId)
+    const userId = await this.users.resolveLocalId(clerkUserId);
     const rows = await this.db
       .select({
         id: decks.id,
@@ -73,7 +61,7 @@ export class DecksService {
       })
       .from(decks)
       .where(eq(decks.userId, userId))
-      .orderBy(desc(decks.updatedAt))
+      .orderBy(desc(decks.updatedAt));
 
     this.logger.info(
       {
@@ -82,14 +70,14 @@ export class DecksService {
         deckCount: rows.length,
       },
       'Listed decks for user',
-    )
+    );
 
-    return rows.map(toDeck)
+    return rows.map(toDeck);
   }
 
   async createForUser(clerkUserId: string, input: CreateDeckInput): Promise<Deck> {
-    const userId = await this.users.resolveLocalId(clerkUserId)
-    const description = input.description?.trim() || null
+    const userId = await this.users.resolveLocalId(clerkUserId);
+    const description = input.description?.trim() || null;
     const [row] = await this.db
       .insert(decks)
       .values({
@@ -104,7 +92,7 @@ export class DecksService {
         description: decks.description,
         format: decks.format,
         updatedAt: decks.updatedAt,
-      })
+      });
 
     this.logger.info(
       {
@@ -114,55 +102,45 @@ export class DecksService {
         format: row.format,
       },
       'Created deck for user',
-    )
+    );
 
-    return toDeck(row)
+    return toDeck(row);
   }
 
-  async updateForUser(
-    clerkUserId: string,
-    deckId: string,
-    input: UpdateDeckInput,
-  ): Promise<Deck> {
-    const existing = await this.requireOwnedDeck(clerkUserId, deckId)
+  async updateForUser(clerkUserId: string, deckId: string, input: UpdateDeckInput): Promise<Deck> {
+    const existing = await this.requireOwnedDeck(clerkUserId, deckId);
 
     const patch: {
-      name?: string
-      description?: string | null
-      format?: DeckFormat
-      updatedAt?: Date
-    } = {}
+      name?: string;
+      description?: string | null;
+      format?: DeckFormat;
+      updatedAt?: Date;
+    } = {};
 
     if (input.name !== undefined) {
-      patch.name = input.name.trim()
+      patch.name = input.name.trim();
     }
     if (input.description !== undefined) {
       patch.description =
-        typeof input.description === 'string'
-          ? input.description.trim() || null
-          : null
+        typeof input.description === 'string' ? input.description.trim() || null : null;
     }
     if (input.format !== undefined) {
-      patch.format = input.format
+      patch.format = input.format;
     }
 
     if (Object.keys(patch).length === 0) {
-      return existing
+      return existing;
     }
 
-    patch.updatedAt = new Date()
+    patch.updatedAt = new Date();
 
-    const [row] = await this.db
-      .update(decks)
-      .set(patch)
-      .where(eq(decks.id, deckId))
-      .returning({
-        id: decks.id,
-        name: decks.name,
-        description: decks.description,
-        format: decks.format,
-        updatedAt: decks.updatedAt,
-      })
+    const [row] = await this.db.update(decks).set(patch).where(eq(decks.id, deckId)).returning({
+      id: decks.id,
+      name: decks.name,
+      description: decks.description,
+      format: decks.format,
+      updatedAt: decks.updatedAt,
+    });
 
     this.logger.info(
       {
@@ -174,15 +152,15 @@ export class DecksService {
         ),
       },
       'Updated deck',
-    )
+    );
 
-    return toDeck(row)
+    return toDeck(row);
   }
 
   async deleteForUser(clerkUserId: string, deckId: string): Promise<void> {
-    await this.requireOwnedDeck(clerkUserId, deckId)
+    await this.requireOwnedDeck(clerkUserId, deckId);
 
-    await this.db.delete(decks).where(eq(decks.id, deckId))
+    await this.db.delete(decks).where(eq(decks.id, deckId));
 
     this.logger.info(
       {
@@ -191,7 +169,7 @@ export class DecksService {
         deckId,
       },
       'Deleted deck',
-    )
+    );
   }
 
   async importMoxfield(
@@ -199,50 +177,50 @@ export class DecksService {
     deckId: string,
     text: string,
   ): Promise<DeckImportResult> {
-    await this.requireOwnedDeck(clerkUserId, deckId)
+    await this.requireOwnedDeck(clerkUserId, deckId);
 
-    const trimmed = text.trim()
+    const trimmed = text.trim();
     if (!trimmed) {
-      throw new BadRequestException('import text is required')
+      throw new BadRequestException('import text is required');
     }
 
-    const { lines, skipped } = parseMoxfieldExport(trimmed)
+    const { lines, skipped } = parseMoxfieldExport(trimmed);
     const unmatched = skipped.map((row) => ({
       line: row.raw,
       reason: row.reason,
-    }))
+    }));
 
     /** Aggregate by printing + foil + board. */
     const quantities = new Map<
       string,
       { printingId: string; foil: boolean; sideboard: boolean; quantity: number }
-    >()
+    >();
 
     for (const line of lines) {
-      const printingId = await this.resolveMoxfieldPrinting(line)
+      const printingId = await this.resolveMoxfieldPrinting(line);
       if (!printingId) {
         unmatched.push({
           line: line.raw,
           reason: `no printing for ${line.setCode} #${line.collectorNumber}`,
-        })
-        continue
+        });
+        continue;
       }
-      const foil = line.tags.some((tag) => tag.toUpperCase() === 'F')
-      const key = `${printingId}:${foil ? '1' : '0'}:${line.sideboard ? '1' : '0'}`
-      const existing = quantities.get(key)
+      const foil = line.tags.some((tag) => tag.toUpperCase() === 'F');
+      const key = `${printingId}:${foil ? '1' : '0'}:${line.sideboard ? '1' : '0'}`;
+      const existing = quantities.get(key);
       if (existing) {
-        existing.quantity += line.quantity
+        existing.quantity += line.quantity;
       } else {
         quantities.set(key, {
           printingId,
           foil,
           sideboard: line.sideboard,
           quantity: line.quantity,
-        })
+        });
       }
     }
 
-    let imported = 0
+    let imported = 0;
     for (const entry of quantities.values()) {
       await this.upsertPrintingLine(
         deckId,
@@ -250,12 +228,12 @@ export class DecksService {
         entry.quantity,
         entry.foil,
         entry.sideboard,
-      )
-      imported += 1
+      );
+      imported += 1;
     }
 
     if (imported > 0) {
-      await this.touchDeck(deckId)
+      await this.touchDeck(deckId);
     }
 
     this.logger.info(
@@ -268,17 +246,17 @@ export class DecksService {
         lineCount: lines.length,
       },
       'Imported deck list',
-    )
+    );
 
     return {
       imported,
       unmatched,
       detail: await this.getForUser(clerkUserId, deckId),
-    }
+    };
   }
 
   async getForUser(clerkUserId: string, deckId: string): Promise<DeckDetail> {
-    const deck = await this.requireOwnedDeck(clerkUserId, deckId)
+    const deck = await this.requireOwnedDeck(clerkUserId, deckId);
     const result = await this.db.execute<DeckCardRow>(sql`
       SELECT
         dc.id,
@@ -303,39 +281,35 @@ export class DecksService {
         ON f.printing_id = p.id AND f.face_index = 0
       WHERE dc.deck_id = ${deckId}::uuid
       ORDER BY dc.sideboard ASC, c.name ASC, s.code ASC, p.collector_number ASC, dc.foil ASC
-    `)
+    `);
 
     return {
       deck,
       cards: result.rows.map(toDeckCard),
-    }
+    };
   }
 
   /** Add by oracle card: resolves a default printing, then stacks on that printing. */
-  async addCard(
-    clerkUserId: string,
-    deckId: string,
-    cardId: string,
-  ): Promise<DeckCard> {
-    await this.requireOwnedDeck(clerkUserId, deckId)
+  async addCard(clerkUserId: string, deckId: string, cardId: string): Promise<DeckCard> {
+    await this.requireOwnedDeck(clerkUserId, deckId);
 
     const [card] = await this.db
       .select({ id: cards.id })
       .from(cards)
       .where(eq(cards.id, cardId))
-      .limit(1)
+      .limit(1);
     if (!card) {
-      throw new NotFoundException('Card not found')
+      throw new NotFoundException('Card not found');
     }
 
-    const printingId = await this.defaultPrintingId(cardId)
+    const printingId = await this.defaultPrintingId(cardId);
     if (!printingId) {
-      throw new BadRequestException('Card has no printings')
+      throw new BadRequestException('Card has no printings');
     }
 
-    const row = await this.upsertPrintingLine(deckId, printingId, 1, false, false)
+    const row = await this.upsertPrintingLine(deckId, printingId, 1, false, false);
 
-    await this.touchDeck(deckId)
+    await this.touchDeck(deckId);
 
     this.logger.info(
       {
@@ -347,9 +321,9 @@ export class DecksService {
         quantity: row.quantity,
       },
       'Added card printing to deck',
-    )
+    );
 
-    return this.requireDeckCard(row.id)
+    return this.requireDeckCard(row.id);
   }
 
   async setCardQuantity(
@@ -359,28 +333,28 @@ export class DecksService {
     quantity: number,
   ): Promise<DeckCard | null> {
     if (!Number.isInteger(quantity) || quantity < 0) {
-      throw new BadRequestException('quantity must be a non-negative integer')
+      throw new BadRequestException('quantity must be a non-negative integer');
     }
 
-    await this.requireOwnedDeck(clerkUserId, deckId)
+    await this.requireOwnedDeck(clerkUserId, deckId);
 
     if (quantity === 0) {
-      await this.removeCard(clerkUserId, deckId, deckCardId)
-      return null
+      await this.removeCard(clerkUserId, deckId, deckCardId);
+      return null;
     }
 
     const [row] = await this.db
       .update(deckCards)
       .set({ quantity, updatedAt: new Date() })
       .where(and(eq(deckCards.id, deckCardId), eq(deckCards.deckId, deckId)))
-      .returning({ id: deckCards.id })
+      .returning({ id: deckCards.id });
 
     if (!row) {
-      throw new NotFoundException('Deck card not found')
+      throw new NotFoundException('Deck card not found');
     }
 
-    await this.touchDeck(deckId)
-    return this.requireDeckCard(row.id)
+    await this.touchDeck(deckId);
+    return this.requireDeckCard(row.id);
   }
 
   async setCardPrinting(
@@ -389,7 +363,7 @@ export class DecksService {
     deckCardId: string,
     printingId: string,
   ): Promise<DeckCard> {
-    await this.requireOwnedDeck(clerkUserId, deckId)
+    await this.requireOwnedDeck(clerkUserId, deckId);
 
     const [line] = await this.db
       .select({
@@ -401,35 +375,33 @@ export class DecksService {
       })
       .from(deckCards)
       .where(and(eq(deckCards.id, deckCardId), eq(deckCards.deckId, deckId)))
-      .limit(1)
+      .limit(1);
 
     if (!line) {
-      throw new NotFoundException('Deck card not found')
+      throw new NotFoundException('Deck card not found');
     }
 
     if (line.printingId === printingId) {
-      return this.requireDeckCard(line.id)
+      return this.requireDeckCard(line.id);
     }
 
     const [current] = await this.db
       .select({ cardId: printings.cardId })
       .from(printings)
       .where(eq(printings.id, line.printingId))
-      .limit(1)
+      .limit(1);
 
     const [next] = await this.db
       .select({ id: printings.id, cardId: printings.cardId })
       .from(printings)
       .where(eq(printings.id, printingId))
-      .limit(1)
+      .limit(1);
 
     if (!next) {
-      throw new NotFoundException('Printing not found')
+      throw new NotFoundException('Printing not found');
     }
     if (!current || next.cardId !== current.cardId) {
-      throw new BadRequestException(
-        'Printing must belong to the same card as the deck line',
-      )
+      throw new BadRequestException('Printing must belong to the same card as the deck line');
     }
 
     const survivorId = await this.moveLineToPrinting(
@@ -438,9 +410,9 @@ export class DecksService {
       printingId,
       line.foil,
       line.sideboard,
-    )
+    );
 
-    await this.touchDeck(deckId)
+    await this.touchDeck(deckId);
 
     this.logger.info(
       {
@@ -452,9 +424,9 @@ export class DecksService {
         survivorId,
       },
       'Changed deck card printing',
-    )
+    );
 
-    return this.requireDeckCard(survivorId)
+    return this.requireDeckCard(survivorId);
   }
 
   async setCardFoil(
@@ -463,7 +435,7 @@ export class DecksService {
     deckCardId: string,
     foil: boolean,
   ): Promise<DeckCard> {
-    await this.requireOwnedDeck(clerkUserId, deckId)
+    await this.requireOwnedDeck(clerkUserId, deckId);
 
     const [line] = await this.db
       .select({
@@ -475,14 +447,14 @@ export class DecksService {
       })
       .from(deckCards)
       .where(and(eq(deckCards.id, deckCardId), eq(deckCards.deckId, deckId)))
-      .limit(1)
+      .limit(1);
 
     if (!line) {
-      throw new NotFoundException('Deck card not found')
+      throw new NotFoundException('Deck card not found');
     }
 
     if (line.foil === foil) {
-      return this.requireDeckCard(line.id)
+      return this.requireDeckCard(line.id);
     }
 
     const survivorId = await this.moveLineToPrinting(
@@ -491,9 +463,9 @@ export class DecksService {
       line.printingId,
       foil,
       line.sideboard,
-    )
+    );
 
-    await this.touchDeck(deckId)
+    await this.touchDeck(deckId);
 
     this.logger.info(
       {
@@ -505,9 +477,9 @@ export class DecksService {
         survivorId,
       },
       'Changed deck card foil',
-    )
+    );
 
-    return this.requireDeckCard(survivorId)
+    return this.requireDeckCard(survivorId);
   }
 
   async setCardSideboard(
@@ -516,7 +488,7 @@ export class DecksService {
     deckCardId: string,
     sideboard: boolean,
   ): Promise<DeckCard> {
-    await this.requireOwnedDeck(clerkUserId, deckId)
+    await this.requireOwnedDeck(clerkUserId, deckId);
 
     const [line] = await this.db
       .select({
@@ -528,14 +500,14 @@ export class DecksService {
       })
       .from(deckCards)
       .where(and(eq(deckCards.id, deckCardId), eq(deckCards.deckId, deckId)))
-      .limit(1)
+      .limit(1);
 
     if (!line) {
-      throw new NotFoundException('Deck card not found')
+      throw new NotFoundException('Deck card not found');
     }
 
     if (line.sideboard === sideboard) {
-      return this.requireDeckCard(line.id)
+      return this.requireDeckCard(line.id);
     }
 
     const survivorId = await this.moveLineToPrinting(
@@ -544,9 +516,9 @@ export class DecksService {
       line.printingId,
       line.foil,
       sideboard,
-    )
+    );
 
-    await this.touchDeck(deckId)
+    await this.touchDeck(deckId);
 
     this.logger.info(
       {
@@ -558,28 +530,24 @@ export class DecksService {
         survivorId,
       },
       'Changed deck card sideboard',
-    )
+    );
 
-    return this.requireDeckCard(survivorId)
+    return this.requireDeckCard(survivorId);
   }
 
-  async removeCard(
-    clerkUserId: string,
-    deckId: string,
-    deckCardId: string,
-  ): Promise<void> {
-    await this.requireOwnedDeck(clerkUserId, deckId)
+  async removeCard(clerkUserId: string, deckId: string, deckCardId: string): Promise<void> {
+    await this.requireOwnedDeck(clerkUserId, deckId);
 
     const deleted = await this.db
       .delete(deckCards)
       .where(and(eq(deckCards.id, deckCardId), eq(deckCards.deckId, deckId)))
-      .returning({ id: deckCards.id })
+      .returning({ id: deckCards.id });
 
     if (deleted.length === 0) {
-      throw new NotFoundException('Deck card not found')
+      throw new NotFoundException('Deck card not found');
     }
 
-    await this.touchDeck(deckId)
+    await this.touchDeck(deckId);
 
     this.logger.info(
       {
@@ -589,7 +557,7 @@ export class DecksService {
         deckCardId,
       },
       'Removed card from deck',
-    )
+    );
   }
 
   private async upsertPrintingLine(
@@ -613,7 +581,7 @@ export class DecksService {
           eq(deckCards.sideboard, sideboard),
         ),
       )
-      .limit(1)
+      .limit(1);
 
     if (existing) {
       const [updated] = await this.db
@@ -623,15 +591,15 @@ export class DecksService {
           updatedAt: new Date(),
         })
         .where(eq(deckCards.id, existing.id))
-        .returning({ id: deckCards.id, quantity: deckCards.quantity })
-      return updated
+        .returning({ id: deckCards.id, quantity: deckCards.quantity });
+      return updated;
     }
 
     const [inserted] = await this.db
       .insert(deckCards)
       .values({ deckId, printingId, foil, sideboard, quantity: addQuantity })
-      .returning({ id: deckCards.id, quantity: deckCards.quantity })
-    return inserted
+      .returning({ id: deckCards.id, quantity: deckCards.quantity });
+    return inserted;
   }
 
   /** Move/merge a deck line onto a printing + foil + board key. */
@@ -656,7 +624,7 @@ export class DecksService {
           eq(deckCards.sideboard, sideboard),
         ),
       )
-      .limit(1)
+      .limit(1);
 
     if (existing && existing.id !== line.id) {
       const [merged] = await this.db
@@ -666,17 +634,17 @@ export class DecksService {
           updatedAt: new Date(),
         })
         .where(eq(deckCards.id, existing.id))
-        .returning({ id: deckCards.id })
-      await this.db.delete(deckCards).where(eq(deckCards.id, line.id))
-      return merged.id
+        .returning({ id: deckCards.id });
+      await this.db.delete(deckCards).where(eq(deckCards.id, line.id));
+      return merged.id;
     }
 
     const [updated] = await this.db
       .update(deckCards)
       .set({ printingId, foil, sideboard, updatedAt: new Date() })
       .where(eq(deckCards.id, line.id))
-      .returning({ id: deckCards.id })
-    return updated.id
+      .returning({ id: deckCards.id });
+    return updated.id;
   }
 
   private async defaultPrintingId(cardId: string): Promise<string | null> {
@@ -691,21 +659,21 @@ export class DecksService {
         p.released_at DESC NULLS LAST,
         p.id
       LIMIT 1
-    `)
-    return result.rows[0]?.id ?? null
+    `);
+    return result.rows[0]?.id ?? null;
   }
 
   private async resolveMoxfieldPrinting(line: {
-    name: string
-    setCode: string
-    collectorNumber: string
+    name: string;
+    setCode: string;
+    collectorNumber: string;
   }): Promise<string | null> {
-    const wantedName = normalizeCardName(line.name)
+    const wantedName = normalizeCardName(line.name);
 
     const bySetAndNumber = await this.db.execute<{
-      id: string
-      name: string
-      language: string | null
+      id: string;
+      name: string;
+      language: string | null;
     }>(sql`
       SELECT p.id, c.name, p.language
       FROM catalog.printing p
@@ -716,13 +684,13 @@ export class DecksService {
       ORDER BY
         CASE WHEN p.language = 'en' THEN 0 ELSE 1 END,
         p.id
-    `)
+    `);
 
     if (bySetAndNumber.rows.length > 0) {
       const nameMatch = bySetAndNumber.rows.find(
         (row) => normalizeCardName(row.name) === wantedName,
-      )
-      return (nameMatch ?? bySetAndNumber.rows[0]).id
+      );
+      return (nameMatch ?? bySetAndNumber.rows[0]).id;
     }
 
     // Fallback: match oracle name, then prefer the requested set's printing.
@@ -731,9 +699,9 @@ export class DecksService {
       FROM catalog.card c
       WHERE lower(c.name) = ${wantedName}
       LIMIT 1
-    `)
-    const cardId = byName.rows[0]?.id
-    if (!cardId) return null
+    `);
+    const cardId = byName.rows[0]?.id;
+    if (!cardId) return null;
 
     const inSet = await this.db.execute<{ id: string }>(sql`
       SELECT p.id
@@ -747,10 +715,10 @@ export class DecksService {
         p.released_at DESC NULLS LAST,
         p.id
       LIMIT 1
-    `)
-    if (inSet.rows[0]?.id) return inSet.rows[0].id
+    `);
+    if (inSet.rows[0]?.id) return inSet.rows[0].id;
 
-    return this.defaultPrintingId(cardId)
+    return this.defaultPrintingId(cardId);
   }
 
   private async requireDeckCard(deckCardId: string): Promise<DeckCard> {
@@ -778,19 +746,16 @@ export class DecksService {
         ON f.printing_id = p.id AND f.face_index = 0
       WHERE dc.id = ${deckCardId}::uuid
       LIMIT 1
-    `)
-    const row = result.rows[0]
+    `);
+    const row = result.rows[0];
     if (!row) {
-      throw new NotFoundException('Deck card not found')
+      throw new NotFoundException('Deck card not found');
     }
-    return toDeckCard(row)
+    return toDeckCard(row);
   }
 
-  private async requireOwnedDeck(
-    clerkUserId: string,
-    deckId: string,
-  ): Promise<Deck> {
-    const userId = await this.users.resolveLocalId(clerkUserId)
+  private async requireOwnedDeck(clerkUserId: string, deckId: string): Promise<Deck> {
+    const userId = await this.users.resolveLocalId(clerkUserId);
     const [row] = await this.db
       .select({
         id: decks.id,
@@ -801,30 +766,25 @@ export class DecksService {
       })
       .from(decks)
       .where(and(eq(decks.id, deckId), eq(decks.userId, userId)))
-      .limit(1)
+      .limit(1);
 
     if (!row) {
-      throw new NotFoundException('Deck not found')
+      throw new NotFoundException('Deck not found');
     }
 
-    return toDeck(row)
+    return toDeck(row);
   }
 
   private async touchDeck(deckId: string): Promise<void> {
-    await this.db
-      .update(decks)
-      .set({ updatedAt: new Date() })
-      .where(eq(decks.id, deckId))
+    await this.db.update(decks).set({ updatedAt: new Date() }).where(eq(decks.id, deckId));
   }
 }
 
 export function parseDeckFormat(raw: unknown): DeckFormat {
   if (typeof raw !== 'string' || !(DECK_FORMATS as readonly string[]).includes(raw)) {
-    throw new BadRequestException(
-      `format must be one of: ${DECK_FORMATS.join(', ')}`,
-    )
+    throw new BadRequestException(`format must be one of: ${DECK_FORMATS.join(', ')}`);
   }
-  return raw as DeckFormat
+  return raw as DeckFormat;
 }
 
 function toDeck(row: DeckRow): Deck {
@@ -834,7 +794,7 @@ function toDeck(row: DeckRow): Deck {
     description: row.description,
     format: normalizeFormat(row.format),
     updatedAt: row.updatedAt.toISOString(),
-  }
+  };
 }
 
 function toDeckCard(row: DeckCardRow): DeckCard {
@@ -853,12 +813,12 @@ function toDeckCard(row: DeckCardRow): DeckCard {
     setName: row.set_name,
     collectorNumber: row.collector_number,
     imageNormal: row.image_normal,
-  }
+  };
 }
 
 function normalizeFormat(raw: string): DeckFormat {
   if ((DECK_FORMATS as readonly string[]).includes(raw)) {
-    return raw as DeckFormat
+    return raw as DeckFormat;
   }
-  return 'standard'
+  return 'standard';
 }

@@ -12,9 +12,20 @@
     "build:web": "npm run build -w web",
     "build:api": "npm run build -w api",
     "build:admin": "npm run build -w admin",
-    "preview": "npm run preview -w web"
+    "preview": "npm run preview -w web",
+    "prepare": "husky",
+    "prettier:write": "prettier --write .",
+    "prettier:check": "prettier --check .",
+    "lint-staged": "lint-staged"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs,json,md,yml,yaml,css,html}": "prettier --write",
+    "*.tf": "terraform fmt"
   },
   "devDependencies": {
-    "@mermaid-js/mermaid-cli": "^11.17.0"
+    "@mermaid-js/mermaid-cli": "^11.17.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.9.8"
   }
 }

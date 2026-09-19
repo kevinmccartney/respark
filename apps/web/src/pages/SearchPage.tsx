@@ -1,135 +1,131 @@
-import { useAuth } from '@clerk/react'
-import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { SiteHeader } from '../components/SiteHeader.tsx'
-import { ApiError } from '../lib/api.ts'
-import { searchCards, type CardSearchResult } from '../lib/cards.ts'
+import { useAuth } from '@clerk/react';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { SiteHeader } from '../components/SiteHeader.tsx';
+import { ApiError } from '../lib/api.ts';
+import { searchCards, type CardSearchResult } from '../lib/cards.ts';
 
-const PAGE_SIZE_OPTIONS = [24, 60, 100] as const
-const DEFAULT_PAGE_SIZE = 60
-const DEBOUNCE_MS = 300
+const PAGE_SIZE_OPTIONS = [24, 60, 100] as const;
+const DEFAULT_PAGE_SIZE = 60;
+const DEBOUNCE_MS = 300;
 
-type PageSize = (typeof PAGE_SIZE_OPTIONS)[number]
+type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 
 function parsePageSize(raw: string | null): PageSize {
-  const n = Number.parseInt(raw ?? '', 10)
-  return (PAGE_SIZE_OPTIONS as readonly number[]).includes(n)
-    ? (n as PageSize)
-    : DEFAULT_PAGE_SIZE
+  const n = Number.parseInt(raw ?? '', 10);
+  return (PAGE_SIZE_OPTIONS as readonly number[]).includes(n) ? (n as PageSize) : DEFAULT_PAGE_SIZE;
 }
 
 function parsePage(raw: string | null): number {
-  const n = Number.parseInt(raw ?? '', 10)
-  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1
+  const n = Number.parseInt(raw ?? '', 10);
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
 }
 
 export function SearchPage() {
-  const { getToken } = useAuth()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const qParam = searchParams.get('q') ?? ''
-  const pageSize = parsePageSize(searchParams.get('pageSize'))
-  const pageParam = parsePage(searchParams.get('page'))
-  const searchReturnTo = searchParams.toString()
-    ? `/search?${searchParams.toString()}`
-    : '/search'
+  const { getToken } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const qParam = searchParams.get('q') ?? '';
+  const pageSize = parsePageSize(searchParams.get('pageSize'));
+  const pageParam = parsePage(searchParams.get('page'));
+  const searchReturnTo = searchParams.toString() ? `/search?${searchParams.toString()}` : '/search';
 
-  const [input, setInput] = useState(qParam)
-  const [cards, setCards] = useState<CardSearchResult[]>([])
-  const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(pageParam)
-  const [totalPages, setTotalPages] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [input, setInput] = useState(qParam);
+  const [cards, setCards] = useState<CardSearchResult[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(pageParam);
+  const [totalPages, setTotalPages] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Keep local input in sync when the URL changes (back/forward).
   useEffect(() => {
-    setInput(qParam)
-  }, [qParam])
+    setInput(qParam);
+  }, [qParam]);
 
   // Debounce URL updates from typing; reset to page 1 on query change.
   useEffect(() => {
     const handle = window.setTimeout(() => {
-      const trimmed = input.trim()
-      const current = (searchParams.get('q') ?? '').trim()
-      if (trimmed === current) return
-      const next = new URLSearchParams(searchParams)
-      if (trimmed) next.set('q', trimmed)
-      else next.delete('q')
-      next.delete('page')
-      setSearchParams(next, { replace: true })
-    }, DEBOUNCE_MS)
-    return () => window.clearTimeout(handle)
-  }, [input, searchParams, setSearchParams])
+      const trimmed = input.trim();
+      const current = (searchParams.get('q') ?? '').trim();
+      if (trimmed === current) return;
+      const next = new URLSearchParams(searchParams);
+      if (trimmed) next.set('q', trimmed);
+      else next.delete('q');
+      next.delete('page');
+      setSearchParams(next, { replace: true });
+    }, DEBOUNCE_MS);
+    return () => window.clearTimeout(handle);
+  }, [input, searchParams, setSearchParams]);
 
   useEffect(() => {
-    const controller = new AbortController()
+    const controller = new AbortController();
 
     async function load() {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
       try {
         const result = await searchCards(getToken, {
           q: qParam,
           limit: pageSize,
           page: pageParam,
-        })
-        if (controller.signal.aborted) return
-        setCards(result.cards)
-        setTotal(result.total)
-        setPage(result.page)
-        setTotalPages(result.totalPages)
+        });
+        if (controller.signal.aborted) return;
+        setCards(result.cards);
+        setTotal(result.total);
+        setPage(result.page);
+        setTotalPages(result.totalPages);
         // If the API clamped the page (e.g. past end), sync the URL.
         if (result.page !== pageParam && result.totalPages > 0) {
-          const next = new URLSearchParams(searchParams)
-          if (result.page <= 1) next.delete('page')
-          else next.set('page', String(result.page))
-          setSearchParams(next, { replace: true })
+          const next = new URLSearchParams(searchParams);
+          if (result.page <= 1) next.delete('page');
+          else next.set('page', String(result.page));
+          setSearchParams(next, { replace: true });
         }
       } catch (err) {
-        if (controller.signal.aborted) return
-        setError(err instanceof ApiError ? err.message : 'Could not search cards')
-        setCards([])
-        setTotal(0)
-        setPage(1)
-        setTotalPages(0)
+        if (controller.signal.aborted) return;
+        setError(err instanceof ApiError ? err.message : 'Could not search cards');
+        setCards([]);
+        setTotal(0);
+        setPage(1);
+        setTotalPages(0);
       } finally {
-        if (!controller.signal.aborted) setLoading(false)
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
 
-    void load()
-    return () => controller.abort()
+    void load();
+    return () => controller.abort();
     // searchParams / setSearchParams omitted: only refetch on q/page/pageSize.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
-  }, [getToken, qParam, pageSize, pageParam])
+  }, [getToken, qParam, pageSize, pageParam]);
 
   function updateParams(mutate: (next: URLSearchParams) => void) {
-    const next = new URLSearchParams(searchParams)
-    mutate(next)
-    setSearchParams(next, { replace: true })
+    const next = new URLSearchParams(searchParams);
+    mutate(next);
+    setSearchParams(next, { replace: true });
   }
 
   function setPageSize(nextSize: PageSize) {
     updateParams((next) => {
-      if (nextSize === DEFAULT_PAGE_SIZE) next.delete('pageSize')
-      else next.set('pageSize', String(nextSize))
-      next.delete('page')
-    })
+      if (nextSize === DEFAULT_PAGE_SIZE) next.delete('pageSize');
+      else next.set('pageSize', String(nextSize));
+      next.delete('page');
+    });
   }
 
   function goToPage(nextPage: number) {
     updateParams((next) => {
-      if (nextPage <= 1) next.delete('page')
-      else next.set('page', String(nextPage))
-    })
+      if (nextPage <= 1) next.delete('page');
+      else next.set('page', String(nextPage));
+    });
   }
 
-  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
-  const rangeEnd = Math.min(page * pageSize, total)
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = Math.min(page * pageSize, total);
 
   return (
     <>
@@ -184,9 +180,7 @@ export function SearchPage() {
 
         {!loading && !error && cards.length === 0 ? (
           <p className="text-muted-foreground">
-            {qParam.trim()
-              ? `No cards match “${qParam.trim()}”.`
-              : 'No cards in the catalog yet.'}
+            {qParam.trim() ? `No cards match “${qParam.trim()}”.` : 'No cards in the catalog yet.'}
           </p>
         ) : null}
 
@@ -253,7 +247,7 @@ export function SearchPage() {
         ) : null}
       </main>
     </>
-  )
+  );
 }
 
 function PaginationControls({
@@ -264,15 +258,15 @@ function PaginationControls({
   onNext,
   onLast,
 }: {
-  page: number
-  totalPages: number
-  onFirst: () => void
-  onPrev: () => void
-  onNext: () => void
-  onLast: () => void
+  page: number;
+  totalPages: number;
+  onFirst: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  onLast: () => void;
 }) {
-  const atStart = page <= 1
-  const atEnd = page >= totalPages
+  const atStart = page <= 1;
+  const atEnd = page >= totalPages;
 
   return (
     <nav className="flex items-center gap-2" aria-label="Pagination">
@@ -292,5 +286,5 @@ function PaginationControls({
         Last
       </Button>
     </nav>
-  )
+  );
 }

@@ -1,53 +1,43 @@
-import { useAuth } from '@clerk/react'
-import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { SiteHeader } from '../components/SiteHeader.tsx'
-import { ApiError } from '../lib/api.ts'
-import {
-  createDeck,
-  DECK_FORMAT_LABELS,
-  DECK_FORMATS,
-  type DeckFormat,
-} from '../lib/decks.ts'
+import { useAuth } from '@clerk/react';
+import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { SiteHeader } from '../components/SiteHeader.tsx';
+import { ApiError } from '../lib/api.ts';
+import { createDeck, DECK_FORMAT_LABELS, DECK_FORMATS, type DeckFormat } from '../lib/decks.ts';
 
 export function NewDeckPage() {
-  const { getToken } = useAuth()
-  const navigate = useNavigate()
+  const { getToken } = useAuth();
+  const navigate = useNavigate();
 
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [format, setFormat] = useState<DeckFormat>('standard')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [format, setFormat] = useState<DeckFormat>('standard');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const trimmedName = name.trim()
+  const trimmedName = name.trim();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!trimmedName || saving) return
+    event.preventDefault();
+    if (!trimmedName || saving) return;
 
-    setSaving(true)
-    setError(null)
+    setSaving(true);
+    setError(null);
     try {
       const deck = await createDeck(getToken, {
         name: trimmedName,
         description: description.trim() || undefined,
         format,
-      })
-      navigate(`/decks/${deck.id}`)
+      });
+      navigate(`/decks/${deck.id}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not create deck')
-      setSaving(false)
+      setError(err instanceof ApiError ? err.message : 'Could not create deck');
+      setSaving(false);
     }
   }
 
@@ -132,5 +122,5 @@ export function NewDeckPage() {
         </Card>
       </main>
     </>
-  )
+  );
 }

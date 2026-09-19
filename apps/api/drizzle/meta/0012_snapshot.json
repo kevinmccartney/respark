@@ -79,9 +79,7 @@
         "users_clerk_user_id_unique": {
           "name": "users_clerk_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "clerk_user_id"
-          ]
+          "columns": ["clerk_user_id"]
         }
       },
       "policies": {},
@@ -154,12 +152,8 @@
           "name": "decks_user_id_users_id_fk",
           "tableFrom": "decks",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action",
           "schemaTo": "app"
@@ -330,12 +324,8 @@
           "tableFrom": "ingestion_reconciliation",
           "tableTo": "etl_job_run",
           "schemaTo": "ops",
-          "columnsFrom": [
-            "run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -441,12 +431,8 @@
           "tableFrom": "ingestion_unmatched",
           "tableTo": "etl_job_run",
           "schemaTo": "ops",
-          "columnsFrom": [
-            "run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -694,12 +680,8 @@
           "tableFrom": "card_face",
           "tableTo": "printing",
           "schemaTo": "catalog",
-          "columnsFrom": [
-            "printing_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["printing_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -709,10 +691,7 @@
         "card_face_printing_id_face_index_uidx": {
           "name": "card_face_printing_id_face_index_uidx",
           "nullsNotDistinct": false,
-          "columns": [
-            "printing_id",
-            "face_index"
-          ]
+          "columns": ["printing_id", "face_index"]
         }
       },
       "policies": {},
@@ -915,9 +894,7 @@
         "card_oracle_id_unique": {
           "name": "card_oracle_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "oracle_id"
-          ]
+          "columns": ["oracle_id"]
         }
       },
       "policies": {},
@@ -968,12 +945,8 @@
           "tableFrom": "printing_identifier",
           "tableTo": "printing",
           "schemaTo": "catalog",
-          "columnsFrom": [
-            "printing_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["printing_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -981,21 +954,14 @@
       "compositePrimaryKeys": {
         "printing_identifier_printing_id_provider_external_id_pk": {
           "name": "printing_identifier_printing_id_provider_external_id_pk",
-          "columns": [
-            "printing_id",
-            "provider",
-            "external_id"
-          ]
+          "columns": ["printing_id", "provider", "external_id"]
         }
       },
       "uniqueConstraints": {
         "printing_identifier_provider_external_id_uidx": {
           "name": "printing_identifier_provider_external_id_uidx",
           "nullsNotDistinct": false,
-          "columns": [
-            "provider",
-            "external_id"
-          ]
+          "columns": ["provider", "external_id"]
         }
       },
       "policies": {},
@@ -1165,12 +1131,8 @@
           "tableFrom": "printing",
           "tableTo": "card",
           "schemaTo": "catalog",
-          "columnsFrom": [
-            "card_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["card_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1179,12 +1141,8 @@
           "tableFrom": "printing",
           "tableTo": "set",
           "schemaTo": "catalog",
-          "columnsFrom": [
-            "set_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["set_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1194,9 +1152,7 @@
         "printing_scryfall_id_unique": {
           "name": "printing_scryfall_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "scryfall_id"
-          ]
+          "columns": ["scryfall_id"]
         }
       },
       "policies": {},
@@ -1290,16 +1246,12 @@
         "set_scryfall_id_unique": {
           "name": "set_scryfall_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "scryfall_id"
-          ]
+          "columns": ["scryfall_id"]
         },
         "set_code_unique": {
           "name": "set_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
+          "columns": ["code"]
         }
       },
       "policies": {},
@@ -1427,12 +1379,8 @@
           "tableFrom": "etl_job_run",
           "tableTo": "etl_sync",
           "schemaTo": "ops",
-          "columnsFrom": [
-            "sync_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["sync_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1603,12 +1551,8 @@
           "tableFrom": "deck_card",
           "tableTo": "decks",
           "schemaTo": "app",
-          "columnsFrom": [
-            "deck_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["deck_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1617,12 +1561,8 @@
           "tableFrom": "deck_card",
           "tableTo": "card",
           "schemaTo": "catalog",
-          "columnsFrom": [
-            "card_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["card_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }

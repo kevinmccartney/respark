@@ -1,5 +1,5 @@
-import { Outlet } from 'react-router-dom'
-import { ApiHealthFooter } from './ApiHealthFooter.tsx'
+import { Outlet } from 'react-router-dom';
+import { ApiHealthFooter } from './ApiHealthFooter.tsx';
 
 export function AppShell() {
   return (
@@ -9,5 +9,5 @@ export function AppShell() {
       </div>
       <ApiHealthFooter />
     </div>
-  )
+  );
 }

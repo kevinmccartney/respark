@@ -4,11 +4,11 @@ Respark ingests Magic: The Gathering card data into PostgreSQL so the app never 
 
 ## Nomenclature
 
-| Term | Meaning | Storage |
-| --- | --- | --- |
-| **Sync** | One user-triggered pipeline execution | `ops.etl_sync` |
-| **Stage** | Ordered phase inside a sync | `catalog` \| `enrichment` |
-| **Job** | Concrete work unit inside a stage | see below |
+| Term      | Meaning                               | Storage                   |
+| --------- | ------------------------------------- | ------------------------- |
+| **Sync**  | One user-triggered pipeline execution | `ops.etl_sync`            |
+| **Stage** | Ordered phase inside a sync           | `catalog` \| `enrichment` |
+| **Job**   | Concrete work unit inside a stage     | see below                 |
 
 ```text
 ETL Sync
@@ -23,9 +23,9 @@ A sync may run catalog only, enrichment only, or both. Enrichment-only is allowe
 
 ## Sources of truth
 
-| Concern | Owner |
-| --- | --- |
-| Oracle identity, printings, sets, images, legality fields | **Scryfall** (catalog job) |
+| Concern                                                                                               | Owner                         |
+| ----------------------------------------------------------------------------------------------------- | ----------------------------- |
+| Oracle identity, printings, sets, images, legality fields                                             | **Scryfall** (catalog job)    |
 | Cross-provider IDs on existing printings (`mtgjson`, `tcgplayer`, `cardmarket`, `mtgo`, `multiverse`) | **MTGJSON** (identifiers job) |
 
 Enrichment **never creates** `catalog.printing` rows. Unmatched MTGJSON cards are recorded for review; they do not become catalog entities.
@@ -34,11 +34,11 @@ Enrichment **never creates** `catalog.printing` rows. Unmatched MTGJSON cards ar
 
 ![ETL architecture](diagrams/architecture.svg)
 
-| Surface | Role |
-| --- | --- |
-| **etl lib** (`runEtlSync`) | Business logic + typed progress events |
-| **API** | Calls the lib in-process; fans events out over WebSocket |
-| **CLI** | TTY / report adapter for break-glass maintenance (`task etl -- …`) |
+| Surface                    | Role                                                               |
+| -------------------------- | ------------------------------------------------------------------ |
+| **etl lib** (`runEtlSync`) | Business logic + typed progress events                             |
+| **API**                    | Calls the lib in-process; fans events out over WebSocket           |
+| **CLI**                    | TTY / report adapter for break-glass maintenance (`task etl -- …`) |
 
 Postgres `NOTIFY` on `ops.etl_sync` also refreshes the admin list when syncs are started from the CLI.
 

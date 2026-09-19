@@ -43,9 +43,7 @@
         "users_clerk_user_id_unique": {
           "name": "users_clerk_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "clerk_user_id"
-          ]
+          "columns": ["clerk_user_id"]
         }
       },
       "policies": {},
@@ -118,12 +116,8 @@
           "name": "decks_user_id_users_id_fk",
           "tableFrom": "decks",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

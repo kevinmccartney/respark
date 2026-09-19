@@ -1,62 +1,62 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common'
-import { sql, type SQL } from 'drizzle-orm'
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino'
-import { DATABASE, type Database } from '../db/database.module'
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { sql, type SQL } from 'drizzle-orm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { DATABASE, type Database } from '../db/database.module';
 import type {
   CardDetail,
   CardNameSuggestion,
   CardPrintingSummary,
   CardSearchPage,
   CardSearchResult,
-} from './card.types'
+} from './card.types';
 
-const DEFAULT_LIMIT = 60
-const MAX_LIMIT = 100
+const DEFAULT_LIMIT = 60;
+const MAX_LIMIT = 100;
 
 type SearchRow = {
-  id: string
-  oracle_id: string
-  name: string
-  mana_cost: string | null
-  type_line: string | null
-  oracle_text: string | null
-  image_normal: string | null
-}
+  id: string;
+  oracle_id: string;
+  name: string;
+  mana_cost: string | null;
+  type_line: string | null;
+  oracle_text: string | null;
+  image_normal: string | null;
+};
 
 type CountRow = {
-  total: string | number
-}
+  total: string | number;
+};
 
 type CardDetailRow = {
-  id: string
-  oracle_id: string
-  name: string
-  mana_cost: string | null
-  mana_value: string | null
-  type_line: string | null
-  oracle_text: string | null
-  colors: string[] | null
-  color_identity: string[] | null
-  keywords: string[] | null
-  layout: string | null
-  reserved: boolean | null
-}
+  id: string;
+  oracle_id: string;
+  name: string;
+  mana_cost: string | null;
+  mana_value: string | null;
+  type_line: string | null;
+  oracle_text: string | null;
+  colors: string[] | null;
+  color_identity: string[] | null;
+  keywords: string[] | null;
+  layout: string | null;
+  reserved: boolean | null;
+};
 
 type PrintingDetailRow = {
-  id: string
-  scryfall_id: string
-  collector_number: string
-  language: string | null
-  rarity: string | null
-  artist: string | null
-  released_at: string | null
-  set_code: string
-  set_name: string
-  image_normal: string | null
-  image_large: string | null
-  face_image_normal: string | null
-  face_image_large: string | null
-}
+  id: string;
+  scryfall_id: string;
+  collector_number: string;
+  language: string | null;
+  rarity: string | null;
+  artist: string | null;
+  released_at: string | null;
+  set_code: string;
+  set_name: string;
+  image_normal: string | null;
+  image_large: string | null;
+  face_image_normal: string | null;
+  face_image_large: string | null;
+};
 
 @Injectable()
 export class CardsService {
@@ -67,28 +67,23 @@ export class CardsService {
     private readonly logger: PinoLogger,
   ) {}
 
-  async search(opts: {
-    q?: string
-    limit?: number
-    page?: number
-  }): Promise<CardSearchPage> {
-    const q = (opts.q ?? '').trim()
-    const pageSize = clampLimit(opts.limit)
-    const requestedPage = clampPage(opts.page)
+  async search(opts: { q?: string; limit?: number; page?: number }): Promise<CardSearchPage> {
+    const q = (opts.q ?? '').trim();
+    const pageSize = clampLimit(opts.limit);
+    const requestedPage = clampPage(opts.page);
 
-    const pattern = q.length > 0 ? `%${escapeIlike(q)}%` : null
-    const matchPredicate = matchSql(pattern)
+    const pattern = q.length > 0 ? `%${escapeIlike(q)}%` : null;
+    const matchPredicate = matchSql(pattern);
 
     const countResult = await this.db.execute<CountRow>(sql`
       SELECT count(*)::int AS total
       FROM catalog.card c
       WHERE ${matchPredicate}
-    `)
-    const total = Number(countResult.rows[0]?.total ?? 0)
-    const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize)
-    const page =
-      totalPages === 0 ? 1 : Math.min(requestedPage, totalPages)
-    const offset = (page - 1) * pageSize
+    `);
+    const total = Number(countResult.rows[0]?.total ?? 0);
+    const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
+    const page = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages);
+    const offset = (page - 1) * pageSize;
 
     const pageResult = await this.db.execute<SearchRow>(sql`
       WITH matched AS (
@@ -129,9 +124,9 @@ export class CardsService {
         LIMIT 1
       ) img ON true
       ORDER BY m.name ASC, m.id ASC
-    `)
+    `);
 
-    const cards = pageResult.rows.map(toCard)
+    const cards = pageResult.rows.map(toCard);
 
     this.logger.info(
       {
@@ -144,20 +139,20 @@ export class CardsService {
         totalPages,
       },
       'Searched cards',
-    )
+    );
 
-    return { cards, total, page, pageSize, totalPages }
+    return { cards, total, page, pageSize, totalPages };
   }
 
   /**
    * Deck-builder autocomplete: match card names only, return id + name.
    */
   async suggestNames(qRaw: string | undefined, limitRaw?: number): Promise<CardNameSuggestion[]> {
-    const q = (qRaw ?? '').trim()
-    if (q.length < 2) return []
+    const q = (qRaw ?? '').trim();
+    if (q.length < 2) return [];
 
-    const limit = Math.min(30, Math.max(1, Math.floor(limitRaw ?? 15)))
-    const pattern = `%${escapeIlike(q)}%`
+    const limit = Math.min(30, Math.max(1, Math.floor(limitRaw ?? 15)));
+    const pattern = `%${escapeIlike(q)}%`;
 
     const result = await this.db.execute<{ id: string; name: string }>(sql`
       SELECT c.id, c.name
@@ -165,9 +160,9 @@ export class CardsService {
       WHERE c.name ILIKE ${pattern} ESCAPE '\\'
       ORDER BY c.name ASC
       LIMIT ${limit}
-    `)
+    `);
 
-    return result.rows.map((row) => ({ id: row.id, name: row.name }))
+    return result.rows.map((row) => ({ id: row.id, name: row.name }));
   }
 
   async getById(id: string): Promise<CardDetail> {
@@ -188,11 +183,11 @@ export class CardsService {
       FROM catalog.card c
       WHERE c.id = ${id}::uuid
       LIMIT 1
-    `)
+    `);
 
-    const cardRow = cardResult.rows[0]
+    const cardRow = cardResult.rows[0];
     if (!cardRow) {
-      throw new NotFoundException('Card not found')
+      throw new NotFoundException('Card not found');
     }
 
     const printingResult = await this.db.execute<PrintingDetailRow>(sql`
@@ -216,9 +211,9 @@ export class CardsService {
         ON f.printing_id = p.id AND f.face_index = 0
       WHERE p.card_id = ${id}::uuid
       ORDER BY p.released_at DESC NULLS LAST, s.code ASC, p.collector_number ASC
-    `)
+    `);
 
-    const printings = printingResult.rows.map(toPrinting)
+    const printings = printingResult.rows.map(toPrinting);
 
     this.logger.info(
       {
@@ -227,7 +222,7 @@ export class CardsService {
         printingCount: printings.length,
       },
       'Fetched card detail',
-    )
+    );
 
     return {
       id: cardRow.id,
@@ -243,7 +238,7 @@ export class CardsService {
       layout: cardRow.layout,
       reserved: cardRow.reserved,
       printings,
-    }
+    };
   }
 }
 
@@ -268,21 +263,21 @@ function matchSql(pattern: string | null): SQL {
           )
       )
     )
-  `
+  `;
 }
 
 function clampLimit(raw: number | undefined): number {
-  if (raw === undefined || Number.isNaN(raw)) return DEFAULT_LIMIT
-  return Math.min(MAX_LIMIT, Math.max(1, Math.floor(raw)))
+  if (raw === undefined || Number.isNaN(raw)) return DEFAULT_LIMIT;
+  return Math.min(MAX_LIMIT, Math.max(1, Math.floor(raw)));
 }
 
 function clampPage(raw: number | undefined): number {
-  if (raw === undefined || Number.isNaN(raw)) return 1
-  return Math.max(1, Math.floor(raw))
+  if (raw === undefined || Number.isNaN(raw)) return 1;
+  return Math.max(1, Math.floor(raw));
 }
 
 function escapeIlike(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
+  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 }
 
 function toCard(row: SearchRow): CardSearchResult {
@@ -294,7 +289,7 @@ function toCard(row: SearchRow): CardSearchResult {
     typeLine: row.type_line,
     oracleText: row.oracle_text,
     imageNormal: row.image_normal,
-  }
+  };
 }
 
 function toPrinting(row: PrintingDetailRow): CardPrintingSummary {
@@ -309,6 +304,7 @@ function toPrinting(row: PrintingDetailRow): CardPrintingSummary {
     setCode: row.set_code,
     setName: row.set_name,
     imageNormal: row.image_normal ?? row.face_image_normal,
-    imageLarge: row.image_large ?? row.face_image_large ?? row.image_normal ?? row.face_image_normal,
-  }
+    imageLarge:
+      row.image_large ?? row.face_image_large ?? row.image_normal ?? row.face_image_normal,
+  };
 }

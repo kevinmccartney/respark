@@ -1,5 +1,5 @@
-import type { Pool, PoolClient } from "pg";
-import type { IngestionRunStatus } from "../core/types";
+import type { Pool, PoolClient } from 'pg';
+import type { IngestionRunStatus } from '../core/types';
 
 export type StartJobRunInput = {
   syncId: string;
@@ -22,30 +22,18 @@ export type FinishJobRunInput = {
   errorMessage?: string | null;
 };
 
-export async function startJobRun(
-  pool: Pool,
-  input: StartJobRunInput,
-): Promise<string> {
+export async function startJobRun(pool: Pool, input: StartJobRunInput): Promise<string> {
   const result = await pool.query<{ id: string }>(
     `insert into ops.etl_job_run
        (sync_id, stage, job, status, source_version, source_url)
      values ($1, $2, $3, 'running', $4, $5)
      returning id`,
-    [
-      input.syncId,
-      input.stage,
-      input.job,
-      input.sourceVersion ?? null,
-      input.sourceUrl ?? null,
-    ],
+    [input.syncId, input.stage, input.job, input.sourceVersion ?? null, input.sourceUrl ?? null],
   );
   return result.rows[0].id;
 }
 
-export async function finishJobRun(
-  pool: Pool,
-  input: FinishJobRunInput,
-): Promise<void> {
+export async function finishJobRun(pool: Pool, input: FinishJobRunInput): Promise<void> {
   await pool.query(
     `update ops.etl_job_run set
        status = $2,

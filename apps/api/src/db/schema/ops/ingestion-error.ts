@@ -1,5 +1,5 @@
-import { bigserial, jsonb, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { opsSchema } from './ops-schema'
+import { bigserial, jsonb, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { opsSchema } from './ops-schema';
 
 /**
  * Per-record failures during an ETL job. One bad card should not abort the import.
@@ -14,6 +14,6 @@ export const ingestionErrors = opsSchema.table('ingestion_error', {
   errorMessage: text('error_message').notNull(),
   payload: jsonb('payload'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
+});
 
-export type IngestionErrorRow = typeof ingestionErrors.$inferSelect
+export type IngestionErrorRow = typeof ingestionErrors.$inferSelect;

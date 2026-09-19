@@ -1,26 +1,16 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-} from '@nestjs/common'
-import { eq } from 'drizzle-orm'
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino'
-import {
-  createLogger,
-  ENRICHMENT_JOB_IDS,
-  runEtlSync,
-  type EnrichmentJobId,
-} from 'etl'
-import type { Pool } from 'pg'
-import { DATABASE, DATABASE_POOL, type Database } from '../db/database.module'
-import { etlSyncs } from '../db/schema'
-import { EtlSyncEventsService } from './etl-sync-events.service'
+import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
+import { eq } from 'drizzle-orm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { createLogger, ENRICHMENT_JOB_IDS, runEtlSync, type EnrichmentJobId } from 'etl';
+import type { Pool } from 'pg';
+import { DATABASE, DATABASE_POOL, type Database } from '../db/database.module';
+import { etlSyncs } from '../db/schema';
+import { EtlSyncEventsService } from './etl-sync-events.service';
 
 export type StartSyncInput = {
-  catalog: boolean
-  enrichmentJobs: EnrichmentJobId[]
-}
+  catalog: boolean;
+  enrichmentJobs: EnrichmentJobId[];
+};
 
 @Injectable()
 export class AdminEtlService {
@@ -42,16 +32,14 @@ export class AdminEtlService {
     input: StartSyncInput,
   ): Promise<{ accepted: true; catalog: boolean; enrichmentJobs: string[] }> {
     if (!input.catalog && input.enrichmentJobs.length === 0) {
-      throw new BadRequestException(
-        'At least one of catalog or enrichmentJobs is required',
-      )
+      throw new BadRequestException('At least one of catalog or enrichmentJobs is required');
     }
 
     for (const job of input.enrichmentJobs) {
       if (!ENRICHMENT_JOB_IDS.includes(job)) {
         throw new BadRequestException(
           `Unknown enrichment job "${job}". Expected: ${ENRICHMENT_JOB_IDS.join(', ')}`,
-        )
+        );
       }
     }
 
@@ -59,12 +47,12 @@ export class AdminEtlService {
       .select({ id: etlSyncs.id })
       .from(etlSyncs)
       .where(eq(etlSyncs.status, 'running'))
-      .limit(1)
+      .limit(1);
 
     if (running) {
       throw new ConflictException(
         `An ETL sync is already in progress (${running.id}). Wait for it to finish.`,
-      )
+      );
     }
 
     this.logger.info(
@@ -74,7 +62,7 @@ export class AdminEtlService {
         enrichmentJobs: input.enrichmentJobs,
       },
       'Starting ETL sync in-process',
-    )
+    );
 
     void this.runSync(input).catch((err) => {
       this.logger.error(
@@ -83,18 +71,18 @@ export class AdminEtlService {
           err: err instanceof Error ? err.message : String(err),
         },
         'Background ETL sync failed',
-      )
-    })
+      );
+    });
 
     return {
       accepted: true,
       catalog: input.catalog,
       enrichmentJobs: input.enrichmentJobs,
-    }
+    };
   }
 
   private async runSync(input: StartSyncInput): Promise<void> {
-    const logger = createLogger(false)
+    const logger = createLogger(false);
     await runEtlSync(
       this.pool,
       logger,
@@ -107,6 +95,6 @@ export class AdminEtlService {
       {
         onEvent: (event) => this.events.publish(event),
       },
-    )
+    );
   }
 }

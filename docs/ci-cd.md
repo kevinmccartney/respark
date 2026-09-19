@@ -1,18 +1,28 @@
 # CI / CD (GitHub Actions)
 
-Pipeline: **detect changes** → **build** (changed apps) and **plan** (if infra) in parallel → on deployable refs, **apply** (if infra) → **deploy API** (if needed) → **web** ∥ **admin** (if needed).
+Pipeline: **format check** ∥ **detect changes** → **build** (changed apps) and **plan** (if infra) → on deployable refs, **apply** (if infra) → **deploy API** (if needed) → **web** ∥ **admin** (if needed).
 
-Orchestration lives in [`Taskfile.yml`](../Taskfile.yml). The workflow only wires GitHub Environments, OIDC, path filters, and artifacts, then runs the same `task … ENV=<name>` commands you use locally.
+Orchestration lives in [`Taskfile.yml`](../Taskfile.yml). The workflow only wires GitHub Environments, OIDC, path filters, and artifacts, then runs `task …` (never raw `npm` / `terraform` beyond what Task invokes). npm scripts stay in `package.json` for package binaries; Task calls those scripts.
 
 Workflow file: [`.github/workflows/ci-cd.yml`](../.github/workflows/ci-cd.yml).
 
+## Formatting
+
+| Goal         | Local                                                                  | CI / git                 |
+| ------------ | ---------------------------------------------------------------------- | ------------------------ |
+| Write format | `task format`                                                          | —                        |
+| Check format | `task format:check`                                                    | `format` job always runs |
+| On commit    | husky → `task format:staged` (lint-staged: Prettier + `terraform fmt`) | —                        |
+
+Prettier covers JS/TS/JSON/MD/YAML/CSS; Terraform uses `terraform fmt` under `infra/`.
+
 ## Triggers
 
-| Event                         | Environment                        | What runs                                                                                         |
-| ----------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Pull request                  | `develop`                          | `build` + `plan` for changed paths only                                                           |
-| Push to `main`                | `develop`                          | changed paths: `build` / `plan` → `apply` → `deploy-api` → `deploy-web` ∥ `deploy-admin`          |
-| `workflow_dispatch` on `main` | choice (`develop` or `production`) | **Force all** paths for the selected env (full rebuild + plan/apply + deploy)                     |
+| Event                         | Environment                        | What runs                                                                                |
+| ----------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------- |
+| Pull request                  | `develop`                          | `build` + `plan` for changed paths only                                                  |
+| Push to `main`                | `develop`                          | changed paths: `build` / `plan` → `apply` → `deploy-api` → `deploy-web` ∥ `deploy-admin` |
+| `workflow_dispatch` on `main` | choice (`develop` or `production`) | **Force all** paths for the selected env (full rebuild + plan/apply + deploy)            |
 
 Production deploys are intentional: use **Actions → CI / CD → Run workflow** and pick `production`.
 
@@ -20,25 +30,27 @@ Production deploys are intentional: use **Actions → CI / CD → Run workflow**
 
 [`dorny/paths-filter`](https://github.com/dorny/paths-filter) maps the git diff to flags:
 
-| Flag | Paths (also triggered by root `package.json` / lockfile / `Taskfile.yml` / tsconfig as “shared”) |
-| --- | --- |
-| `etl` | `apps/etl/**` |
-| `api` | `apps/api/**`, API deploy scripts (etl changes count as API) |
-| `web` | `apps/web/**` |
-| `admin` | `apps/admin/**` |
-| `infra` | `infra/**`, TF backend bootstrap script |
+| Flag    | Paths (also triggered by root `package.json` / lockfile / `Taskfile.yml` / tsconfig as “shared”) |
+| ------- | ------------------------------------------------------------------------------------------------ |
+| `etl`   | `apps/etl/**`                                                                                    |
+| `api`   | `apps/api/**`, API deploy scripts (etl changes count as API)                                     |
+| `web`   | `apps/web/**`                                                                                    |
+| `admin` | `apps/admin/**`                                                                                  |
+| `infra` | `infra/**`, TF backend bootstrap script                                                          |
 
 - **Build** runs only the matching `task *:build` steps.
 - **Plan / apply** run only when `infra` changed (or on force).
 - **Deploy** runs for the matching app; an `infra` change also redeploys API/web/admin (EC2 / CDN may have moved).
 - Skipped upstream jobs do not block later deploys (e.g. web-only change skips plan/apply/API, then deploys web).
-- Web/admin still wait on API when API *is* deploying.
+- Web/admin still wait on API when API _is_ deploying.
 
 ## Local ↔ CI isomorphism
 
 | Goal               | Local                                   | CI                                               |
 | ------------------ | --------------------------------------- | ------------------------------------------------ |
-| Build apps         | `task build`                            | `task build ENV=…`                               |
+| Format (write)     | `task format`                           | —                                                |
+| Format (check)     | `task format:check`                     | `format` job                                     |
+| Build apps         | `task build`                            | conditional `task *:build`                       |
 | Plan               | `task infra:plan ENV=develop`           | same                                             |
 | Apply              | `task infra:apply ENV=develop`          | same (applies uploaded `tfplan`)                 |
 | Deploy API         | `task api:deploy ENV=develop`           | same (+ `DOCKER_BUILDX=1` `API_IMAGE_TAG=<sha>`) |

@@ -1,20 +1,20 @@
-import type { Pool, PoolClient } from 'pg'
-import type { UnmatchedRecord } from './mtgjsonReconcile'
+import type { Pool, PoolClient } from 'pg';
+import type { UnmatchedRecord } from './mtgjsonReconcile';
 
 export type ReconciliationSummaryInput = {
-  runId: string
-  matched: number
-  unmatched: number
-  ambiguous: number
-  identifiersAdded: number
-  rawInserted: number | null
-  rawUpdated: number | null
-  rawUnchanged: number | null
-  storeRaw: boolean | null
-  demoMismatches: boolean
-  dryRun: boolean
-  limitN: number | null
-}
+  runId: string;
+  matched: number;
+  unmatched: number;
+  ambiguous: number;
+  identifiersAdded: number;
+  rawInserted: number | null;
+  rawUpdated: number | null;
+  rawUnchanged: number | null;
+  storeRaw: boolean | null;
+  demoMismatches: boolean;
+  dryRun: boolean;
+  limitN: number | null;
+};
 
 export async function upsertIngestionReconciliation(
   client: Pool | PoolClient,
@@ -52,7 +52,7 @@ export async function upsertIngestionReconciliation(
       input.dryRun,
       input.limitN,
     ],
-  )
+  );
 }
 
 /**
@@ -63,17 +63,17 @@ export async function replaceUnmatchedRecords(
   runId: string,
   rows: UnmatchedRecord[],
 ): Promise<void> {
-  await client.query(`delete from ops.ingestion_unmatched where run_id = $1`, [runId])
-  if (rows.length === 0) return
+  await client.query(`delete from ops.ingestion_unmatched where run_id = $1`, [runId]);
+  if (rows.length === 0) return;
 
-  const values: unknown[] = []
-  const placeholders: string[] = []
+  const values: unknown[] = [];
+  const placeholders: string[] = [];
 
   rows.forEach((row, i) => {
-    const o = i * 8
+    const o = i * 8;
     placeholders.push(
       `($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5}, $${o + 6}, $${o + 7}, $${o + 8})`,
-    )
+    );
     values.push(
       runId,
       row.mtgjsonUuid,
@@ -83,13 +83,13 @@ export async function replaceUnmatchedRecords(
       row.language,
       row.scryfallId,
       row.reason,
-    )
-  })
+    );
+  });
 
   await client.query(
     `insert into ops.ingestion_unmatched
        (run_id, external_id, name, set_code, collector_number, language, scryfall_id, reason)
      values ${placeholders.join(',')}`,
     values,
-  )
+  );
 }

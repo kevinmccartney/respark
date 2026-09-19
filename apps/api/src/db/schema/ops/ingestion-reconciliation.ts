@@ -1,6 +1,6 @@
-import { bigint, boolean, integer, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { etlJobRuns } from './etl-job-run'
-import { opsSchema } from './ops-schema'
+import { bigint, boolean, integer, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { etlJobRuns } from './etl-job-run';
+import { opsSchema } from './ops-schema';
 
 /**
  * One reconciliation summary per identifiers job run.
@@ -22,6 +22,6 @@ export const ingestionReconciliations = opsSchema.table('ingestion_reconciliatio
   dryRun: boolean('dry_run').notNull().default(false),
   limitN: integer('limit_n'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
+});
 
-export type IngestionReconciliationRow = typeof ingestionReconciliations.$inferSelect
+export type IngestionReconciliationRow = typeof ingestionReconciliations.$inferSelect;

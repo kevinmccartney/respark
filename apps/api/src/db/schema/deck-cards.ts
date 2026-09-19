@@ -1,14 +1,14 @@
-import type { Column } from 'drizzle-orm'
-import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder'
-import { boolean, index, integer, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
-import { printings } from './catalog/tables'
-import { decks } from './decks'
-import { appSchema } from './pipeline-schemas'
+import type { Column } from 'drizzle-orm';
+import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder';
+import { boolean, index, integer, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { printings } from './catalog/tables';
+import { decks } from './decks';
+import { appSchema } from './pipeline-schemas';
 
-type _DrizzlePortableColumn = Column
-type _DrizzlePortableColumnBuilder = ColumnBuilderExtraConfig
-export type { _DrizzlePortableColumn as _DeckCardsPortableColumn }
-export type { _DrizzlePortableColumnBuilder as _DeckCardsPortableColumnBuilder }
+type _DrizzlePortableColumn = Column;
+type _DrizzlePortableColumnBuilder = ColumnBuilderExtraConfig;
+export type { _DrizzlePortableColumn as _DeckCardsPortableColumn };
+export type { _DrizzlePortableColumnBuilder as _DeckCardsPortableColumnBuilder };
 
 /** A unique printing line in a deck (printing + foil + main/sideboard). */
 export const deckCards = appSchema.table(
@@ -36,6 +36,6 @@ export const deckCards = appSchema.table(
     ),
     index('deck_card_deck_id_idx').on(table.deckId),
   ],
-)
+);
 
-export type DeckCardRow = typeof deckCards.$inferSelect
+export type DeckCardRow = typeof deckCards.$inferSelect;

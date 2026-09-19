@@ -14,9 +14,9 @@ task docker:up      # builds Dockerfiles, starts db + api + web + admin, migrate
 task docker:logs    # follow API + web + admin logs
 ```
 
-- Web: http://localhost:5173  
-- Admin: http://localhost:4000  
-- API: http://localhost:3000  
+- Web: http://localhost:5173
+- Admin: http://localhost:4000
+- API: http://localhost:3000
 
 Compose overrides the API `DATABASE_URL` to `postgres://respark:respark@db:5432/respark` so the container reaches Postgres on the Compose network (your `.env` can keep `localhost` for host-side tools like Drizzle Studio). The web and admin containers get `VITE_API_URL=http://localhost:3000` because the browser runs on your machine, not inside the Compose network.
 

@@ -1,4 +1,4 @@
-import pino from 'pino'
+import pino from 'pino';
 
 export function createLogger(verbose: boolean) {
   return pino({
@@ -10,7 +10,7 @@ export function createLogger(verbose: boolean) {
             target: 'pino-pretty',
             options: { colorize: true, translateTime: 'SYS:standard' },
           },
-  })
+  });
 }
 
-export type Logger = ReturnType<typeof createLogger>
+export type Logger = ReturnType<typeof createLogger>;

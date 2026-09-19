@@ -1,31 +1,31 @@
-import { useAuth } from '@clerk/react'
-import type { ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useAuth } from '@clerk/react';
+import type { ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
 
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { isLoaded, isSignedIn } = useAuth()
+  const { isLoaded, isSignedIn } = useAuth();
 
   if (!isLoaded) {
-    return <div className="min-h-svh" aria-live="polite" />
+    return <div className="min-h-svh" aria-live="polite" />;
   }
 
   if (!isSignedIn) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/" replace />;
   }
 
-  return children
+  return children;
 }
 
 export function GuestOnly({ children }: { children: ReactNode }) {
-  const { isLoaded, isSignedIn } = useAuth()
+  const { isLoaded, isSignedIn } = useAuth();
 
   if (!isLoaded) {
-    return <div className="min-h-svh" aria-live="polite" />
+    return <div className="min-h-svh" aria-live="polite" />;
   }
 
   if (isSignedIn) {
-    return <Navigate to="/home" replace />
+    return <Navigate to="/home" replace />;
   }
 
-  return children
+  return children;
 }

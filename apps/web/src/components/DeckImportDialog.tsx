@@ -1,7 +1,7 @@
-import { useAuth } from '@clerk/react'
-import { useState } from 'react'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
+import { useAuth } from '@clerk/react';
+import { useState } from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogBackdrop,
@@ -10,62 +10,53 @@ import {
   DialogPortal,
   DialogPopup,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { ApiError } from '../lib/api.ts'
-import {
-  importDeckList,
-  type DeckDetail,
-  type DeckImportUnmatched,
-} from '../lib/decks.ts'
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { ApiError } from '../lib/api.ts';
+import { importDeckList, type DeckDetail, type DeckImportUnmatched } from '../lib/decks.ts';
 
 type Props = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  deckId: string
-  onImported: (detail: DeckDetail) => void
-}
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  deckId: string;
+  onImported: (detail: DeckDetail) => void;
+};
 
-export function DeckImportDialog({
-  open,
-  onOpenChange,
-  deckId,
-  onImported,
-}: Props) {
-  const { getToken } = useAuth()
-  const [text, setText] = useState('')
-  const [importing, setImporting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [unmatched, setUnmatched] = useState<DeckImportUnmatched[] | null>(null)
-  const [importedCount, setImportedCount] = useState<number | null>(null)
+export function DeckImportDialog({ open, onOpenChange, deckId, onImported }: Props) {
+  const { getToken } = useAuth();
+  const [text, setText] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [unmatched, setUnmatched] = useState<DeckImportUnmatched[] | null>(null);
+  const [importedCount, setImportedCount] = useState<number | null>(null);
 
   function resetState() {
-    setText('')
-    setError(null)
-    setUnmatched(null)
-    setImportedCount(null)
-    setImporting(false)
+    setText('');
+    setError(null);
+    setUnmatched(null);
+    setImportedCount(null);
+    setImporting(false);
   }
 
   async function handleImport() {
-    if (!text.trim() || importing) return
-    setImporting(true)
-    setError(null)
-    setUnmatched(null)
-    setImportedCount(null)
+    if (!text.trim() || importing) return;
+    setImporting(true);
+    setError(null);
+    setUnmatched(null);
+    setImportedCount(null);
     try {
-      const result = await importDeckList(getToken, deckId, text)
-      setImportedCount(result.imported)
-      setUnmatched(result.unmatched)
-      onImported(result.detail)
+      const result = await importDeckList(getToken, deckId, text);
+      setImportedCount(result.imported);
+      setUnmatched(result.unmatched);
+      onImported(result.detail);
       if (result.unmatched.length === 0) {
-        onOpenChange(false)
-        resetState()
+        onOpenChange(false);
+        resetState();
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not import deck list')
+      setError(err instanceof ApiError ? err.message : 'Could not import deck list');
     } finally {
-      setImporting(false)
+      setImporting(false);
     }
   }
 
@@ -73,8 +64,8 @@ export function DeckImportDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        onOpenChange(next)
-        if (!next) resetState()
+        onOpenChange(next);
+        if (!next) resetState();
       }}
     >
       <DialogPortal>
@@ -85,18 +76,13 @@ export function DeckImportDialog({
               <DialogTitle>Import list</DialogTitle>
               <DialogDescription>
                 Paste a Moxfield export (
-                <span className="font-mono text-xs">
-                  1 Card Name (SET) 123 *F*
-                </span>
-                ). Use a <span className="font-mono text-xs">SIDEBOARD:</span>{' '}
-                section (or <span className="font-mono text-xs">SB:</span> lines)
-                for sideboard cards; <span className="font-mono text-xs">*F*</span>{' '}
-                marks foil.
+                <span className="font-mono text-xs">1 Card Name (SET) 123 *F*</span>
+                ). Use a <span className="font-mono text-xs">SIDEBOARD:</span> section (or{' '}
+                <span className="font-mono text-xs">SB:</span> lines) for sideboard cards;{' '}
+                <span className="font-mono text-xs">*F*</span> marks foil.
               </DialogDescription>
             </div>
-            <DialogClose
-              render={<Button type="button" variant="outline" size="sm" />}
-            >
+            <DialogClose render={<Button type="button" variant="outline" size="sm" />}>
               Close
             </DialogClose>
           </div>
@@ -131,8 +117,7 @@ export function DeckImportDialog({
             {unmatched && unmatched.length > 0 ? (
               <div className="space-y-2">
                 <p className="text-sm font-medium">
-                  {unmatched.length} line{unmatched.length === 1 ? '' : 's'} not
-                  imported
+                  {unmatched.length} line{unmatched.length === 1 ? '' : 's'} not imported
                 </p>
                 <ul className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2 text-xs">
                   {unmatched.map((row) => (
@@ -147,11 +132,7 @@ export function DeckImportDialog({
           </div>
 
           <div className="flex justify-end gap-2 border-t px-4 py-3">
-            <DialogClose
-              render={
-                <Button type="button" variant="outline" disabled={importing} />
-              }
-            >
+            <DialogClose render={<Button type="button" variant="outline" disabled={importing} />}>
               Cancel
             </DialogClose>
             <Button
@@ -165,5 +146,5 @@ export function DeckImportDialog({
         </DialogPopup>
       </DialogPortal>
     </Dialog>
-  )
+  );
 }

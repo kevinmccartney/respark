@@ -1,7 +1,7 @@
-import { useAuth } from '@clerk/react'
-import { useEffect, useState } from 'react'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
+import { useAuth } from '@clerk/react';
+import { useEffect, useState } from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogBackdrop,
@@ -10,82 +10,70 @@ import {
   DialogPortal,
   DialogPopup,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { ApiError } from '../lib/api.ts'
-import {
-  fetchCard,
-  type CardPrintingSummary,
-} from '../lib/cards.ts'
-import type { DeckCard } from '../lib/decks.ts'
+} from '@/components/ui/dialog';
+import { ApiError } from '../lib/api.ts';
+import { fetchCard, type CardPrintingSummary } from '../lib/cards.ts';
+import type { DeckCard } from '../lib/decks.ts';
 
 type Props = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  deckCard: DeckCard | null
-  onSelect: (printingId: string) => Promise<void>
-}
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  deckCard: DeckCard | null;
+  onSelect: (printingId: string) => Promise<void>;
+};
 
-export function PrintingPickerDialog({
-  open,
-  onOpenChange,
-  deckCard,
-  onSelect,
-}: Props) {
-  const { getToken } = useAuth()
-  const [printings, setPrintings] = useState<CardPrintingSummary[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [savingId, setSavingId] = useState<string | null>(null)
+export function PrintingPickerDialog({ open, onOpenChange, deckCard, onSelect }: Props) {
+  const { getToken } = useAuth();
+  const [printings, setPrintings] = useState<CardPrintingSummary[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !deckCard) {
-      setPrintings([])
-      setError(null)
-      setLoading(false)
-      return
+      setPrintings([]);
+      setError(null);
+      setLoading(false);
+      return;
     }
 
-    const controller = new AbortController()
-    setLoading(true)
-    setError(null)
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
 
     void fetchCard(getToken, deckCard.cardId)
       .then((detail) => {
         if (!controller.signal.aborted) {
-          setPrintings(detail.printings)
+          setPrintings(detail.printings);
         }
       })
       .catch((err) => {
-        if (controller.signal.aborted) return
-        setError(
-          err instanceof ApiError ? err.message : 'Could not load printings',
-        )
-        setPrintings([])
+        if (controller.signal.aborted) return;
+        setError(err instanceof ApiError ? err.message : 'Could not load printings');
+        setPrintings([]);
       })
       .finally(() => {
-        if (!controller.signal.aborted) setLoading(false)
-      })
+        if (!controller.signal.aborted) setLoading(false);
+      });
 
-    return () => controller.abort()
-  }, [open, deckCard, getToken])
+    return () => controller.abort();
+  }, [open, deckCard, getToken]);
 
   async function handleSelect(printing: CardPrintingSummary) {
-    if (!deckCard || savingId) return
+    if (!deckCard || savingId) return;
     if (printing.id === deckCard.printingId) {
-      onOpenChange(false)
-      return
+      onOpenChange(false);
+      return;
     }
-    setSavingId(printing.id)
-    setError(null)
+    setSavingId(printing.id);
+    setError(null);
     try {
-      await onSelect(printing.id)
-      onOpenChange(false)
+      await onSelect(printing.id);
+      onOpenChange(false);
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : 'Could not change printing',
-      )
+      setError(err instanceof ApiError ? err.message : 'Could not change printing');
     } finally {
-      setSavingId(null)
+      setSavingId(null);
     }
   }
 
@@ -99,21 +87,15 @@ export function PrintingPickerDialog({
               <DialogTitle>
                 {deckCard ? `Printing · ${deckCard.name}` : 'Choose printing'}
               </DialogTitle>
-              <DialogDescription>
-                Pick which set version sits in this deck.
-              </DialogDescription>
+              <DialogDescription>Pick which set version sits in this deck.</DialogDescription>
             </div>
-            <DialogClose
-              render={<Button type="button" variant="outline" size="sm" />}
-            >
+            <DialogClose render={<Button type="button" variant="outline" size="sm" />}>
               Close
             </DialogClose>
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-            {loading ? (
-              <p className="text-sm text-muted-foreground">Loading printings…</p>
-            ) : null}
+            {loading ? <p className="text-sm text-muted-foreground">Loading printings…</p> : null}
             {error ? (
               <Alert variant="destructive" className="mb-3">
                 <AlertDescription>{error}</AlertDescription>
@@ -125,7 +107,7 @@ export function PrintingPickerDialog({
             {printings.length > 0 ? (
               <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {printings.map((printing) => {
-                  const active = printing.id === deckCard?.printingId
+                  const active = printing.id === deckCard?.printingId;
                   return (
                     <li key={printing.id}>
                       <button
@@ -155,18 +137,14 @@ export function PrintingPickerDialog({
                             {printing.rarity ? ` · ${printing.rarity}` : ''}
                           </p>
                           {savingId === printing.id ? (
-                            <p className="text-xs text-muted-foreground">
-                              Saving…
-                            </p>
+                            <p className="text-xs text-muted-foreground">Saving…</p>
                           ) : active ? (
-                            <p className="text-xs text-muted-foreground">
-                              Current
-                            </p>
+                            <p className="text-xs text-muted-foreground">Current</p>
                           ) : null}
                         </div>
                       </button>
                     </li>
-                  )
+                  );
                 })}
               </ul>
             ) : null}
@@ -174,5 +152,5 @@ export function PrintingPickerDialog({
         </DialogPopup>
       </DialogPortal>
     </Dialog>
-  )
+  );
 }

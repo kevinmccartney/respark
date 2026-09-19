@@ -1,4 +1,4 @@
-version: "3"
+version: '3'
 
 vars:
   # Override with ENV=production (or ENV=develop) — same for local and CI.
@@ -7,17 +7,59 @@ vars:
   TF_PLAN_FILE: tfplan
   WEB_DIST: apps/web/dist
   ADMIN_DIST: apps/admin/dist
-  API_PORT: "3000"
+  API_PORT: '3000'
   API_DOCKERFILE: apps/api/Dockerfile
   API_IMAGE_TAG: latest
   AWS_REGION: us-east-1
   COMPOSE_FILE: docker-compose.yml
   # Set DOCKER_BUILDX=1 in CI to build+push linux/arm64 via buildx.
-  DOCKER_BUILDX: "0"
+  DOCKER_BUILDX: '0'
   # Local interactive apply unless set (e.g. TF_APPLY_FLAGS=-auto-approve).
-  TF_APPLY_FLAGS: ""
+  TF_APPLY_FLAGS: ''
 
 tasks:
+  install:
+    desc: Install JS workspace dependencies (npm ci)
+    cmds:
+      - npm ci
+
+  format:
+    desc: Format the repo (Prettier + terraform fmt)
+    deps:
+      - format:prettier
+      - format:terraform
+
+  format:check:
+    desc: Check formatting without writing (Prettier + terraform fmt) — used in CI
+    deps:
+      - format:prettier:check
+      - format:terraform:check
+
+  format:staged:
+    desc: Format staged files only (husky pre-commit via lint-staged)
+    cmds:
+      - npm run lint-staged
+
+  format:prettier:
+    desc: Write Prettier formatting across the repo
+    cmds:
+      - npm run prettier:write
+
+  format:prettier:check:
+    desc: Check Prettier formatting
+    cmds:
+      - npm run prettier:check
+
+  format:terraform:
+    desc: Write terraform fmt under infra/
+    cmds:
+      - terraform fmt -recursive infra/
+
+  format:terraform:check:
+    desc: Check terraform fmt under infra/
+    cmds:
+      - terraform fmt -check -recursive infra/
+
   build:
     desc: Production build etl, API, web, and admin
     deps:
@@ -96,7 +138,7 @@ tasks:
       - npm run db:studio -w api
 
   etl:
-    desc: "Run the MTG ETL CLI (e.g. task etl -- ping | scryfall --limit 1000)"
+    desc: 'Run the MTG ETL CLI (e.g. task etl -- ping | scryfall --limit 1000)'
     cmds:
       - npx tsx apps/etl/src/cli.ts {{.CLI_ARGS}}
 
@@ -124,16 +166,16 @@ tasks:
   db:tunnel:
     desc: SSM port-forward localhost:15432 to {{.ENV}} RDS via the API EC2 instance
     env:
-      AWS_REGION: "{{.AWS_REGION}}"
-      ENV: "{{.ENV}}"
-      TF_DIR: "{{.TF_DIR}}"
+      AWS_REGION: '{{.AWS_REGION}}'
+      ENV: '{{.ENV}}'
+      TF_DIR: '{{.TF_DIR}}'
     cmds:
       - bash scripts/db-tunnel.sh
 
   db:url:
     desc: Print the {{.ENV}} RDS DATABASE_URL from SSM (contains the password)
     env:
-      AWS_REGION: "{{.AWS_REGION}}"
+      AWS_REGION: '{{.AWS_REGION}}'
     cmds:
       - |
         set -euo pipefail
@@ -147,7 +189,7 @@ tasks:
   api:dev:
     desc: Run the API in watch mode on PORT (default {{.API_PORT}})
     env:
-      PORT: "{{.API_PORT}}"
+      PORT: '{{.API_PORT}}'
     cmds:
       - npm run start:dev -w api
 
@@ -159,7 +201,7 @@ tasks:
   api:debug:
     desc: Run the API with Node inspector on 9229 (or use VS Code "API debug (launch)")
     env:
-      PORT: "{{.API_PORT}}"
+      PORT: '{{.API_PORT}}'
     cmds:
       - npm run start:debug -w api
 
@@ -202,19 +244,19 @@ tasks:
   api:secrets:push:
     desc: Push CLERK_SECRET_KEY from apps/api/.env into SSM for {{.ENV}}
     env:
-      AWS_REGION: "{{.AWS_REGION}}"
-      ENV: "{{.ENV}}"
-      TF_DIR: "{{.TF_DIR}}"
+      AWS_REGION: '{{.AWS_REGION}}'
+      ENV: '{{.ENV}}'
+      TF_DIR: '{{.TF_DIR}}'
     cmds:
       - bash scripts/push-api-secrets.sh
 
   api:deploy:ec2:
     desc: Pull latest image on the API EC2 instance via SSM and restart the container
     env:
-      IMAGE_TAG: "{{.API_IMAGE_TAG}}"
-      AWS_REGION: "{{.AWS_REGION}}"
-      ENV: "{{.ENV}}"
-      TF_DIR: "{{.TF_DIR}}"
+      IMAGE_TAG: '{{.API_IMAGE_TAG}}'
+      AWS_REGION: '{{.AWS_REGION}}'
+      ENV: '{{.ENV}}'
+      TF_DIR: '{{.TF_DIR}}'
     cmds:
       - bash scripts/redeploy-api-ec2.sh
 
@@ -226,22 +268,21 @@ tasks:
 
   infra:init:
     desc: Terraform init for {{.ENV}}
-    dir: "{{.TF_DIR}}"
+    dir: '{{.TF_DIR}}'
     cmds:
       - terraform init -input=false
 
   infra:plan:
-    desc: Terraform fmt + validate + plan for {{.ENV}} (writes {{.TF_PLAN_FILE}})
-    dir: "{{.TF_DIR}}"
+    desc: Terraform validate + plan for {{.ENV}} (writes {{.TF_PLAN_FILE}}; fmt is via format:check)
+    dir: '{{.TF_DIR}}'
     cmds:
       - terraform init -input=false
-      - terraform fmt -check -recursive ../..
       - terraform validate
       - terraform plan -input=false -out={{.TF_PLAN_FILE}}
 
   infra:apply:
     desc: Terraform apply for {{.ENV}} (uses {{.TF_PLAN_FILE}} when present)
-    dir: "{{.TF_DIR}}"
+    dir: '{{.TF_DIR}}'
     cmds:
       - terraform init -input=false
       - |

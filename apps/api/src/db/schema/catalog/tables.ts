@@ -1,5 +1,5 @@
-import type { Column } from 'drizzle-orm'
-import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder'
+import type { Column } from 'drizzle-orm';
+import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder';
 import {
   boolean,
   date,
@@ -10,12 +10,12 @@ import {
   timestamp,
   unique,
   uuid,
-} from 'drizzle-orm/pg-core'
-import { catalogSchema } from '../pipeline-schemas'
+} from 'drizzle-orm/pg-core';
+import { catalogSchema } from '../pipeline-schemas';
 
 // Keep these in scope so `declaration: true` can name inferred table types.
-export type _DrizzlePortableColumn = Column
-export type _DrizzlePortableColumnBuilder = ColumnBuilderExtraConfig
+export type _DrizzlePortableColumn = Column;
+export type _DrizzlePortableColumnBuilder = ColumnBuilderExtraConfig;
 
 /** Conceptual / oracle identity. External key: Scryfall oracle_id. */
 export const cards = catalogSchema.table('card', {
@@ -33,7 +33,7 @@ export const cards = catalogSchema.table('card', {
   reserved: boolean('reserved'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+});
 
 export const sets = catalogSchema.table('set', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -48,7 +48,7 @@ export const sets = catalogSchema.table('set', {
   iconSvgUri: text('icon_svg_uri'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+});
 
 export const printings = catalogSchema.table('printing', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -77,7 +77,7 @@ export const printings = catalogSchema.table('printing', {
   imagePng: text('image_png'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+});
 
 export const cardFaces = catalogSchema.table(
   'card_face',
@@ -99,8 +99,10 @@ export const cardFaces = catalogSchema.table(
     imageNormal: text('image_normal'),
     imageLarge: text('image_large'),
   },
-  (table) => [unique('card_face_printing_id_face_index_uidx').on(table.printingId, table.faceIndex)],
-)
+  (table) => [
+    unique('card_face_printing_id_face_index_uidx').on(table.printingId, table.faceIndex),
+  ],
+);
 
 export const printingIdentifiers = catalogSchema.table(
   'printing_identifier',
@@ -117,4 +119,4 @@ export const printingIdentifiers = catalogSchema.table(
     primaryKey({ columns: [table.printingId, table.provider, table.externalId] }),
     unique('printing_identifier_provider_external_id_uidx').on(table.provider, table.externalId),
   ],
-)
+);

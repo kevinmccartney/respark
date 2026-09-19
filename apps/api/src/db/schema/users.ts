@@ -1,13 +1,13 @@
-import type { Column } from 'drizzle-orm'
-import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder'
-import { text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { appSchema } from './pipeline-schemas'
+import type { Column } from 'drizzle-orm';
+import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder';
+import { text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { appSchema } from './pipeline-schemas';
 
 // Keep these in scope so `declaration: true` can name inferred table types.
-type _DrizzlePortableColumn = Column
-type _DrizzlePortableColumnBuilder = ColumnBuilderExtraConfig
-export type { _DrizzlePortableColumn as _UsersPortableColumn }
-export type { _DrizzlePortableColumnBuilder as _UsersPortableColumnBuilder }
+type _DrizzlePortableColumn = Column;
+type _DrizzlePortableColumnBuilder = ColumnBuilderExtraConfig;
+export type { _DrizzlePortableColumn as _UsersPortableColumn };
+export type { _DrizzlePortableColumnBuilder as _UsersPortableColumnBuilder };
 
 /**
  * Local identity for a Clerk user. Clerk owns authentication; this row owns the
@@ -36,6 +36,6 @@ export const users = appSchema.table('users', {
 
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+});
 
-export type UserRow = typeof users.$inferSelect
+export type UserRow = typeof users.$inferSelect;

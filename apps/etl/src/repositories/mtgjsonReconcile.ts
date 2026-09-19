@@ -1,24 +1,24 @@
-import type { PoolClient } from 'pg'
-import type { EnrichmentIdentifier, MtgjsonEnrichment } from '../sources/mtgjson/transformer'
+import type { PoolClient } from 'pg';
+import type { EnrichmentIdentifier, MtgjsonEnrichment } from '../sources/mtgjson/transformer';
 
-export type MatchStatus = 'matched' | 'unmatched' | 'ambiguous'
+export type MatchStatus = 'matched' | 'unmatched' | 'ambiguous';
 
 export type MatchResult = {
-  status: MatchStatus
-  printingId: string | null
-  identifiersAdded: number
-  reason: string
-}
+  status: MatchStatus;
+  printingId: string | null;
+  identifiersAdded: number;
+  reason: string;
+};
 
 export type UnmatchedRecord = {
-  mtgjsonUuid: string
-  name: string | null
-  setCode: string | null
-  collectorNumber: string | null
-  language: string | null
-  scryfallId: string | null
-  reason: string
-}
+  mtgjsonUuid: string;
+  name: string | null;
+  setCode: string | null;
+  collectorNumber: string | null;
+  language: string | null;
+  scryfallId: string | null;
+  reason: string;
+};
 
 /**
  * Resolve an MTGJSON card to an existing catalog.printing.
@@ -34,39 +34,38 @@ export async function resolvePrinting(
 ): Promise<{ status: MatchStatus; printingId: string | null; reason: string }> {
   if (enrichment.scryfallId) {
     // Guard against non-UUID scryfall ids from older MTGJSON rows
-    const looksUuid =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        enrichment.scryfallId,
-      )
+    const looksUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      enrichment.scryfallId,
+    );
     if (looksUuid) {
       const byScryfall = await client.query<{ id: string }>(
         `select id from catalog.printing where scryfall_id = $1::uuid`,
         [enrichment.scryfallId],
-      )
+      );
       if (byScryfall.rows.length === 1) {
-        return { status: 'matched', printingId: byScryfall.rows[0].id, reason: 'scryfall_id' }
+        return { status: 'matched', printingId: byScryfall.rows[0].id, reason: 'scryfall_id' };
       }
       if (byScryfall.rows.length > 1) {
         return {
           status: 'ambiguous',
           printingId: null,
           reason: `multiple printings for scryfall_id=${enrichment.scryfallId}`,
-        }
+        };
       }
     }
   }
 
   if (enrichment.setCode && enrichment.collectorNumber) {
-    const params: unknown[] = [enrichment.setCode.toLowerCase(), enrichment.collectorNumber]
-    let langClause = ''
+    const params: unknown[] = [enrichment.setCode.toLowerCase(), enrichment.collectorNumber];
+    let langClause = '';
     if (enrichment.language) {
       // MTGJSON uses "English"; Scryfall uses "en"
       const lang =
         enrichment.language.toLowerCase() === 'english'
           ? 'en'
-          : enrichment.language.toLowerCase().slice(0, 2)
-      params.push(lang)
-      langClause = ` and p.language = $${params.length}`
+          : enrichment.language.toLowerCase().slice(0, 2);
+      params.push(lang);
+      langClause = ` and p.language = $${params.length}`;
     }
 
     const bySetNumber = await client.query<{ id: string }>(
@@ -77,21 +76,21 @@ export async function resolvePrinting(
          and p.collector_number = $2
          ${langClause}`,
       params,
-    )
+    );
 
     if (bySetNumber.rows.length === 1) {
       return {
         status: 'matched',
         printingId: bySetNumber.rows[0].id,
         reason: enrichment.scryfallId ? 'set_number_fallback' : 'set_number',
-      }
+      };
     }
     if (bySetNumber.rows.length > 1) {
       return {
         status: 'ambiguous',
         printingId: null,
         reason: `multiple printings for ${enrichment.setCode}#${enrichment.collectorNumber}`,
-      }
+      };
     }
   }
 
@@ -101,7 +100,7 @@ export async function resolvePrinting(
     reason: enrichment.scryfallId
       ? 'scryfall_id_not_in_catalog'
       : 'no_scryfall_id_and_no_set_number_match',
-  }
+  };
 }
 
 /**
@@ -113,9 +112,9 @@ export async function enrichPrintingIdentifiers(
   printingId: string,
   identifiers: EnrichmentIdentifier[],
 ): Promise<number> {
-  let added = 0
+  let added = 0;
   for (const id of identifiers) {
-    if (id.provider === 'scryfall') continue
+    if (id.provider === 'scryfall') continue;
 
     const result = await client.query<{ is_insert: boolean }>(
       `insert into catalog.printing_identifier as t
@@ -127,36 +126,36 @@ export async function enrichPrintingIdentifiers(
        where t.printing_id is distinct from excluded.printing_id
        returning (xmax::text = '0') as is_insert`,
       [printingId, id.provider, id.externalId],
-    )
-    if (result.rows.length > 0) added += 1
+    );
+    if (result.rows.length > 0) added += 1;
   }
-  return added
+  return added;
 }
 
 export async function reconcileMtgjsonCard(
   client: PoolClient,
   enrichment: MtgjsonEnrichment,
 ): Promise<MatchResult> {
-  const match = await resolvePrinting(client, enrichment)
+  const match = await resolvePrinting(client, enrichment);
   if (match.status !== 'matched' || !match.printingId) {
     return {
       status: match.status,
       printingId: null,
       identifiersAdded: 0,
       reason: match.reason,
-    }
+    };
   }
 
   const identifiersAdded = await enrichPrintingIdentifiers(
     client,
     match.printingId,
     enrichment.identifiers,
-  )
+  );
 
   return {
     status: 'matched',
     printingId: match.printingId,
     identifiersAdded,
     reason: match.reason,
-  }
+  };
 }

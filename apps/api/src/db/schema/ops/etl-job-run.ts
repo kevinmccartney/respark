@@ -1,14 +1,14 @@
-import type { Column } from 'drizzle-orm'
-import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder'
-import { bigint, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { etlSyncs } from './etl-sync'
-import { opsSchema } from './ops-schema'
+import type { Column } from 'drizzle-orm';
+import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder';
+import { bigint, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { etlSyncs } from './etl-sync';
+import { opsSchema } from './ops-schema';
 
 // Imported so `declaration: true` can name inferred table types (see catalog/tables.ts).
-type _DrizzlePortableColumn = Column
-type _DrizzlePortableColumnBuilder = ColumnBuilderExtraConfig
-export type { _DrizzlePortableColumn as _EtlJobRunPortableColumn }
-export type { _DrizzlePortableColumnBuilder as _EtlJobRunPortableColumnBuilder }
+type _DrizzlePortableColumn = Column;
+type _DrizzlePortableColumnBuilder = ColumnBuilderExtraConfig;
+export type { _DrizzlePortableColumn as _EtlJobRunPortableColumn };
+export type { _DrizzlePortableColumnBuilder as _EtlJobRunPortableColumnBuilder };
 
 /**
  * One job execution inside an ETL sync (e.g. catalog/catalog or enrichment/identifiers).
@@ -34,10 +34,10 @@ export const etlJobRuns = opsSchema.table('etl_job_run', {
   downloadBytes: bigint('download_bytes', { mode: 'number' }),
   durationMs: bigint('duration_ms', { mode: 'number' }),
   errorMessage: text('error_message'),
-})
+});
 
-export type EtlJobRunRow = typeof etlJobRuns.$inferSelect
+export type EtlJobRunRow = typeof etlJobRuns.$inferSelect;
 
 /** @deprecated Prefer etlJobRuns. */
-export const ingestionRuns = etlJobRuns
-export type IngestionRunRow = EtlJobRunRow
+export const ingestionRuns = etlJobRuns;
+export type IngestionRunRow = EtlJobRunRow;

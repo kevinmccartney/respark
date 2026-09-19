@@ -1,19 +1,16 @@
-import { Dialog } from '@base-ui/react/dialog'
-import { cn } from 'cn'
-import type { ComponentProps } from 'react'
+import { Dialog } from '@base-ui/react/dialog';
+import { cn } from 'cn';
+import type { ComponentProps } from 'react';
 
 function DialogRoot(props: ComponentProps<typeof Dialog.Root>) {
-  return <Dialog.Root {...props} />
+  return <Dialog.Root {...props} />;
 }
 
 function DialogPortal(props: ComponentProps<typeof Dialog.Portal>) {
-  return <Dialog.Portal {...props} />
+  return <Dialog.Portal {...props} />;
 }
 
-function DialogBackdrop({
-  className,
-  ...props
-}: ComponentProps<typeof Dialog.Backdrop>) {
+function DialogBackdrop({ className, ...props }: ComponentProps<typeof Dialog.Backdrop>) {
   return (
     <Dialog.Backdrop
       className={cn(
@@ -22,13 +19,10 @@ function DialogBackdrop({
       )}
       {...props}
     />
-  )
+  );
 }
 
-function DialogPopup({
-  className,
-  ...props
-}: ComponentProps<typeof Dialog.Popup>) {
+function DialogPopup({ className, ...props }: ComponentProps<typeof Dialog.Popup>) {
   return (
     <Dialog.Popup
       className={cn(
@@ -37,35 +31,26 @@ function DialogPopup({
       )}
       {...props}
     />
-  )
+  );
 }
 
-function DialogTitle({
-  className,
-  ...props
-}: ComponentProps<typeof Dialog.Title>) {
+function DialogTitle({ className, ...props }: ComponentProps<typeof Dialog.Title>) {
   return (
     <Dialog.Title
       className={cn('font-heading text-lg font-medium tracking-tight', className)}
       {...props}
     />
-  )
+  );
 }
 
-function DialogDescription({
-  className,
-  ...props
-}: ComponentProps<typeof Dialog.Description>) {
+function DialogDescription({ className, ...props }: ComponentProps<typeof Dialog.Description>) {
   return (
-    <Dialog.Description
-      className={cn('text-sm text-muted-foreground', className)}
-      {...props}
-    />
-  )
+    <Dialog.Description className={cn('text-sm text-muted-foreground', className)} {...props} />
+  );
 }
 
 function DialogClose(props: ComponentProps<typeof Dialog.Close>) {
-  return <Dialog.Close {...props} />
+  return <Dialog.Close {...props} />;
 }
 
 export {
@@ -76,4 +61,4 @@ export {
   DialogTitle,
   DialogDescription,
   DialogClose,
-}
+};

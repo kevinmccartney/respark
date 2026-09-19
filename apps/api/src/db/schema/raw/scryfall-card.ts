@@ -1,5 +1,5 @@
-import { jsonb, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { rawSchema } from '../pipeline-schemas'
+import { jsonb, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { rawSchema } from '../pipeline-schemas';
 
 /**
  * Latest Scryfall card object per printing. `payload` is the full provider JSON;
@@ -12,6 +12,6 @@ export const scryfallCards = rawSchema.table('scryfall_card', {
   sourceUpdatedAt: timestamp('source_updated_at', { withTimezone: true }),
   payloadHash: text('payload_hash').notNull(),
   ingestedAt: timestamp('ingested_at', { withTimezone: true }).notNull().defaultNow(),
-})
+});
 
-export type ScryfallCardRow = typeof scryfallCards.$inferSelect
+export type ScryfallCardRow = typeof scryfallCards.$inferSelect;

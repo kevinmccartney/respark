@@ -1,12 +1,6 @@
-import { SignInButton } from '@clerk/react'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { SignInButton } from '@clerk/react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export function SignInPage() {
   return (
@@ -29,5 +23,5 @@ export function SignInPage() {
         </CardContent>
       </Card>
     </main>
-  )
+  );
 }

@@ -1,5 +1,5 @@
-import { SignInButton, SignUpButton } from '@clerk/react'
-import { Button } from '@/components/ui/button'
+import { SignInButton, SignUpButton } from '@clerk/react';
+import { Button } from '@/components/ui/button';
 
 export function WelcomePage() {
   return (
@@ -16,8 +16,8 @@ export function WelcomePage() {
           Respark your deck building
         </h1>
         <p className="mx-auto mb-8 max-w-lg text-base leading-relaxed text-muted-foreground">
-          Learn cards, refine your lists, and build decks with a companion built
-          for the long game—not just the next brew night.
+          Learn cards, refine your lists, and build decks with a companion built for the long
+          game—not just the next brew night.
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <SignUpButton mode="modal">
@@ -33,5 +33,5 @@ export function WelcomePage() {
         </div>
       </section>
     </div>
-  )
+  );
 }

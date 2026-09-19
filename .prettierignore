@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+.terraform
+*.tfstate
+*.tfstate.*
+tfplan
+*.tfplan
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+*.svg
+reports
+apps/**/dist

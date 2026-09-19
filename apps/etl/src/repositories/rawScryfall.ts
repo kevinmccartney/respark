@@ -1,18 +1,18 @@
-import type { PoolClient } from 'pg'
+import type { PoolClient } from 'pg';
 
 export type RawScryfallUpsert = {
-  scryfallId: string
-  oracleId: string | null
-  payload: unknown
-  sourceUpdatedAt: Date | null
-  payloadHash: string
-}
+  scryfallId: string;
+  oracleId: string | null;
+  payload: unknown;
+  sourceUpdatedAt: Date | null;
+  payloadHash: string;
+};
 
 export type UpsertBatchResult = {
-  inserted: number
-  updated: number
-  unchanged: number
-}
+  inserted: number;
+  updated: number;
+  unchanged: number;
+};
 
 /**
  * Batch upsert into raw.scryfall_card.
@@ -23,25 +23,25 @@ export async function upsertScryfallCards(
   rows: RawScryfallUpsert[],
 ): Promise<UpsertBatchResult> {
   if (rows.length === 0) {
-    return { inserted: 0, updated: 0, unchanged: 0 }
+    return { inserted: 0, updated: 0, unchanged: 0 };
   }
 
-  const values: unknown[] = []
-  const placeholders: string[] = []
+  const values: unknown[] = [];
+  const placeholders: string[] = [];
 
   rows.forEach((row, i) => {
-    const o = i * 5
+    const o = i * 5;
     placeholders.push(
       `($${o + 1}::uuid, $${o + 2}::uuid, $${o + 3}::jsonb, $${o + 4}::timestamptz, $${o + 5})`,
-    )
+    );
     values.push(
       row.scryfallId,
       row.oracleId,
       JSON.stringify(row.payload),
       row.sourceUpdatedAt,
       row.payloadHash,
-    )
-  })
+    );
+  });
 
   // xmax = 0 → insert; otherwise an update that passed the WHERE clause.
   // Conflicts skipped by WHERE do not appear in RETURNING → unchanged.
@@ -58,18 +58,18 @@ export async function upsertScryfallCards(
      where t.payload_hash is distinct from excluded.payload_hash
      returning (xmax::text = '0') as is_insert`,
     values,
-  )
+  );
 
-  let inserted = 0
-  let updated = 0
+  let inserted = 0;
+  let updated = 0;
   for (const row of result.rows) {
-    if (row.is_insert) inserted += 1
-    else updated += 1
+    if (row.is_insert) inserted += 1;
+    else updated += 1;
   }
 
   return {
     inserted,
     updated,
     unchanged: rows.length - result.rows.length,
-  }
+  };
 }

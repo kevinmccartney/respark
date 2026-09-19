@@ -1,7 +1,7 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common'
-import { and, asc, count, desc, eq, inArray, type SQL } from 'drizzle-orm'
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino'
-import { DATABASE, type Database } from '../db/database.module'
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, asc, count, desc, eq, inArray, type SQL } from 'drizzle-orm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { DATABASE, type Database } from '../db/database.module';
 import {
   etlJobRuns,
   etlSyncs,
@@ -13,14 +13,14 @@ import {
   type IngestionErrorRow,
   type IngestionReconciliationRow,
   type IngestionUnmatchedRow,
-} from '../db/schema'
+} from '../db/schema';
 import type {
   EtlJobRun,
   EtlSync,
   IngestionError,
   IngestionReconciliation,
   IngestionUnmatched,
-} from './admin.types'
+} from './admin.types';
 
 @Injectable()
 export class AdminService {
@@ -31,34 +31,31 @@ export class AdminService {
     private readonly logger: PinoLogger,
   ) {}
 
-  async listEtlSyncs(input: {
-    limit: number
-    status?: string
-  }): Promise<EtlSync[]> {
-    const filters: SQL[] = []
-    if (input.status) filters.push(eq(etlSyncs.status, input.status))
+  async listEtlSyncs(input: { limit: number; status?: string }): Promise<EtlSync[]> {
+    const filters: SQL[] = [];
+    if (input.status) filters.push(eq(etlSyncs.status, input.status));
 
     const syncRows = await this.db
       .select()
       .from(etlSyncs)
       .where(filters.length ? and(...filters) : undefined)
       .orderBy(desc(etlSyncs.startedAt))
-      .limit(input.limit)
+      .limit(input.limit);
 
-    const syncIds = syncRows.map((s) => s.id)
-    const jobsBySync = new Map<string, EtlJobRunRow[]>()
+    const syncIds = syncRows.map((s) => s.id);
+    const jobsBySync = new Map<string, EtlJobRunRow[]>();
 
     if (syncIds.length > 0) {
       const jobRows = await this.db
         .select()
         .from(etlJobRuns)
         .where(inArray(etlJobRuns.syncId, syncIds))
-        .orderBy(asc(etlJobRuns.startedAt))
+        .orderBy(asc(etlJobRuns.startedAt));
 
       for (const job of jobRows) {
-        const list = jobsBySync.get(job.syncId) ?? []
-        list.push(job)
-        jobsBySync.set(job.syncId, list)
+        const list = jobsBySync.get(job.syncId) ?? [];
+        list.push(job);
+        jobsBySync.set(job.syncId, list);
       }
     }
 
@@ -70,29 +67,25 @@ export class AdminService {
         count: syncRows.length,
       },
       'Listed ETL syncs',
-    )
+    );
 
-    return syncRows.map((row) => toEtlSync(row, jobsBySync.get(row.id) ?? []))
+    return syncRows.map((row) => toEtlSync(row, jobsBySync.get(row.id) ?? []));
   }
 
   async getEtlSync(id: string): Promise<EtlSync> {
-    const [row] = await this.db
-      .select()
-      .from(etlSyncs)
-      .where(eq(etlSyncs.id, id))
-      .limit(1)
+    const [row] = await this.db.select().from(etlSyncs).where(eq(etlSyncs.id, id)).limit(1);
 
     if (!row) {
-      throw new NotFoundException(`ETL sync ${id} not found`)
+      throw new NotFoundException(`ETL sync ${id} not found`);
     }
 
     const jobs = await this.db
       .select()
       .from(etlJobRuns)
       .where(eq(etlJobRuns.syncId, id))
-      .orderBy(asc(etlJobRuns.startedAt))
+      .orderBy(asc(etlJobRuns.startedAt));
 
-    return toEtlSync(row, jobs)
+    return toEtlSync(row, jobs);
   }
 
   async getJobRun(syncId: string, jobRunId: string): Promise<EtlJobRun> {
@@ -100,15 +93,13 @@ export class AdminService {
       .select()
       .from(etlJobRuns)
       .where(and(eq(etlJobRuns.id, jobRunId), eq(etlJobRuns.syncId, syncId)))
-      .limit(1)
+      .limit(1);
 
     if (!row) {
-      throw new NotFoundException(
-        `Job run ${jobRunId} not found for sync ${syncId}`,
-      )
+      throw new NotFoundException(`Job run ${jobRunId} not found for sync ${syncId}`);
     }
 
-    return toEtlJobRun(row)
+    return toEtlJobRun(row);
   }
 
   async listJobErrors(
@@ -116,14 +107,11 @@ export class AdminService {
     jobRunId: string,
     input: { limit: number; offset: number },
   ): Promise<{ errors: IngestionError[]; total: number }> {
-    await this.getJobRun(syncId, jobRunId)
+    await this.getJobRun(syncId, jobRunId);
 
-    const where = eq(ingestionErrors.runId, jobRunId)
+    const where = eq(ingestionErrors.runId, jobRunId);
 
-    const [totalRow] = await this.db
-      .select({ total: count() })
-      .from(ingestionErrors)
-      .where(where)
+    const [totalRow] = await this.db.select({ total: count() }).from(ingestionErrors).where(where);
 
     const rows = await this.db
       .select()
@@ -131,7 +119,7 @@ export class AdminService {
       .where(where)
       .orderBy(desc(ingestionErrors.createdAt))
       .limit(input.limit)
-      .offset(input.offset)
+      .offset(input.offset);
 
     this.logger.info(
       {
@@ -144,28 +132,28 @@ export class AdminService {
         count: rows.length,
       },
       'Listed job errors',
-    )
+    );
 
     return {
       errors: rows.map(toIngestionError),
       total: totalRow.total,
-    }
+    };
   }
 
   async getJobReconciliation(
     syncId: string,
     jobRunId: string,
   ): Promise<IngestionReconciliation | null> {
-    const job = await this.getJobRun(syncId, jobRunId)
+    const job = await this.getJobRun(syncId, jobRunId);
     if (job.job !== 'identifiers') {
-      return null
+      return null;
     }
 
     const [row] = await this.db
       .select()
       .from(ingestionReconciliations)
       .where(eq(ingestionReconciliations.runId, jobRunId))
-      .limit(1)
+      .limit(1);
 
     this.logger.info(
       {
@@ -175,9 +163,9 @@ export class AdminService {
         found: Boolean(row),
       },
       'Fetched job reconciliation',
-    )
+    );
 
-    return row ? toIngestionReconciliation(row) : null
+    return row ? toIngestionReconciliation(row) : null;
   }
 
   async listJobUnmatched(
@@ -185,17 +173,17 @@ export class AdminService {
     jobRunId: string,
     input: { limit: number; offset: number },
   ): Promise<{ unmatched: IngestionUnmatched[]; total: number }> {
-    const job = await this.getJobRun(syncId, jobRunId)
+    const job = await this.getJobRun(syncId, jobRunId);
     if (job.job !== 'identifiers') {
-      return { unmatched: [], total: 0 }
+      return { unmatched: [], total: 0 };
     }
 
-    const where = eq(ingestionUnmatched.runId, jobRunId)
+    const where = eq(ingestionUnmatched.runId, jobRunId);
 
     const [totalRow] = await this.db
       .select({ total: count() })
       .from(ingestionUnmatched)
-      .where(where)
+      .where(where);
 
     const rows = await this.db
       .select()
@@ -203,7 +191,7 @@ export class AdminService {
       .where(where)
       .orderBy(asc(ingestionUnmatched.id))
       .limit(input.limit)
-      .offset(input.offset)
+      .offset(input.offset);
 
     this.logger.info(
       {
@@ -216,32 +204,32 @@ export class AdminService {
         count: rows.length,
       },
       'Listed job unmatched records',
-    )
+    );
 
     return {
       unmatched: rows.map(toIngestionUnmatched),
       total: totalRow.total,
-    }
+    };
   }
 }
 
 function toEtlSync(row: EtlSyncRow, jobs: EtlJobRunRow[]): EtlSync {
-  const stageOrder = ['catalog', 'enrichment']
-  const byStage = new Map<string, EtlJobRun[]>()
+  const stageOrder = ['catalog', 'enrichment'];
+  const byStage = new Map<string, EtlJobRun[]>();
   for (const job of jobs) {
-    const list = byStage.get(job.stage) ?? []
-    list.push(toEtlJobRun(job))
-    byStage.set(job.stage, list)
+    const list = byStage.get(job.stage) ?? [];
+    list.push(toEtlJobRun(job));
+    byStage.set(job.stage, list);
   }
 
   const stages = stageOrder
     .filter((s) => byStage.has(s))
-    .map((stage) => ({ stage, jobs: byStage.get(stage)! }))
+    .map((stage) => ({ stage, jobs: byStage.get(stage)! }));
 
   // Include any unexpected stages
   for (const [stage, stageJobs] of byStage) {
     if (!stageOrder.includes(stage)) {
-      stages.push({ stage, jobs: stageJobs })
+      stages.push({ stage, jobs: stageJobs });
     }
   }
 
@@ -256,7 +244,7 @@ function toEtlSync(row: EtlSyncRow, jobs: EtlJobRunRow[]): EtlSync {
     errorMessage: row.errorMessage,
     createdAt: row.createdAt.toISOString(),
     stages,
-  }
+  };
 }
 
 function toEtlJobRun(row: EtlJobRunRow): EtlJobRun {
@@ -278,7 +266,7 @@ function toEtlJobRun(row: EtlJobRunRow): EtlJobRun {
     downloadBytes: row.downloadBytes,
     durationMs: row.durationMs,
     errorMessage: row.errorMessage,
-  }
+  };
 }
 
 function toIngestionError(row: IngestionErrorRow): IngestionError {
@@ -291,12 +279,10 @@ function toIngestionError(row: IngestionErrorRow): IngestionError {
     errorMessage: row.errorMessage,
     payload: row.payload,
     createdAt: row.createdAt.toISOString(),
-  }
+  };
 }
 
-function toIngestionReconciliation(
-  row: IngestionReconciliationRow,
-): IngestionReconciliation {
+function toIngestionReconciliation(row: IngestionReconciliationRow): IngestionReconciliation {
   return {
     runId: row.runId,
     matched: row.matched,
@@ -311,7 +297,7 @@ function toIngestionReconciliation(
     dryRun: row.dryRun,
     limitN: row.limitN,
     createdAt: row.createdAt.toISOString(),
-  }
+  };
 }
 
 function toIngestionUnmatched(row: IngestionUnmatchedRow): IngestionUnmatched {
@@ -326,5 +312,5 @@ function toIngestionUnmatched(row: IngestionUnmatchedRow): IngestionUnmatched {
     scryfallId: row.scryfallId,
     reason: row.reason,
     createdAt: row.createdAt.toISOString(),
-  }
+  };
 }

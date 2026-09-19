@@ -1,23 +1,23 @@
-import { useAuth } from '@clerk/react'
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { ManaCost } from '../components/ManaCost.tsx'
-import { DeckImportDialog } from '../components/DeckImportDialog.tsx'
-import { PrintingPickerDialog } from '../components/PrintingPickerDialog.tsx'
-import { SiteHeader } from '../components/SiteHeader.tsx'
-import { ApiError } from '../lib/api.ts'
-import { suggestCardNames, type CardNameSuggestion } from '../lib/cards.ts'
+import { useAuth } from '@clerk/react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ManaCost } from '../components/ManaCost.tsx';
+import { DeckImportDialog } from '../components/DeckImportDialog.tsx';
+import { PrintingPickerDialog } from '../components/PrintingPickerDialog.tsx';
+import { SiteHeader } from '../components/SiteHeader.tsx';
+import { ApiError } from '../lib/api.ts';
+import { suggestCardNames, type CardNameSuggestion } from '../lib/cards.ts';
 import {
   DECK_GROUP_LABELS,
   DECK_GROUP_MODES,
   groupDeckCards,
   type DeckCardGroup,
   type DeckGroupMode,
-} from '../lib/deck-grouping.ts'
+} from '../lib/deck-grouping.ts';
 import {
   addCardToDeck,
   DECK_FORMAT_LABELS,
@@ -33,128 +33,128 @@ import {
   type DeckCard,
   type DeckDetail,
   type DeckFormat,
-} from '../lib/decks.ts'
+} from '../lib/decks.ts';
 
-const SUGGEST_DEBOUNCE_MS = 200
+const SUGGEST_DEBOUNCE_MS = 200;
 
-type ViewMode = 'list' | 'grid'
+type ViewMode = 'list' | 'grid';
 
 export function DeckDetailPage() {
-  const { id = '' } = useParams<{ id: string }>()
-  const { getToken } = useAuth()
-  const navigate = useNavigate()
+  const { id = '' } = useParams<{ id: string }>();
+  const { getToken } = useAuth();
+  const navigate = useNavigate();
 
-  const [detail, setDetail] = useState<DeckDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
-  const [groupMode, setGroupMode] = useState<DeckGroupMode>('none')
-  const [pickingCard, setPickingCard] = useState<DeckCard | null>(null)
-  const [editingDetails, setEditingDetails] = useState(false)
-  const [nameDraft, setNameDraft] = useState('')
-  const [formatDraft, setFormatDraft] = useState<DeckFormat>('standard')
-  const [descriptionDraft, setDescriptionDraft] = useState('')
-  const [savingDetails, setSavingDetails] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [importOpen, setImportOpen] = useState(false)
+  const [detail, setDetail] = useState<DeckDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [groupMode, setGroupMode] = useState<DeckGroupMode>('none');
+  const [pickingCard, setPickingCard] = useState<DeckCard | null>(null);
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [formatDraft, setFormatDraft] = useState<DeckFormat>('standard');
+  const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
-  const [query, setQuery] = useState('')
-  const [suggestions, setSuggestions] = useState<CardNameSuggestion[]>([])
-  const [suggesting, setSuggesting] = useState(false)
-  const [addingId, setAddingId] = useState<string | null>(null)
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<CardNameSuggestion[]>([]);
+  const [suggesting, setSuggesting] = useState(false);
+  const [addingId, setAddingId] = useState<string | null>(null);
 
   const mainboardCards = useMemo(
     () => detail?.cards.filter((card) => !card.sideboard) ?? [],
     [detail],
-  )
+  );
   const sideboardCards = useMemo(
     () => detail?.cards.filter((card) => card.sideboard) ?? [],
     [detail],
-  )
+  );
   const mainGroups = useMemo(
     () => groupDeckCards(mainboardCards, groupMode),
     [mainboardCards, groupMode],
-  )
+  );
   const sideGroups = useMemo(
     () => groupDeckCards(sideboardCards, groupMode),
     [sideboardCards, groupMode],
-  )
+  );
 
   useEffect(() => {
-    const controller = new AbortController()
+    const controller = new AbortController();
 
     async function load() {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
       try {
-        const next = await fetchDeck(getToken, id)
-        if (!controller.signal.aborted) setDetail(next)
+        const next = await fetchDeck(getToken, id);
+        if (!controller.signal.aborted) setDetail(next);
       } catch (err) {
-        if (controller.signal.aborted) return
-        setError(err instanceof ApiError ? err.message : 'Could not load deck')
-        setDetail(null)
+        if (controller.signal.aborted) return;
+        setError(err instanceof ApiError ? err.message : 'Could not load deck');
+        setDetail(null);
       } finally {
-        if (!controller.signal.aborted) setLoading(false)
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
 
-    if (id) void load()
-    return () => controller.abort()
-  }, [getToken, id])
+    if (id) void load();
+    return () => controller.abort();
+  }, [getToken, id]);
 
   useEffect(() => {
-    const trimmed = query.trim()
+    const trimmed = query.trim();
     if (trimmed.length < 2) {
-      setSuggestions([])
-      setSuggesting(false)
-      return
+      setSuggestions([]);
+      setSuggesting(false);
+      return;
     }
 
-    const controller = new AbortController()
+    const controller = new AbortController();
     const handle = window.setTimeout(() => {
-      setSuggesting(true)
+      setSuggesting(true);
       void suggestCardNames(getToken, trimmed)
         .then((rows) => {
-          if (!controller.signal.aborted) setSuggestions(rows)
+          if (!controller.signal.aborted) setSuggestions(rows);
         })
         .catch(() => {
-          if (!controller.signal.aborted) setSuggestions([])
+          if (!controller.signal.aborted) setSuggestions([]);
         })
         .finally(() => {
-          if (!controller.signal.aborted) setSuggesting(false)
-        })
-    }, SUGGEST_DEBOUNCE_MS)
+          if (!controller.signal.aborted) setSuggesting(false);
+        });
+    }, SUGGEST_DEBOUNCE_MS);
 
     return () => {
-      controller.abort()
-      window.clearTimeout(handle)
-    }
-  }, [getToken, query])
+      controller.abort();
+      window.clearTimeout(handle);
+    };
+  }, [getToken, query]);
 
   async function handleAdd(suggestion: CardNameSuggestion) {
-    if (!detail || addingId) return
-    setAddingId(suggestion.id)
-    setActionError(null)
+    if (!detail || addingId) return;
+    setAddingId(suggestion.id);
+    setActionError(null);
     try {
-      const card = await addCardToDeck(getToken, detail.deck.id, suggestion.id)
-      setDetail((prev) => (prev ? upsertDeckCard(prev, card.id, card) : prev))
-      setQuery('')
-      setSuggestions([])
+      const card = await addCardToDeck(getToken, detail.deck.id, suggestion.id);
+      setDetail((prev) => (prev ? upsertDeckCard(prev, card.id, card) : prev));
+      setQuery('');
+      setSuggestions([]);
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : 'Could not add card')
+      setActionError(err instanceof ApiError ? err.message : 'Could not add card');
     } finally {
-      setAddingId(null)
+      setAddingId(null);
     }
   }
 
   async function bumpQuantity(card: DeckCard, delta: number) {
-    if (!detail) return
-    const nextQty = card.quantity + delta
-    setActionError(null)
+    if (!detail) return;
+    const nextQty = card.quantity + delta;
+    setActionError(null);
     try {
       if (nextQty <= 0) {
-        await removeDeckCard(getToken, detail.deck.id, card.id)
+        await removeDeckCard(getToken, detail.deck.id, card.id);
         setDetail((prev) =>
           prev
             ? {
@@ -162,139 +162,110 @@ export function DeckDetailPage() {
                 cards: prev.cards.filter((c) => c.id !== card.id),
               }
             : prev,
-        )
-        return
+        );
+        return;
       }
-      const updated = await setDeckCardQuantity(
-        getToken,
-        detail.deck.id,
-        card.id,
-        nextQty,
-      )
-      if (!updated) return
-      setDetail((prev) => (prev ? upsertDeckCard(prev, card.id, updated) : prev))
+      const updated = await setDeckCardQuantity(getToken, detail.deck.id, card.id, nextQty);
+      if (!updated) return;
+      setDetail((prev) => (prev ? upsertDeckCard(prev, card.id, updated) : prev));
     } catch (err) {
-      setActionError(
-        err instanceof ApiError ? err.message : 'Could not update quantity',
-      )
+      setActionError(err instanceof ApiError ? err.message : 'Could not update quantity');
     }
   }
 
   async function handlePrintingSelect(printingId: string) {
-    if (!detail || !pickingCard) return
-    const previousId = pickingCard.id
-    const updated = await setDeckCardPrinting(
-      getToken,
-      detail.deck.id,
-      previousId,
-      printingId,
-    )
-    setDetail((prev) => (prev ? upsertDeckCard(prev, previousId, updated) : prev))
+    if (!detail || !pickingCard) return;
+    const previousId = pickingCard.id;
+    const updated = await setDeckCardPrinting(getToken, detail.deck.id, previousId, printingId);
+    setDetail((prev) => (prev ? upsertDeckCard(prev, previousId, updated) : prev));
   }
 
   async function toggleFoil(card: DeckCard) {
-    if (!detail) return
-    setActionError(null)
+    if (!detail) return;
+    setActionError(null);
     try {
-      const updated = await setDeckCardFoil(
-        getToken,
-        detail.deck.id,
-        card.id,
-        !card.foil,
-      )
-      setDetail((prev) => (prev ? upsertDeckCard(prev, card.id, updated) : prev))
+      const updated = await setDeckCardFoil(getToken, detail.deck.id, card.id, !card.foil);
+      setDetail((prev) => (prev ? upsertDeckCard(prev, card.id, updated) : prev));
     } catch (err) {
-      setActionError(
-        err instanceof ApiError ? err.message : 'Could not update foil',
-      )
+      setActionError(err instanceof ApiError ? err.message : 'Could not update foil');
     }
   }
 
   async function toggleSideboard(card: DeckCard) {
-    if (!detail) return
-    setActionError(null)
+    if (!detail) return;
+    setActionError(null);
     try {
       const updated = await setDeckCardSideboard(
         getToken,
         detail.deck.id,
         card.id,
         !card.sideboard,
-      )
-      setDetail((prev) => (prev ? upsertDeckCard(prev, card.id, updated) : prev))
+      );
+      setDetail((prev) => (prev ? upsertDeckCard(prev, card.id, updated) : prev));
     } catch (err) {
-      setActionError(
-        err instanceof ApiError ? err.message : 'Could not move card',
-      )
+      setActionError(err instanceof ApiError ? err.message : 'Could not move card');
     }
   }
 
   function startEditDetails() {
-    if (!detail) return
-    setNameDraft(detail.deck.name)
-    setFormatDraft(detail.deck.format)
-    setDescriptionDraft(detail.deck.description ?? '')
-    setEditingDetails(true)
-    setActionError(null)
+    if (!detail) return;
+    setNameDraft(detail.deck.name);
+    setFormatDraft(detail.deck.format);
+    setDescriptionDraft(detail.deck.description ?? '');
+    setEditingDetails(true);
+    setActionError(null);
   }
 
   function cancelEditDetails() {
-    setEditingDetails(false)
-    setNameDraft('')
-    setDescriptionDraft('')
+    setEditingDetails(false);
+    setNameDraft('');
+    setDescriptionDraft('');
   }
 
   async function saveDetails() {
-    if (!detail || savingDetails) return
-    const trimmedName = nameDraft.trim()
+    if (!detail || savingDetails) return;
+    const trimmedName = nameDraft.trim();
     if (!trimmedName) {
-      setActionError('Name is required')
-      return
+      setActionError('Name is required');
+      return;
     }
 
-    setSavingDetails(true)
-    setActionError(null)
+    setSavingDetails(true);
+    setActionError(null);
     try {
-      const trimmedDescription = descriptionDraft.trim()
+      const trimmedDescription = descriptionDraft.trim();
       const deck = await updateDeck(getToken, detail.deck.id, {
         name: trimmedName,
         format: formatDraft,
         description: trimmedDescription || null,
-      })
-      setDetail((prev) => (prev ? { ...prev, deck } : prev))
-      setEditingDetails(false)
+      });
+      setDetail((prev) => (prev ? { ...prev, deck } : prev));
+      setEditingDetails(false);
     } catch (err) {
-      setActionError(
-        err instanceof ApiError ? err.message : 'Could not save deck details',
-      )
+      setActionError(err instanceof ApiError ? err.message : 'Could not save deck details');
     } finally {
-      setSavingDetails(false)
+      setSavingDetails(false);
     }
   }
 
   async function handleDelete() {
-    if (!detail || deleting) return
-    const confirmed = window.confirm(
-      `Delete “${detail.deck.name}”? This cannot be undone.`,
-    )
-    if (!confirmed) return
+    if (!detail || deleting) return;
+    const confirmed = window.confirm(`Delete “${detail.deck.name}”? This cannot be undone.`);
+    if (!confirmed) return;
 
-    setDeleting(true)
-    setActionError(null)
+    setDeleting(true);
+    setActionError(null);
     try {
-      await deleteDeck(getToken, detail.deck.id)
-      navigate('/home')
+      await deleteDeck(getToken, detail.deck.id);
+      navigate('/home');
     } catch (err) {
-      setActionError(
-        err instanceof ApiError ? err.message : 'Could not delete deck',
-      )
-      setDeleting(false)
+      setActionError(err instanceof ApiError ? err.message : 'Could not delete deck');
+      setDeleting(false);
     }
   }
 
-  const mainTotal =
-    mainboardCards.reduce((sum, card) => sum + card.quantity, 0)
-  const sideTotal =
-    sideboardCards.reduce((sum, card) => sum + card.quantity, 0)
+  const mainTotal = mainboardCards.reduce((sum, card) => sum + card.quantity, 0);
+  const sideTotal = sideboardCards.reduce((sum, card) => sum + card.quantity, 0);
 
   return (
     <>
@@ -340,9 +311,7 @@ export function DeckDetailPage() {
                     <select
                       id="deck-format"
                       value={formatDraft}
-                      onChange={(event) =>
-                        setFormatDraft(event.target.value as DeckFormat)
-                      }
+                      onChange={(event) => setFormatDraft(event.target.value as DeckFormat)}
                       disabled={savingDetails}
                       className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     >
@@ -390,16 +359,12 @@ export function DeckDetailPage() {
                 <>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 space-y-2">
-                      <h1 className="font-heading text-3xl tracking-tight">
-                        {detail.deck.name}
-                      </h1>
+                      <h1 className="font-heading text-3xl tracking-tight">{detail.deck.name}</h1>
                       <p className="text-sm text-muted-foreground">
-                        {DECK_FORMAT_LABELS[detail.deck.format]} · {mainTotal}{' '}
-                        card{mainTotal === 1 ? '' : 's'}
-                        {sideTotal > 0
-                          ? ` · ${sideTotal} sideboard`
-                          : ''}{' '}
-                        · {mainboardCards.length} unique
+                        {DECK_FORMAT_LABELS[detail.deck.format]} · {mainTotal} card
+                        {mainTotal === 1 ? '' : 's'}
+                        {sideTotal > 0 ? ` · ${sideTotal} sideboard` : ''} · {mainboardCards.length}{' '}
+                        unique
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-wrap gap-2">
@@ -411,12 +376,7 @@ export function DeckDetailPage() {
                       >
                         Import
                       </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={startEditDetails}
-                      >
+                      <Button type="button" variant="outline" size="sm" onClick={startEditDetails}>
                         Edit details
                       </Button>
                       <Button
@@ -453,9 +413,7 @@ export function DeckDetailPage() {
                   autoComplete="off"
                 />
               </div>
-              {suggesting ? (
-                <p className="text-sm text-muted-foreground">Searching…</p>
-              ) : null}
+              {suggesting ? <p className="text-sm text-muted-foreground">Searching…</p> : null}
               {!suggesting && query.trim().length >= 2 && suggestions.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No matching names.</p>
               ) : null}
@@ -554,7 +512,7 @@ export function DeckDetailPage() {
             <PrintingPickerDialog
               open={pickingCard !== null}
               onOpenChange={(open) => {
-                if (!open) setPickingCard(null)
+                if (!open) setPickingCard(null);
               }}
               deckCard={pickingCard}
               onSelect={handlePrintingSelect}
@@ -569,7 +527,7 @@ export function DeckDetailPage() {
         ) : null}
       </main>
     </>
-  )
+  );
 }
 
 function ToggleGroup<T extends string>({
@@ -578,10 +536,10 @@ function ToggleGroup<T extends string>({
   options,
   onChange,
 }: {
-  label: string
-  value: T
-  options: { value: T; label: string }[]
-  onChange: (value: T) => void
+  label: string;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (value: T) => void;
 }) {
   return (
     <div className="inline-flex items-center gap-2">
@@ -608,7 +566,7 @@ function ToggleGroup<T extends string>({
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 function BoardSection({
@@ -622,26 +580,24 @@ function BoardSection({
   onToggleFoil,
   onToggleSideboard,
 }: {
-  title: string
-  showTitle: boolean
-  groups: DeckCardGroup[]
-  groupMode: DeckGroupMode
-  viewMode: ViewMode
-  onPickPrinting: (card: DeckCard) => void
-  onBump: (card: DeckCard, delta: number) => void
-  onToggleFoil: (card: DeckCard) => void
-  onToggleSideboard: (card: DeckCard) => void
+  title: string;
+  showTitle: boolean;
+  groups: DeckCardGroup[];
+  groupMode: DeckGroupMode;
+  viewMode: ViewMode;
+  onPickPrinting: (card: DeckCard) => void;
+  onBump: (card: DeckCard, delta: number) => void;
+  onToggleFoil: (card: DeckCard) => void;
+  onToggleSideboard: (card: DeckCard) => void;
 }) {
-  const total = groups.reduce((sum, group) => sum + group.totalQuantity, 0)
+  const total = groups.reduce((sum, group) => sum + group.totalQuantity, 0);
 
   return (
     <div className="space-y-4">
       {showTitle ? (
         <h3 className="flex items-baseline justify-between gap-3 font-heading text-lg">
           <span>{title}</span>
-          <span className="text-sm font-normal text-muted-foreground">
-            {total}
-          </span>
+          <span className="text-sm font-normal text-muted-foreground">{total}</span>
         </h3>
       ) : null}
       <div className="space-y-6">
@@ -661,9 +617,7 @@ function BoardSection({
                   <div key={subgroup.key} className="space-y-2">
                     <p className="flex items-baseline justify-between gap-3 text-sm font-medium text-muted-foreground">
                       <span>{subgroup.label}</span>
-                      <span className="font-normal tabular-nums">
-                        {subgroup.totalQuantity}
-                      </span>
+                      <span className="font-normal tabular-nums">{subgroup.totalQuantity}</span>
                     </p>
                     <CardCollection
                       cards={subgroup.cards}
@@ -690,7 +644,7 @@ function BoardSection({
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 function CardCollection({
@@ -701,12 +655,12 @@ function CardCollection({
   onToggleFoil,
   onToggleSideboard,
 }: {
-  cards: DeckCard[]
-  viewMode: ViewMode
-  onPickPrinting: (card: DeckCard) => void
-  onBump: (card: DeckCard, delta: number) => void
-  onToggleFoil: (card: DeckCard) => void
-  onToggleSideboard: (card: DeckCard) => void
+  cards: DeckCard[];
+  viewMode: ViewMode;
+  onPickPrinting: (card: DeckCard) => void;
+  onBump: (card: DeckCard, delta: number) => void;
+  onToggleFoil: (card: DeckCard) => void;
+  onToggleSideboard: (card: DeckCard) => void;
 }) {
   if (viewMode === 'list') {
     return (
@@ -722,7 +676,7 @@ function CardCollection({
           />
         ))}
       </ul>
-    )
+    );
   }
 
   return (
@@ -738,7 +692,7 @@ function CardCollection({
         />
       ))}
     </ul>
-  )
+  );
 }
 
 function ListCardRow({
@@ -748,11 +702,11 @@ function ListCardRow({
   onToggleFoil,
   onToggleSideboard,
 }: {
-  card: DeckCard
-  onPickPrinting: (card: DeckCard) => void
-  onBump: (card: DeckCard, delta: number) => void
-  onToggleFoil: (card: DeckCard) => void
-  onToggleSideboard: (card: DeckCard) => void
+  card: DeckCard;
+  onPickPrinting: (card: DeckCard) => void;
+  onBump: (card: DeckCard, delta: number) => void;
+  onToggleFoil: (card: DeckCard) => void;
+  onToggleSideboard: (card: DeckCard) => void;
 }) {
   return (
     <li className="flex items-center justify-between gap-3 px-3 py-2">
@@ -764,12 +718,7 @@ function ListCardRow({
           aria-label={`Change printing for ${card.name}`}
         >
           {card.imageNormal ? (
-            <img
-              src={card.imageNormal}
-              alt=""
-              className="h-12 w-auto rounded-sm"
-              loading="lazy"
-            />
+            <img src={card.imageNormal} alt="" className="h-12 w-auto rounded-sm" loading="lazy" />
           ) : (
             <div className="bg-muted flex h-12 w-9 items-center justify-center rounded-sm text-[10px]">
               ?
@@ -778,25 +727,16 @@ function ListCardRow({
         </button>
         <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-            <Link
-              to={`/cards/${card.cardId}`}
-              className="font-medium hover:underline"
-            >
+            <Link to={`/cards/${card.cardId}`} className="font-medium hover:underline">
               {card.name}
             </Link>
             <ManaCost cost={card.manaCost} />
             {card.foil ? (
-              <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                Foil
-              </span>
+              <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Foil</span>
             ) : null}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <button
-              type="button"
-              className="hover:underline"
-              onClick={() => onPickPrinting(card)}
-            >
+            <button type="button" className="hover:underline" onClick={() => onPickPrinting(card)}>
               {card.setCode.toUpperCase()} #{card.collectorNumber}
             </button>
             <button
@@ -818,7 +758,7 @@ function ListCardRow({
       </div>
       <QuantityControls card={card} onBump={onBump} />
     </li>
-  )
+  );
 }
 
 function GridCardCell({
@@ -828,11 +768,11 @@ function GridCardCell({
   onToggleFoil,
   onToggleSideboard,
 }: {
-  card: DeckCard
-  onPickPrinting: (card: DeckCard) => void
-  onBump: (card: DeckCard, delta: number) => void
-  onToggleFoil: (card: DeckCard) => void
-  onToggleSideboard: (card: DeckCard) => void
+  card: DeckCard;
+  onPickPrinting: (card: DeckCard) => void;
+  onBump: (card: DeckCard, delta: number) => void;
+  onToggleFoil: (card: DeckCard) => void;
+  onToggleSideboard: (card: DeckCard) => void;
 }) {
   return (
     <li className="flex flex-col gap-2">
@@ -887,34 +827,28 @@ function GridCardCell({
         <QuantityControls card={card} onBump={onBump} />
       </div>
     </li>
-  )
+  );
 }
 
-function upsertDeckCard(
-  detail: DeckDetail,
-  previousId: string,
-  next: DeckCard,
-): DeckDetail {
-  const without = detail.cards.filter(
-    (card) => card.id !== previousId && card.id !== next.id,
-  )
+function upsertDeckCard(detail: DeckDetail, previousId: string, next: DeckCard): DeckDetail {
+  const without = detail.cards.filter((card) => card.id !== previousId && card.id !== next.id);
   const cards = [...without, next].sort((a, b) => {
-    const byName = a.name.localeCompare(b.name)
-    if (byName !== 0) return byName
-    return a.setCode.localeCompare(b.setCode)
-  })
+    const byName = a.name.localeCompare(b.name);
+    if (byName !== 0) return byName;
+    return a.setCode.localeCompare(b.setCode);
+  });
   return {
     deck: { ...detail.deck, updatedAt: new Date().toISOString() },
     cards,
-  }
+  };
 }
 
 function QuantityControls({
   card,
   onBump,
 }: {
-  card: DeckCard
-  onBump: (card: DeckCard, delta: number) => void
+  card: DeckCard;
+  onBump: (card: DeckCard, delta: number) => void;
 }) {
   return (
     <div className="flex shrink-0 items-center gap-1">
@@ -927,9 +861,7 @@ function QuantityControls({
       >
         −
       </Button>
-      <span className="min-w-8 text-center tabular-nums text-sm">
-        {card.quantity}
-      </span>
+      <span className="min-w-8 text-center tabular-nums text-sm">{card.quantity}</span>
       <Button
         type="button"
         variant="outline"
@@ -940,5 +872,5 @@ function QuantityControls({
         +
       </Button>
     </div>
-  )
+  );
 }

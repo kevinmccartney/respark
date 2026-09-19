@@ -1,9 +1,9 @@
-import { Route, Routes } from 'react-router-dom'
-import { AppShell } from './components/AppShell.tsx'
-import { GuestOnly, RequireAuth } from './components/AuthGate.tsx'
-import { SyncDetailPage } from './pages/SyncDetailPage.tsx'
-import { SyncsListPage } from './pages/SyncsListPage.tsx'
-import { SignInPage } from './pages/SignInPage.tsx'
+import { Route, Routes } from 'react-router-dom';
+import { AppShell } from './components/AppShell.tsx';
+import { GuestOnly, RequireAuth } from './components/AuthGate.tsx';
+import { SyncDetailPage } from './pages/SyncDetailPage.tsx';
+import { SyncsListPage } from './pages/SyncsListPage.tsx';
+import { SignInPage } from './pages/SignInPage.tsx';
 
 export default function App() {
   return (
@@ -35,5 +35,5 @@ export default function App() {
         />
       </Route>
     </Routes>
-  )
+  );
 }

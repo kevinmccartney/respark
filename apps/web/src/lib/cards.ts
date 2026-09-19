@@ -1,84 +1,84 @@
-import { apiFetchJson } from './api.ts'
+import { apiFetchJson } from './api.ts';
 
 export type CardSearchResult = {
-  id: string
-  oracleId: string
-  name: string
-  manaCost: string | null
-  typeLine: string | null
-  oracleText: string | null
-  imageNormal: string | null
-}
+  id: string;
+  oracleId: string;
+  name: string;
+  manaCost: string | null;
+  typeLine: string | null;
+  oracleText: string | null;
+  imageNormal: string | null;
+};
 
 export type CardSearchPage = {
-  cards: CardSearchResult[]
-  total: number
-  page: number
-  pageSize: number
-  totalPages: number
-}
+  cards: CardSearchResult[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
 
 export type CardPrintingSummary = {
-  id: string
-  scryfallId: string
-  collectorNumber: string
-  language: string | null
-  rarity: string | null
-  artist: string | null
-  releasedAt: string | null
-  setCode: string
-  setName: string
-  imageNormal: string | null
-  imageLarge: string | null
-}
+  id: string;
+  scryfallId: string;
+  collectorNumber: string;
+  language: string | null;
+  rarity: string | null;
+  artist: string | null;
+  releasedAt: string | null;
+  setCode: string;
+  setName: string;
+  imageNormal: string | null;
+  imageLarge: string | null;
+};
 
 export type CardDetail = {
-  id: string
-  oracleId: string
-  name: string
-  manaCost: string | null
-  manaValue: string | null
-  typeLine: string | null
-  oracleText: string | null
-  colors: string[] | null
-  colorIdentity: string[] | null
-  keywords: string[] | null
-  layout: string | null
-  reserved: boolean | null
-  printings: CardPrintingSummary[]
-}
+  id: string;
+  oracleId: string;
+  name: string;
+  manaCost: string | null;
+  manaValue: string | null;
+  typeLine: string | null;
+  oracleText: string | null;
+  colors: string[] | null;
+  colorIdentity: string[] | null;
+  keywords: string[] | null;
+  layout: string | null;
+  reserved: boolean | null;
+  printings: CardPrintingSummary[];
+};
 
-type GetToken = () => Promise<string | null>
+type GetToken = () => Promise<string | null>;
 
 export function searchCards(
   getToken: GetToken,
   opts: { q?: string; limit?: number; page?: number },
 ): Promise<CardSearchPage> {
-  const params = new URLSearchParams()
-  if (opts.q) params.set('q', opts.q)
-  if (opts.limit !== undefined) params.set('limit', String(opts.limit))
-  if (opts.page !== undefined && opts.page > 1) params.set('page', String(opts.page))
-  const qs = params.toString()
-  return apiFetchJson<CardSearchPage>(`/cards${qs ? `?${qs}` : ''}`, getToken)
+  const params = new URLSearchParams();
+  if (opts.q) params.set('q', opts.q);
+  if (opts.limit !== undefined) params.set('limit', String(opts.limit));
+  if (opts.page !== undefined && opts.page > 1) params.set('page', String(opts.page));
+  const qs = params.toString();
+  return apiFetchJson<CardSearchPage>(`/cards${qs ? `?${qs}` : ''}`, getToken);
 }
 
 export function fetchCard(getToken: GetToken, id: string): Promise<CardDetail> {
-  return apiFetchJson<CardDetail>(`/cards/${id}`, getToken)
+  return apiFetchJson<CardDetail>(`/cards/${id}`, getToken);
 }
 
 export type CardNameSuggestion = {
-  id: string
-  name: string
-}
+  id: string;
+  name: string;
+};
 
 export function suggestCardNames(
   getToken: GetToken,
   q: string,
   limit = 15,
 ): Promise<CardNameSuggestion[]> {
-  const params = new URLSearchParams({ q, limit: String(limit) })
+  const params = new URLSearchParams({ q, limit: String(limit) });
   return apiFetchJson<{ suggestions: CardNameSuggestion[] }>(
     `/cards/suggestions?${params}`,
     getToken,
-  ).then((body) => body.suggestions)
+  ).then((body) => body.suggestions);
 }

@@ -1,5 +1,5 @@
-import { Outlet } from 'react-router-dom'
-import { AdminHeader } from './AdminHeader.tsx'
+import { Outlet } from 'react-router-dom';
+import { AdminHeader } from './AdminHeader.tsx';
 
 export function AppShell() {
   return (
@@ -9,5 +9,5 @@ export function AppShell() {
         <Outlet />
       </div>
     </div>
-  )
+  );
 }

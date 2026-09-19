@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 /** Minimum fields required to stage a Scryfall printing into raw storage. */
 export const scryfallCardSchema = z
@@ -23,7 +23,7 @@ export const scryfallCardSchema = z
 export type ScryfallCard = z.infer<typeof scryfallCardSchema>;
 
 export const bulkDataItemSchema = z.object({
-  object: z.literal("bulk_data"),
+  object: z.literal('bulk_data'),
   id: z.uuid(),
   type: z.string(),
   name: z.string(),
@@ -39,7 +39,7 @@ export const bulkDataItemSchema = z.object({
 });
 
 export const bulkDataListSchema = z.object({
-  object: z.literal("list"),
+  object: z.literal('list'),
   data: z.array(bulkDataItemSchema),
 });
 

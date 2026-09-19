@@ -4,7 +4,7 @@ Writing down ideas for the future
 
 ## Repo
 
-- Auto formatting rules
+- ~~Auto formatting rules~~
 - Linting
 - Custom LLM instructions
 - ~~Pipeline~~

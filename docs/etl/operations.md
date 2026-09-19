@@ -45,14 +45,14 @@ Useful flags (global): `--limit`, `--dry-run`, `--verbose`, `--store-raw` / `--n
 
 API:
 
-| Method | Path | Notes |
-| --- | --- | --- |
-| `POST` | `/admin/etl-syncs` | `{ catalog, enrichmentJobs? }` → 202 |
-| `GET` | `/admin/etl-syncs` | List |
-| `GET` | `/admin/etl-syncs/:id` | Sync + nested stages/jobs |
-| `GET` | `/admin/etl-syncs/:id/jobs/:jobRunId/errors` | Paginated |
-| `GET` | `/admin/etl-syncs/:id/jobs/:jobRunId/reconciliation` | Identifiers job |
-| `GET` | `/admin/etl-syncs/:id/jobs/:jobRunId/unmatched` | Identifiers job |
+| Method | Path                                                 | Notes                                |
+| ------ | ---------------------------------------------------- | ------------------------------------ |
+| `POST` | `/admin/etl-syncs`                                   | `{ catalog, enrichmentJobs? }` → 202 |
+| `GET`  | `/admin/etl-syncs`                                   | List                                 |
+| `GET`  | `/admin/etl-syncs/:id`                               | Sync + nested stages/jobs            |
+| `GET`  | `/admin/etl-syncs/:id/jobs/:jobRunId/errors`         | Paginated                            |
+| `GET`  | `/admin/etl-syncs/:id/jobs/:jobRunId/reconciliation` | Identifiers job                      |
+| `GET`  | `/admin/etl-syncs/:id/jobs/:jobRunId/unmatched`      | Identifiers job                      |
 
 Conflict rule: starting a sync fails while any sync is `running`.
 
@@ -68,8 +68,8 @@ Writes `reports/etl-size-report.json` (schema/table sizes, row counts, recent jo
 
 ## Env knobs
 
-| Variable | Where | Purpose |
-| --- | --- | --- |
-| `DATABASE_URL` | etl / api | Postgres connection |
-| `ETL_STORE_RAW` | etl | Default raw persistence (`false` to skip) |
-| `ETL_BATCH_SIZE` | etl | Upsert batch size (default 500) |
+| Variable         | Where     | Purpose                                   |
+| ---------------- | --------- | ----------------------------------------- |
+| `DATABASE_URL`   | etl / api | Postgres connection                       |
+| `ETL_STORE_RAW`  | etl       | Default raw persistence (`false` to skip) |
+| `ETL_BATCH_SIZE` | etl       | Upsert batch size (default 500)           |

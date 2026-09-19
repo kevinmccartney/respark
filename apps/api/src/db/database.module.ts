@@ -1,15 +1,22 @@
-import { existsSync, readFileSync } from 'fs'
-import { resolve } from 'path'
-import { Global, Inject, Logger, Module, OnApplicationShutdown, OnModuleInit } from '@nestjs/common'
-import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { migrate } from 'drizzle-orm/node-postgres/migrator'
-import { Pool } from 'pg'
-import * as schema from './schema'
+import { existsSync, readFileSync } from 'fs';
+import { resolve } from 'path';
+import {
+  Global,
+  Inject,
+  Logger,
+  Module,
+  OnApplicationShutdown,
+  OnModuleInit,
+} from '@nestjs/common';
+import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { Pool } from 'pg';
+import * as schema from './schema';
 
-export const DATABASE = Symbol('DATABASE')
-export const DATABASE_POOL = Symbol('DATABASE_POOL')
+export const DATABASE = Symbol('DATABASE');
+export const DATABASE_POOL = Symbol('DATABASE_POOL');
 
-export type Database = NodePgDatabase<typeof schema>
+export type Database = NodePgDatabase<typeof schema>;
 
 @Global()
 @Module({
@@ -17,16 +24,16 @@ export type Database = NodePgDatabase<typeof schema>
     {
       provide: DATABASE_POOL,
       useFactory: () => {
-        const connectionString = process.env.DATABASE_URL
+        const connectionString = process.env.DATABASE_URL;
         if (!connectionString) {
-          throw new Error('DATABASE_URL is required. Copy apps/api/.env.example to apps/api/.env.')
+          throw new Error('DATABASE_URL is required. Copy apps/api/.env.example to apps/api/.env.');
         }
 
         // Present only in the deployed image, where RDS requires verified TLS.
-        const caPath = process.env.DATABASE_CA_PATH
-        const ssl = caPath && existsSync(caPath) ? { ca: readFileSync(caPath, 'utf8') } : undefined
+        const caPath = process.env.DATABASE_CA_PATH;
+        const ssl = caPath && existsSync(caPath) ? { ca: readFileSync(caPath, 'utf8') } : undefined;
 
-        return new Pool(ssl ? { connectionString, ssl } : { connectionString })
+        return new Pool(ssl ? { connectionString, ssl } : { connectionString });
       },
     },
     {
@@ -38,7 +45,7 @@ export type Database = NodePgDatabase<typeof schema>
   exports: [DATABASE, DATABASE_POOL],
 })
 export class DatabaseModule implements OnModuleInit, OnApplicationShutdown {
-  private readonly logger = new Logger(DatabaseModule.name)
+  private readonly logger = new Logger(DatabaseModule.name);
 
   constructor(
     @Inject(DATABASE) private readonly db: Database,
@@ -50,15 +57,15 @@ export class DatabaseModule implements OnModuleInit, OnApplicationShutdown {
    * remains the explicit step. Safe for a single instance only.
    */
   async onModuleInit() {
-    if (process.env.RUN_MIGRATIONS !== 'true') return
+    if (process.env.RUN_MIGRATIONS !== 'true') return;
 
-    const migrationsFolder = resolve(__dirname, '../../drizzle')
-    this.logger.log({ event: 'db.migrate.start', migrationsFolder }, 'Applying migrations')
-    await migrate(this.db, { migrationsFolder })
-    this.logger.log({ event: 'db.migrate.complete' }, 'Migrations applied')
+    const migrationsFolder = resolve(__dirname, '../../drizzle');
+    this.logger.log({ event: 'db.migrate.start', migrationsFolder }, 'Applying migrations');
+    await migrate(this.db, { migrationsFolder });
+    this.logger.log({ event: 'db.migrate.complete' }, 'Migrations applied');
   }
 
   async onApplicationShutdown() {
-    await this.pool.end()
+    await this.pool.end();
   }
 }

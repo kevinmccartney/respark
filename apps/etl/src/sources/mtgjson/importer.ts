@@ -1,62 +1,52 @@
-import type { Pool } from 'pg'
-import { payloadHash } from '../../core/hashing'
-import type { Logger } from '../../core/logger'
-import { ProgressBar, tapByteStream } from '../../core/progress'
-import { emitSyncEvent } from '../../core/stream-events'
-import type { GlobalFlags, IngestionRunStatus, JobContext } from '../../core/types'
-import {
-  finishJobRun,
-  insertIngestionError,
-  startJobRun,
-} from '../../repositories/ingestionRuns'
+import type { Pool } from 'pg';
+import { payloadHash } from '../../core/hashing';
+import type { Logger } from '../../core/logger';
+import { ProgressBar, tapByteStream } from '../../core/progress';
+import { emitSyncEvent } from '../../core/stream-events';
+import type { GlobalFlags, IngestionRunStatus, JobContext } from '../../core/types';
+import { finishJobRun, insertIngestionError, startJobRun } from '../../repositories/ingestionRuns';
 import {
   reconcileMtgjsonCard,
   resolvePrinting,
   type UnmatchedRecord,
-} from '../../repositories/mtgjsonReconcile'
+} from '../../repositories/mtgjsonReconcile';
 import {
   replaceUnmatchedRecords,
   upsertIngestionReconciliation,
-} from '../../repositories/reconciliation'
-import {
-  upsertMtgjsonCards,
-  type RawMtgjsonUpsert,
-} from '../../repositories/rawMtgjson'
-import {
-  buildDemoUnmatchedItems,
-  installDemoAmbiguousClone,
-} from './demoMismatches'
-import { fetchMtgjsonMeta, openAllIdentifiersDownload } from './client'
-import { mtgjsonCardSchema } from './schema'
-import { streamAllIdentifiers } from './stream'
-import { extractEnrichment } from './transformer'
+} from '../../repositories/reconciliation';
+import { upsertMtgjsonCards, type RawMtgjsonUpsert } from '../../repositories/rawMtgjson';
+import { buildDemoUnmatchedItems, installDemoAmbiguousClone } from './demoMismatches';
+import { fetchMtgjsonMeta, openAllIdentifiersDownload } from './client';
+import { mtgjsonCardSchema } from './schema';
+import { streamAllIdentifiers } from './stream';
+import { extractEnrichment } from './transformer';
 
-const SOURCE = 'identifiers'
-const STAGE = 'enrichment'
-const JOB = 'identifiers'
-const DEFAULT_BATCH_SIZE = 500
+const SOURCE = 'identifiers';
+const STAGE = 'enrichment';
+const JOB = 'identifiers';
+const DEFAULT_BATCH_SIZE = 500;
 
 type BatchItem = {
-  raw: RawMtgjsonUpsert
-  enrichment: ReturnType<typeof extractEnrichment>
-  sourcePayload: unknown
-}
+  raw: RawMtgjsonUpsert;
+  enrichment: ReturnType<typeof extractEnrichment>;
+  sourcePayload: unknown;
+};
 
 function resolveStoreRaw(flags: GlobalFlags): boolean {
-  if (flags.storeRaw !== undefined) return flags.storeRaw
-  if (process.env.ETL_STORE_RAW === 'false') return false
-  return true
+  if (flags.storeRaw !== undefined) return flags.storeRaw;
+  if (process.env.ETL_STORE_RAW === 'false') return false;
+  return true;
 }
 
 export type MtgjsonImportStats = {
-  matched: number
-  unmatched: number
-  ambiguous: number
-  identifiersAdded: number
-  rawInserted: number
-  rawUpdated: number
-  rawUnchanged: number
-}
+  matched: number;
+  unmatched: number;
+  ambiguous: number;
+  identifiersAdded: number;
+  rawInserted: number;
+  rawUpdated: number;
+  rawUnchanged: number;
+};
 
 /**
  * Download MTGJSON AllIdentifiers → raw.mtgjson_card + enrich catalog identifiers.
@@ -68,12 +58,11 @@ export async function runMtgjsonImport(
   flags: GlobalFlags,
   ctx: JobContext,
 ): Promise<IngestionRunStatus> {
-  const storeRaw = resolveStoreRaw(flags)
-  const batchSize =
-    Number.parseInt(process.env.ETL_BATCH_SIZE ?? '', 10) || DEFAULT_BATCH_SIZE
+  const storeRaw = resolveStoreRaw(flags);
+  const batchSize = Number.parseInt(process.env.ETL_BATCH_SIZE ?? '', 10) || DEFAULT_BATCH_SIZE;
 
-  const started = Date.now()
-  const meta = await fetchMtgjsonMeta(logger)
+  const started = Date.now();
+  const meta = await fetchMtgjsonMeta(logger);
 
   const runId = await startJobRun(pool, {
     syncId: ctx.syncId,
@@ -81,7 +70,7 @@ export async function runMtgjsonImport(
     job: JOB,
     sourceVersion: meta.version,
     sourceUrl: meta.downloadUrl,
-  })
+  });
 
   emitSyncEvent(ctx.onEvent, {
     type: 'job.started',
@@ -91,13 +80,13 @@ export async function runMtgjsonImport(
     job: JOB,
     status: 'running',
     startedAt: new Date().toISOString(),
-  })
+  });
 
-  let recordsSeen = 0
-  let recordsFailed = 0
-  let downloadBytes: number | null = null
-  let bytesRead = 0
-  let batch: BatchItem[] = []
+  let recordsSeen = 0;
+  let recordsFailed = 0;
+  let downloadBytes: number | null = null;
+  let bytesRead = 0;
+  let batch: BatchItem[] = [];
 
   const stats: MtgjsonImportStats = {
     matched: 0,
@@ -107,17 +96,17 @@ export async function runMtgjsonImport(
     rawInserted: 0,
     rawUpdated: 0,
     rawUnchanged: 0,
-  }
-  const unmatchedSamples: UnmatchedRecord[] = []
-  const MAX_UNMATCHED_SAMPLES = 5_000
+  };
+  const unmatchedSamples: UnmatchedRecord[] = [];
+  const MAX_UNMATCHED_SAMPLES = 5_000;
 
   // Catalog accounting for ops.etl_job_run:
   // inserted = identifiers newly written, updated = matched printings, unchanged unused
-  let recordsInserted = 0
-  let recordsUpdated = 0
-  let recordsUnchanged = 0
+  let recordsInserted = 0;
+  let recordsUpdated = 0;
+  let recordsUnchanged = 0;
 
-  const useCardProgress = flags.limit !== undefined
+  const useCardProgress = flags.limit !== undefined;
   const progress = new ProgressBar(
     'MTGJSON',
     useCardProgress ? 'cards' : 'bytes',
@@ -140,9 +129,9 @@ export async function runMtgjsonImport(
           failed: snap.failed,
           percent: snap.percent,
         },
-      })
+      });
     },
-  )
+  );
 
   const emitUnmatched = (row: UnmatchedRecord) => {
     emitSyncEvent(ctx.onEvent, {
@@ -158,8 +147,8 @@ export async function runMtgjsonImport(
         scryfallId: row.scryfallId,
         reason: row.reason,
       },
-    })
-  }
+    });
+  };
 
   const snapshot = () => ({
     current: useCardProgress ? recordsSeen : bytesRead,
@@ -169,19 +158,19 @@ export async function runMtgjsonImport(
     updated: stats.identifiersAdded,
     unchanged: stats.unmatched,
     failed: recordsFailed + stats.ambiguous,
-  })
+  });
 
   const flush = async () => {
-    if (batch.length === 0) return
+    if (batch.length === 0) return;
     if (flags.dryRun) {
-      const client = await pool.connect()
+      const client = await pool.connect();
       try {
         for (const item of batch) {
-          const result = await resolvePrinting(client, item.enrichment)
-          if (result.status === 'matched') stats.matched += 1
-          else if (result.status === 'ambiguous') stats.ambiguous += 1
+          const result = await resolvePrinting(client, item.enrichment);
+          if (result.status === 'matched') stats.matched += 1;
+          else if (result.status === 'ambiguous') stats.ambiguous += 1;
           else {
-            stats.unmatched += 1
+            stats.unmatched += 1;
             if (unmatchedSamples.length < MAX_UNMATCHED_SAMPLES) {
               const row = {
                 mtgjsonUuid: item.enrichment.mtgjsonUuid,
@@ -191,47 +180,47 @@ export async function runMtgjsonImport(
                 language: item.enrichment.language,
                 scryfallId: item.enrichment.scryfallId,
                 reason: result.reason,
-              }
-              unmatchedSamples.push(row)
-              emitUnmatched(row)
+              };
+              unmatchedSamples.push(row);
+              emitUnmatched(row);
             }
           }
         }
       } finally {
-        client.release()
-        batch = []
-        progress.update(snapshot(), true)
+        client.release();
+        batch = [];
+        progress.update(snapshot(), true);
       }
-      return
+      return;
     }
 
-    const client = await pool.connect()
+    const client = await pool.connect();
     try {
-      await client.query('begin')
+      await client.query('begin');
 
       if (storeRaw) {
         const rawResult = await upsertMtgjsonCards(
           client,
           batch.map((item) => item.raw),
-        )
-        stats.rawInserted += rawResult.inserted
-        stats.rawUpdated += rawResult.updated
-        stats.rawUnchanged += rawResult.unchanged
+        );
+        stats.rawInserted += rawResult.inserted;
+        stats.rawUpdated += rawResult.updated;
+        stats.rawUnchanged += rawResult.unchanged;
       }
 
       for (const item of batch) {
-        const result = await reconcileMtgjsonCard(client, item.enrichment)
+        const result = await reconcileMtgjsonCard(client, item.enrichment);
         if (result.status === 'matched') {
-          stats.matched += 1
-          stats.identifiersAdded += result.identifiersAdded
+          stats.matched += 1;
+          stats.identifiersAdded += result.identifiersAdded;
           if (result.identifiersAdded > 0) {
-            recordsInserted += result.identifiersAdded
-            recordsUpdated += 1
+            recordsInserted += result.identifiersAdded;
+            recordsUpdated += 1;
           } else {
-            recordsUnchanged += 1
+            recordsUnchanged += 1;
           }
         } else if (result.status === 'ambiguous') {
-          stats.ambiguous += 1
+          stats.ambiguous += 1;
           await insertIngestionError(client, {
             runId,
             source: SOURCE,
@@ -244,7 +233,7 @@ export async function runMtgjsonImport(
               number: item.enrichment.collectorNumber,
               scryfallId: item.enrichment.scryfallId,
             },
-          })
+          });
           emitSyncEvent(ctx.onEvent, {
             type: 'job.error',
             syncId: ctx.syncId,
@@ -261,9 +250,9 @@ export async function runMtgjsonImport(
                 scryfallId: item.enrichment.scryfallId,
               },
             },
-          })
+          });
         } else {
-          stats.unmatched += 1
+          stats.unmatched += 1;
           if (unmatchedSamples.length < MAX_UNMATCHED_SAMPLES) {
             const row = {
               mtgjsonUuid: item.enrichment.mtgjsonUuid,
@@ -273,56 +262,56 @@ export async function runMtgjsonImport(
               language: item.enrichment.language,
               scryfallId: item.enrichment.scryfallId,
               reason: result.reason,
-            }
-            unmatchedSamples.push(row)
-            emitUnmatched(row)
+            };
+            unmatchedSamples.push(row);
+            emitUnmatched(row);
           }
         }
       }
 
-      await client.query('commit')
+      await client.query('commit');
     } catch (err) {
-      await client.query('rollback')
-      throw err
+      await client.query('rollback');
+      throw err;
     } finally {
-      client.release()
-      batch = []
-      progress.update(snapshot(), true)
+      client.release();
+      batch = [];
+      progress.update(snapshot(), true);
     }
-  }
+  };
 
   try {
     if (flags.demoMismatches) {
       logger.warn(
         { event: 'mtgjson.demo_mismatches' },
         'Demo mode: injecting synthetic unmatched/ambiguous records (no download)',
-      )
+      );
 
-      const unmatchedItems = buildDemoUnmatchedItems()
-      batch.push(...unmatchedItems)
-      recordsSeen += unmatchedItems.length
-      await flush()
+      const unmatchedItems = buildDemoUnmatchedItems();
+      batch.push(...unmatchedItems);
+      recordsSeen += unmatchedItems.length;
+      await flush();
 
       // Clone a real printing so set+number resolution hits ambiguous, then remove clone.
-      const setupClient = await pool.connect()
-      let ambiguousCleanup: (() => Promise<void>) | null = null
+      const setupClient = await pool.connect();
+      let ambiguousCleanup: (() => Promise<void>) | null = null;
       try {
-        const installed = await installDemoAmbiguousClone(setupClient)
+        const installed = await installDemoAmbiguousClone(setupClient);
         if (installed) {
-          ambiguousCleanup = installed.cleanup
-          batch.push(installed.item)
-          recordsSeen += 1
-          await flush()
+          ambiguousCleanup = installed.cleanup;
+          batch.push(installed.item);
+          recordsSeen += 1;
+          await flush();
         } else {
           logger.warn(
             { event: 'mtgjson.demo_mismatches.skip_ambiguous' },
             'No catalog.printing seed row available for ambiguous demo',
-          )
+          );
         }
       } finally {
         if (ambiguousCleanup) {
           try {
-            await ambiguousCleanup()
+            await ambiguousCleanup();
           } catch (cleanupErr) {
             logger.warn(
               {
@@ -330,29 +319,29 @@ export async function runMtgjsonImport(
                 err: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
               },
               'Failed to remove demo ambiguous clone printing',
-            )
+            );
           }
         }
-        setupClient.release()
+        setupClient.release();
       }
 
-      progress.done(snapshot())
+      progress.done(snapshot());
     } else {
-      const { body, contentLength } = await openAllIdentifiersDownload(meta, logger)
-      downloadBytes = contentLength
+      const { body, contentLength } = await openAllIdentifiersDownload(meta, logger);
+      downloadBytes = contentLength;
 
       const trackedBody = tapByteStream(body, (total) => {
-        bytesRead = total
-        progress.update(snapshot())
-      })
+        bytesRead = total;
+        progress.update(snapshot());
+      });
 
       for await (const { key, value } of streamAllIdentifiers(trackedBody)) {
-        if (flags.limit !== undefined && recordsSeen >= flags.limit) break
+        if (flags.limit !== undefined && recordsSeen >= flags.limit) break;
 
-        recordsSeen += 1
-        const parsed = mtgjsonCardSchema.safeParse(value)
+        recordsSeen += 1;
+        const parsed = mtgjsonCardSchema.safeParse(value);
         if (!parsed.success) {
-          recordsFailed += 1
+          recordsFailed += 1;
           await insertIngestionError(pool, {
             runId,
             source: SOURCE,
@@ -360,7 +349,7 @@ export async function runMtgjsonImport(
             stage: 'validate',
             errorMessage: parsed.error.message,
             payload: value,
-          })
+          });
           emitSyncEvent(ctx.onEvent, {
             type: 'job.error',
             syncId: ctx.syncId,
@@ -372,17 +361,17 @@ export async function runMtgjsonImport(
               errorMessage: parsed.error.message,
               payload: value,
             },
-          })
-          continue
+          });
+          continue;
         }
 
-        const card = parsed.data
+        const card = parsed.data;
         // Prefer object uuid; fall back to map key
         if (!card.uuid) {
-          ;(card as { uuid: string }).uuid = key
+          (card as { uuid: string }).uuid = key;
         }
 
-        const enrichment = extractEnrichment(card)
+        const enrichment = extractEnrichment(card);
         batch.push({
           raw: {
             mtgjsonUuid: enrichment.mtgjsonUuid,
@@ -392,10 +381,10 @@ export async function runMtgjsonImport(
           },
           enrichment,
           sourcePayload: value,
-        })
+        });
 
         if (batch.length >= batchSize) {
-          await flush()
+          await flush();
           logger.debug(
             {
               event: 'mtgjson.batch',
@@ -405,12 +394,12 @@ export async function runMtgjsonImport(
               ambiguous: stats.ambiguous,
             },
             'Flushed MTGJSON batch',
-          )
+          );
         }
       }
 
-      await flush()
-      progress.done(snapshot())
+      await flush();
+      progress.done(snapshot());
     }
 
     const reconciliation = {
@@ -432,7 +421,7 @@ export async function runMtgjsonImport(
       durationMs: Date.now() - started,
       dryRun: flags.dryRun,
       limit: flags.limit ?? null,
-    }
+    };
 
     await upsertIngestionReconciliation(pool, {
       runId,
@@ -447,15 +436,15 @@ export async function runMtgjsonImport(
       demoMismatches: Boolean(flags.demoMismatches),
       dryRun: flags.dryRun,
       limitN: flags.limit ?? null,
-    })
-    await replaceUnmatchedRecords(pool, runId, unmatchedSamples)
+    });
+    await replaceUnmatchedRecords(pool, runId, unmatchedSamples);
 
     const status =
       recordsFailed > 0 && stats.matched === 0 && stats.ambiguous === 0 && stats.unmatched === 0
         ? 'failed'
         : recordsFailed > 0 || stats.ambiguous > 0 || stats.unmatched > 0
           ? 'partial_success'
-          : 'success'
+          : 'success';
 
     await finishJobRun(pool, {
       runId,
@@ -467,7 +456,7 @@ export async function runMtgjsonImport(
       recordsFailed: recordsFailed + stats.unmatched + stats.ambiguous,
       downloadBytes,
       durationMs: Date.now() - started,
-    })
+    });
 
     emitSyncEvent(ctx.onEvent, {
       type: 'job.completed',
@@ -487,7 +476,7 @@ export async function runMtgjsonImport(
       },
       completedAt: new Date().toISOString(),
       errorMessage: null,
-    })
+    });
 
     logger.info(
       {
@@ -497,11 +486,11 @@ export async function runMtgjsonImport(
         unmatchedSampleSize: unmatchedSamples.length,
       },
       'MTGJSON import finished (raw + identifier enrichment)',
-    )
-    return status
+    );
+    return status;
   } catch (err) {
-    progress.done(snapshot())
-    const message = err instanceof Error ? err.message : String(err)
+    progress.done(snapshot());
+    const message = err instanceof Error ? err.message : String(err);
     await finishJobRun(pool, {
       runId,
       status: 'failed',
@@ -513,7 +502,7 @@ export async function runMtgjsonImport(
       downloadBytes,
       durationMs: Date.now() - started,
       errorMessage: message,
-    })
+    });
     emitSyncEvent(ctx.onEvent, {
       type: 'job.completed',
       syncId: ctx.syncId,
@@ -532,7 +521,7 @@ export async function runMtgjsonImport(
       },
       completedAt: new Date().toISOString(),
       errorMessage: message,
-    })
-    throw err
+    });
+    throw err;
   }
 }

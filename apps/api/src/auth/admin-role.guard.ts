@@ -4,14 +4,14 @@ import {
   ForbiddenException,
   Injectable,
   UnauthorizedException,
-} from '@nestjs/common'
-import { createClerkClient } from '@clerk/backend'
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino'
-import type { AuthenticatedRequest } from './clerk-auth.guard'
+} from '@nestjs/common';
+import { createClerkClient } from '@clerk/backend';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import type { AuthenticatedRequest } from './clerk-auth.guard';
 
 @Injectable()
 export class AdminRoleGuard implements CanActivate {
-  private readonly secretKey = process.env.CLERK_SECRET_KEY
+  private readonly secretKey = process.env.CLERK_SECRET_KEY;
 
   constructor(
     @InjectPinoLogger(AdminRoleGuard.name)
@@ -19,35 +19,32 @@ export class AdminRoleGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<AuthenticatedRequest>()
-    const userId = request.auth?.userId
-    const path = request.path
-    const method = request.method
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const userId = request.auth?.userId;
+    const path = request.path;
+    const method = request.method;
 
     if (!userId) {
-      throw new UnauthorizedException('Missing authenticated user')
+      throw new UnauthorizedException('Missing authenticated user');
     }
 
     if (!this.secretKey) {
       this.logger.error(
         { event: 'admin.config_missing', path, method },
         'CLERK_SECRET_KEY is not configured',
-      )
-      throw new UnauthorizedException('CLERK_SECRET_KEY is not configured')
+      );
+      throw new UnauthorizedException('CLERK_SECRET_KEY is not configured');
     }
 
-    const clerk = createClerkClient({ secretKey: this.secretKey })
-    const user = await clerk.users.getUser(userId)
-    const role = user.publicMetadata?.role
+    const clerk = createClerkClient({ secretKey: this.secretKey });
+    const user = await clerk.users.getUser(userId);
+    const role = user.publicMetadata?.role;
 
     if (role !== 'admin') {
-      this.logger.warn(
-        { event: 'admin.forbidden', path, method, userId },
-        'User is not an admin',
-      )
-      throw new ForbiddenException('Admin role required')
+      this.logger.warn({ event: 'admin.forbidden', path, method, userId }, 'User is not an admin');
+      throw new ForbiddenException('Admin role required');
     }
 
-    return true
+    return true;
   }
 }

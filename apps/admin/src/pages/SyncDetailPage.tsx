@@ -1,8 +1,8 @@
-import { useAuth } from "@clerk/react";
-import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import { useAuth } from '@clerk/react';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -10,9 +10,9 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+} from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -20,12 +20,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-} from "@/components/ui/pagination";
+} from '@/components/ui/dialog';
+import { Pagination, PaginationContent, PaginationItem } from '@/components/ui/pagination';
 import {
   Table,
   TableBody,
@@ -33,16 +29,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { ApiError } from "../lib/api.ts";
-import { connectEtlSyncWs } from "../lib/etl-ws.ts";
-import {
-  formatDuration,
-  formatNumber,
-  formatTimestamp,
-  statusBadgeProps,
-} from "../lib/format.ts";
-import type { SyncEvent } from "../lib/sync-events.ts";
+} from '@/components/ui/table';
+import { ApiError } from '../lib/api.ts';
+import { connectEtlSyncWs } from '../lib/etl-ws.ts';
+import { formatDuration, formatNumber, formatTimestamp, statusBadgeProps } from '../lib/format.ts';
+import type { SyncEvent } from '../lib/sync-events.ts';
 import {
   fetchEtlSync,
   fetchJobErrors,
@@ -58,7 +49,7 @@ import {
   type IngestionError,
   type IngestionReconciliation,
   type IngestionUnmatched,
-} from "../lib/syncs.ts";
+} from '../lib/syncs.ts';
 
 const PAGE_SIZE = 50;
 
@@ -75,8 +66,7 @@ export function SyncDetailPage() {
 
   const [sync, setSync] = useState<EtlSync | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-  const [reconciliation, setReconciliation] =
-    useState<IngestionReconciliation | null>(null);
+  const [reconciliation, setReconciliation] = useState<IngestionReconciliation | null>(null);
   const [unmatched, setUnmatched] = useState<IngestionUnmatched[]>([]);
   const [totalUnmatched, setTotalUnmatched] = useState(0);
   const [unmatchedOffset, setUnmatchedOffset] = useState(0);
@@ -109,8 +99,7 @@ export function SyncDetailPage() {
         setSync(syncRow);
 
         const allJobs = syncRow.stages.flatMap((s) => s.jobs);
-        const preferred =
-          allJobs.find((j) => j.job === "identifiers") ?? allJobs[0] ?? null;
+        const preferred = allJobs.find((j) => j.job === 'identifiers') ?? allJobs[0] ?? null;
         const jobId = preferred?.id ?? null;
         setSelectedJobId(jobId);
 
@@ -120,10 +109,10 @@ export function SyncDetailPage() {
               limit: PAGE_SIZE,
               offset: 0,
             }),
-            preferred?.job === "identifiers"
+            preferred?.job === 'identifiers'
               ? fetchJobReconciliation(getToken, id!, jobId)
               : Promise.resolve(null),
-            preferred?.job === "identifiers"
+            preferred?.job === 'identifiers'
               ? fetchJobUnmatched(getToken, id!, jobId, {
                   limit: PAGE_SIZE,
                   offset: 0,
@@ -147,13 +136,11 @@ export function SyncDetailPage() {
         if (controller.signal.aborted) return;
         if (isForbidden(err)) {
           setForbidden(true);
-          setError(
-            'Your account is not an admin. Set publicMetadata.role to "admin" in Clerk.',
-          );
+          setError('Your account is not an admin. Set publicMetadata.role to "admin" in Clerk.');
         } else if (err instanceof ApiError) {
           setError(err.message);
         } else {
-          setError("Could not load sync");
+          setError('Could not load sync');
         }
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -167,9 +154,7 @@ export function SyncDetailPage() {
   useEffect(() => {
     if (!id || forbidden) return;
 
-    const upsertJob = (
-      job: Partial<EtlJobRun> & { id: string; stage: string; job: string },
-    ) => {
+    const upsertJob = (job: Partial<EtlJobRun> & { id: string; stage: string; job: string }) => {
       setSync((prev) => {
         if (!prev) return prev;
         const stages = [...prev.stages];
@@ -188,7 +173,7 @@ export function SyncDetailPage() {
             syncId: prev.id,
             stage: job.stage,
             job: job.job,
-            status: job.status ?? "running",
+            status: job.status ?? 'running',
             startedAt: job.startedAt ?? new Date().toISOString(),
             completedAt: job.completedAt ?? null,
             sourceVersion: null,
@@ -227,14 +212,10 @@ export function SyncDetailPage() {
 
     const applyEvent = (event: SyncEvent) => {
       const syncId =
-        event.type === "sync.started"
-          ? event.sync.id
-          : "syncId" in event
-            ? event.syncId
-            : null;
+        event.type === 'sync.started' ? event.sync.id : 'syncId' in event ? event.syncId : null;
       if (syncId !== id) return;
 
-      if (event.type === "sync.updated" || event.type === "sync.completed") {
+      if (event.type === 'sync.updated' || event.type === 'sync.completed') {
         setSync((prev) =>
           prev
             ? {
@@ -248,7 +229,7 @@ export function SyncDetailPage() {
         return;
       }
 
-      if (event.type === "job.started") {
+      if (event.type === 'job.started') {
         upsertJob({
           id: event.jobRunId,
           stage: event.stage,
@@ -256,11 +237,11 @@ export function SyncDetailPage() {
           status: event.status,
           startedAt: event.startedAt,
         });
-        appendLog("info", `Job started: ${event.stage}/${event.job}`);
+        appendLog('info', `Job started: ${event.stage}/${event.job}`);
         return;
       }
 
-      if (event.type === "job.completed") {
+      if (event.type === 'job.completed') {
         upsertJob({
           id: event.jobRunId,
           stage: event.stage,
@@ -271,13 +252,13 @@ export function SyncDetailPage() {
           ...event.metrics,
         });
         appendLog(
-          event.status === "failed" ? "error" : "info",
+          event.status === 'failed' ? 'error' : 'info',
           `Job completed: ${event.stage}/${event.job} (${event.status})`,
         );
         return;
       }
 
-      if (event.type === "job.progress") {
+      if (event.type === 'job.progress') {
         upsertJob({
           id: event.jobRunId,
           stage: event.stage,
@@ -291,12 +272,12 @@ export function SyncDetailPage() {
         return;
       }
 
-      if (event.type === "job.log") {
+      if (event.type === 'job.log') {
         appendLog(event.level, event.message);
         return;
       }
 
-      if (event.type === "job.error") {
+      if (event.type === 'job.error') {
         setTotalErrors((n) => n + 1);
         setErrors((prev) => {
           if (selectedJobId && event.jobRunId !== selectedJobId) return prev;
@@ -312,11 +293,11 @@ export function SyncDetailPage() {
           };
           return [row, ...prev].slice(0, PAGE_SIZE);
         });
-        appendLog("error", event.error.errorMessage);
+        appendLog('error', event.error.errorMessage);
         return;
       }
 
-      if (event.type === "job.unmatched") {
+      if (event.type === 'job.unmatched') {
         setTotalUnmatched((n) => n + 1);
         setUnmatched((prev) => {
           if (selectedJobId && event.jobRunId !== selectedJobId) return prev;
@@ -360,10 +341,10 @@ export function SyncDetailPage() {
     try {
       const [errorPage, recon, unmatchedPage] = await Promise.all([
         fetchJobErrors(getToken, id, job.id, { limit: PAGE_SIZE, offset: 0 }),
-        job.job === "identifiers"
+        job.job === 'identifiers'
           ? fetchJobReconciliation(getToken, id, job.id)
           : Promise.resolve(null),
-        job.job === "identifiers"
+        job.job === 'identifiers'
           ? fetchJobUnmatched(getToken, id, job.id, {
               limit: PAGE_SIZE,
               offset: 0,
@@ -377,7 +358,7 @@ export function SyncDetailPage() {
       setTotalUnmatched(unmatchedPage.total);
     } catch (err) {
       if (err instanceof ApiError) setError(err.message);
-      else setError("Could not load job details");
+      else setError('Could not load job details');
     } finally {
       setErrorsLoading(false);
       setUnmatchedLoading(false);
@@ -398,7 +379,7 @@ export function SyncDetailPage() {
       setExpandedPayload(null);
     } catch (err) {
       if (err instanceof ApiError) setError(err.message);
-      else setError("Could not load failed rows");
+      else setError('Could not load failed rows');
     } finally {
       setErrorsLoading(false);
     }
@@ -417,20 +398,17 @@ export function SyncDetailPage() {
       setUnmatchedOffset(nextOffset);
     } catch (err) {
       if (err instanceof ApiError) setError(err.message);
-      else setError("Could not load unmatched records");
+      else setError('Could not load unmatched records');
     } finally {
       setUnmatchedLoading(false);
     }
   }
 
   const selectedJob =
-    sync?.stages.flatMap((s) => s.jobs).find((j) => j.id === selectedJobId) ??
-    null;
+    sync?.stages.flatMap((s) => s.jobs).find((j) => j.id === selectedJobId) ?? null;
 
   const payloadRow =
-    expandedPayload == null
-      ? null
-      : (errors.find((e) => e.id === expandedPayload) ?? null);
+    expandedPayload == null ? null : (errors.find((e) => e.id === expandedPayload) ?? null);
 
   return (
     <main className="mx-auto max-w-6xl px-5 py-5">
@@ -448,7 +426,7 @@ export function SyncDetailPage() {
 
       {loading ? <p className="text-muted-foreground">Loading…</p> : null}
       {error ? (
-        <Alert variant={forbidden ? "destructive" : "default"} className="mb-3">
+        <Alert variant={forbidden ? 'destructive' : 'default'} className="mb-3">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
@@ -457,38 +435,26 @@ export function SyncDetailPage() {
         <>
           <header className="mb-5">
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="font-heading text-2xl tracking-tight">
-                {syncStagesLabel(sync)}
-              </h1>
+              <h1 className="font-heading text-2xl tracking-tight">{syncStagesLabel(sync)}</h1>
               <Badge {...statusBadgeProps(sync.status)}>{sync.status}</Badge>
-              {live ? (
-                <span className="text-xs text-emerald-700">live</span>
-              ) : null}
+              {live ? <span className="text-xs text-emerald-700">live</span> : null}
             </div>
-            <p className="mt-1 font-mono text-sm text-muted-foreground">
-              {sync.id}
-            </p>
+            <p className="mt-1 font-mono text-sm text-muted-foreground">{sync.id}</p>
           </header>
 
           <Card className="mb-5">
             <CardContent>
               <dl className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-4 gap-y-3">
                 <div>
-                  <dt className="mb-1 text-xs text-muted-foreground">
-                    Started
-                  </dt>
+                  <dt className="mb-1 text-xs text-muted-foreground">Started</dt>
                   <dd>{formatTimestamp(sync.startedAt)}</dd>
                 </div>
                 <div>
-                  <dt className="mb-1 text-xs text-muted-foreground">
-                    Completed
-                  </dt>
+                  <dt className="mb-1 text-xs text-muted-foreground">Completed</dt>
                   <dd>{formatTimestamp(sync.completedAt)}</dd>
                 </div>
                 <div>
-                  <dt className="mb-1 text-xs text-muted-foreground">
-                    Duration
-                  </dt>
+                  <dt className="mb-1 text-xs text-muted-foreground">Duration</dt>
                   <dd>{formatDuration(syncDurationMs(sync))}</dd>
                 </div>
               </dl>
@@ -515,24 +481,19 @@ export function SyncDetailPage() {
               </h2>
               <div className="max-h-48 overflow-auto rounded-xl bg-muted p-3 font-mono text-xs text-foreground ring-1 ring-foreground/10">
                 {liveLogs.map((line) => (
-                  <div
-                    key={line.id}
-                    className="whitespace-pre-wrap break-words"
-                  >
-                    <span className="text-muted-foreground">
-                      [{formatTimestamp(line.at)}]
-                    </span>{" "}
+                  <div key={line.id} className="whitespace-pre-wrap break-words">
+                    <span className="text-muted-foreground">[{formatTimestamp(line.at)}]</span>{' '}
                     <span
                       className={
-                        line.level === "error"
-                          ? "text-red-400"
-                          : line.level === "warn"
-                            ? "text-amber-300"
-                            : "text-foreground/80"
+                        line.level === 'error'
+                          ? 'text-red-400'
+                          : line.level === 'warn'
+                            ? 'text-amber-300'
+                            : 'text-foreground/80'
                       }
                     >
                       {line.level}
-                    </span>{" "}
+                    </span>{' '}
                     {line.message}
                   </div>
                 ))}
@@ -541,15 +502,8 @@ export function SyncDetailPage() {
           ) : null}
 
           {sync.stages.map((stage) => (
-            <section
-              key={stage.stage}
-              className="mt-6"
-              aria-labelledby={`stage-${stage.stage}`}
-            >
-              <h2
-                id={`stage-${stage.stage}`}
-                className="mb-3 font-heading text-lg"
-              >
+            <section key={stage.stage} className="mt-6" aria-labelledby={`stage-${stage.stage}`}>
+              <h2 id={`stage-${stage.stage}`} className="mb-3 font-heading text-lg">
                 {STAGE_LABELS[stage.stage] ?? stage.stage}
               </h2>
               <div className="space-y-3">
@@ -559,18 +513,14 @@ export function SyncDetailPage() {
                     type="button"
                     className={`w-full rounded-xl bg-card p-4 text-left ring-1 transition-shadow ${
                       selectedJobId === job.id
-                        ? "ring-2 ring-foreground"
-                        : "ring-foreground/10 hover:ring-foreground/30"
+                        ? 'ring-2 ring-foreground'
+                        : 'ring-foreground/10 hover:ring-foreground/30'
                     }`}
                     onClick={() => void selectJob(job)}
                   >
                     <div className="mb-3 flex flex-wrap items-center gap-2">
-                      <span className="font-medium">
-                        {JOB_LABELS[job.job] ?? job.job}
-                      </span>
-                      <Badge {...statusBadgeProps(job.status)}>
-                        {job.status}
-                      </Badge>
+                      <span className="font-medium">{JOB_LABELS[job.job] ?? job.job}</span>
+                      <Badge {...statusBadgeProps(job.status)}>{job.status}</Badge>
                     </div>
                     <dl className="grid grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-x-4 gap-y-2 text-sm">
                       <div>
@@ -578,47 +528,33 @@ export function SyncDetailPage() {
                         <dd>{formatNumber(job.recordsSeen)}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-muted-foreground">
-                          Inserted
-                        </dt>
+                        <dt className="text-xs text-muted-foreground">Inserted</dt>
                         <dd>{formatNumber(job.recordsInserted)}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-muted-foreground">
-                          Updated
-                        </dt>
+                        <dt className="text-xs text-muted-foreground">Updated</dt>
                         <dd>{formatNumber(job.recordsUpdated)}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-muted-foreground">
-                          Failed
-                        </dt>
+                        <dt className="text-xs text-muted-foreground">Failed</dt>
                         <dd
                           className={
-                            job.recordsFailed > 0
-                              ? "font-semibold text-destructive"
-                              : undefined
+                            job.recordsFailed > 0 ? 'font-semibold text-destructive' : undefined
                           }
                         >
                           {formatNumber(job.recordsFailed)}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-muted-foreground">
-                          Duration
-                        </dt>
+                        <dt className="text-xs text-muted-foreground">Duration</dt>
                         <dd>{formatDuration(job.durationMs)}</dd>
                       </div>
                     </dl>
                     {job.sourceUrl ? (
-                      <p className="mt-2 truncate text-xs text-muted-foreground">
-                        {job.sourceUrl}
-                      </p>
+                      <p className="mt-2 truncate text-xs text-muted-foreground">{job.sourceUrl}</p>
                     ) : null}
                     {job.errorMessage ? (
-                      <p className="mt-2 text-sm text-destructive">
-                        {job.errorMessage}
-                      </p>
+                      <p className="mt-2 text-sm text-destructive">{job.errorMessage}</p>
                     ) : null}
                   </button>
                 ))}
@@ -626,39 +562,28 @@ export function SyncDetailPage() {
             </section>
           ))}
 
-          {selectedJob?.job === "identifiers" && reconciliation ? (
+          {selectedJob?.job === 'identifiers' && reconciliation ? (
             <section className="mt-6" aria-labelledby="reconciliation-heading">
               <div className="mb-3 flex flex-wrap items-center gap-3">
-                <h2
-                  id="reconciliation-heading"
-                  className="font-heading text-lg"
-                >
+                <h2 id="reconciliation-heading" className="font-heading text-lg">
                   Reconciliation
                 </h2>
-                {reconciliation.demoMismatches ? (
-                  <Badge variant="secondary">demo</Badge>
-                ) : null}
-                {reconciliation.dryRun ? (
-                  <Badge variant="outline">dry-run</Badge>
-                ) : null}
+                {reconciliation.demoMismatches ? <Badge variant="secondary">demo</Badge> : null}
+                {reconciliation.dryRun ? <Badge variant="outline">dry-run</Badge> : null}
               </div>
               <Card className="mb-5">
                 <CardContent>
                   <dl className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-4 gap-y-3">
                     <div>
-                      <dt className="mb-1 text-xs text-muted-foreground">
-                        Matched
-                      </dt>
+                      <dt className="mb-1 text-xs text-muted-foreground">Matched</dt>
                       <dd>{formatNumber(reconciliation.matched)}</dd>
                     </div>
                     <div>
-                      <dt className="mb-1 text-xs text-muted-foreground">
-                        Unmatched
-                      </dt>
+                      <dt className="mb-1 text-xs text-muted-foreground">Unmatched</dt>
                       <dd
                         className={
                           reconciliation.unmatched > 0
-                            ? "font-semibold text-destructive"
+                            ? 'font-semibold text-destructive'
                             : undefined
                         }
                       >
@@ -666,13 +591,11 @@ export function SyncDetailPage() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="mb-1 text-xs text-muted-foreground">
-                        Ambiguous
-                      </dt>
+                      <dt className="mb-1 text-xs text-muted-foreground">Ambiguous</dt>
                       <dd
                         className={
                           reconciliation.ambiguous > 0
-                            ? "font-semibold text-destructive"
+                            ? 'font-semibold text-destructive'
                             : undefined
                         }
                       >
@@ -680,9 +603,7 @@ export function SyncDetailPage() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="mb-1 text-xs text-muted-foreground">
-                        Identifiers added
-                      </dt>
+                      <dt className="mb-1 text-xs text-muted-foreground">Identifiers added</dt>
                       <dd>{formatNumber(reconciliation.identifiersAdded)}</dd>
                     </div>
                   </dl>
@@ -691,7 +612,7 @@ export function SyncDetailPage() {
             </section>
           ) : null}
 
-          {selectedJob?.job === "identifiers" && reconciliation ? (
+          {selectedJob?.job === 'identifiers' && reconciliation ? (
             <section className="mt-6" aria-labelledby="unmatched-heading">
               <div className="mb-3 flex items-baseline justify-between gap-4">
                 <h2 id="unmatched-heading" className="font-heading text-lg">
@@ -705,14 +626,10 @@ export function SyncDetailPage() {
                 </span>
               </div>
 
-              {unmatchedLoading ? (
-                <p className="text-muted-foreground">Loading…</p>
-              ) : null}
+              {unmatchedLoading ? <p className="text-muted-foreground">Loading…</p> : null}
 
               {!unmatchedLoading && unmatched.length === 0 ? (
-                <p className="text-muted-foreground">
-                  No unmatched records for this job.
-                </p>
+                <p className="text-muted-foreground">No unmatched records for this job.</p>
               ) : null}
 
               {!unmatchedLoading && unmatched.length > 0 ? (
@@ -733,21 +650,19 @@ export function SyncDetailPage() {
                       <TableBody>
                         {unmatched.map((row) => (
                           <TableRow key={row.id}>
-                            <TableCell className="font-mono text-sm">
-                              {row.externalId}
-                            </TableCell>
+                            <TableCell className="font-mono text-sm">{row.externalId}</TableCell>
                             <TableCell className="max-w-xs whitespace-normal break-words">
-                              {row.name ?? "—"}
+                              {row.name ?? '—'}
                             </TableCell>
                             <TableCell className="font-mono text-sm">
-                              {row.setCode ?? "—"}
+                              {row.setCode ?? '—'}
                             </TableCell>
                             <TableCell className="font-mono text-sm">
-                              {row.collectorNumber ?? "—"}
+                              {row.collectorNumber ?? '—'}
                             </TableCell>
-                            <TableCell>{row.language ?? "—"}</TableCell>
+                            <TableCell>{row.language ?? '—'}</TableCell>
                             <TableCell className="font-mono text-sm">
-                              {row.scryfallId ?? "—"}
+                              {row.scryfallId ?? '—'}
                             </TableCell>
                             <TableCell className="max-w-sm whitespace-normal break-words">
                               {row.reason}
@@ -766,9 +681,7 @@ export function SyncDetailPage() {
                           variant="outline"
                           disabled={unmatchedOffset === 0 || unmatchedLoading}
                           onClick={() =>
-                            void loadUnmatchedPage(
-                              Math.max(0, unmatchedOffset - PAGE_SIZE),
-                            )
+                            void loadUnmatchedPage(Math.max(0, unmatchedOffset - PAGE_SIZE))
                           }
                         >
                           Previous
@@ -779,12 +692,9 @@ export function SyncDetailPage() {
                           type="button"
                           variant="outline"
                           disabled={
-                            unmatchedOffset + PAGE_SIZE >= totalUnmatched ||
-                            unmatchedLoading
+                            unmatchedOffset + PAGE_SIZE >= totalUnmatched || unmatchedLoading
                           }
-                          onClick={() =>
-                            void loadUnmatchedPage(unmatchedOffset + PAGE_SIZE)
-                          }
+                          onClick={() => void loadUnmatchedPage(unmatchedOffset + PAGE_SIZE)}
                         >
                           Next
                         </Button>
@@ -807,20 +717,14 @@ export function SyncDetailPage() {
                 </h2>
                 <span className="text-muted-foreground">
                   {formatNumber(totalErrors)} total
-                  {totalErrors > 0
-                    ? ` · showing ${offset + 1}–${offset + errors.length}`
-                    : null}
+                  {totalErrors > 0 ? ` · showing ${offset + 1}–${offset + errors.length}` : null}
                 </span>
               </div>
 
-              {errorsLoading ? (
-                <p className="text-muted-foreground">Loading…</p>
-              ) : null}
+              {errorsLoading ? <p className="text-muted-foreground">Loading…</p> : null}
 
               {!errorsLoading && errors.length === 0 ? (
-                <p className="text-muted-foreground">
-                  No failed rows for this job.
-                </p>
+                <p className="text-muted-foreground">No failed rows for this job.</p>
               ) : null}
 
               {!errorsLoading && errors.length > 0 ? (
@@ -847,17 +751,15 @@ export function SyncDetailPage() {
                             <TableRow key={row.id}>
                               <TableCell>{row.stage}</TableCell>
                               <TableCell className="font-mono text-sm">
-                                {row.externalId ?? "—"}
+                                {row.externalId ?? '—'}
                               </TableCell>
                               <TableCell className="max-w-md whitespace-normal break-words">
                                 {row.errorMessage}
                               </TableCell>
-                              <TableCell>
-                                {formatTimestamp(row.createdAt)}
-                              </TableCell>
+                              <TableCell>{formatTimestamp(row.createdAt)}</TableCell>
                               <TableCell>
                                 {row.payload == null ? (
-                                  "—"
+                                  '—'
                                 ) : (
                                   <Button
                                     type="button"
@@ -879,9 +781,7 @@ export function SyncDetailPage() {
                       <DialogHeader>
                         <DialogTitle>Error payload</DialogTitle>
                         <DialogDescription className="font-mono">
-                          {payloadRow?.externalId ??
-                            payloadRow?.stage ??
-                            "Failed row"}
+                          {payloadRow?.externalId ?? payloadRow?.stage ?? 'Failed row'}
                         </DialogDescription>
                       </DialogHeader>
                       <pre className="max-h-[60vh] overflow-auto rounded-md bg-muted p-4 text-xs text-foreground whitespace-pre-wrap break-words">
@@ -898,9 +798,7 @@ export function SyncDetailPage() {
                           type="button"
                           variant="outline"
                           disabled={offset === 0 || errorsLoading}
-                          onClick={() =>
-                            void loadErrorPage(Math.max(0, offset - PAGE_SIZE))
-                          }
+                          onClick={() => void loadErrorPage(Math.max(0, offset - PAGE_SIZE))}
                         >
                           Previous
                         </Button>
@@ -909,9 +807,7 @@ export function SyncDetailPage() {
                         <Button
                           type="button"
                           variant="outline"
-                          disabled={
-                            offset + PAGE_SIZE >= totalErrors || errorsLoading
-                          }
+                          disabled={offset + PAGE_SIZE >= totalErrors || errorsLoading}
                           onClick={() => void loadErrorPage(offset + PAGE_SIZE)}
                         >
                           Next

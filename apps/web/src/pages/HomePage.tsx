@@ -1,58 +1,52 @@
-import { useAuth, useUser } from '@clerk/react'
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { SiteHeader } from '../components/SiteHeader.tsx'
-import { ApiError } from '../lib/api.ts'
-import { DECK_FORMAT_LABELS, fetchDecks, type Deck } from '../lib/decks.ts'
+import { useAuth, useUser } from '@clerk/react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { SiteHeader } from '../components/SiteHeader.tsx';
+import { ApiError } from '../lib/api.ts';
+import { DECK_FORMAT_LABELS, fetchDecks, type Deck } from '../lib/decks.ts';
 
 export function HomePage() {
-  const { getToken } = useAuth()
-  const { user } = useUser()
-  const firstName = user?.firstName?.trim()
-  const greeting = firstName ? `Welcome back, ${firstName}` : 'Welcome back'
+  const { getToken } = useAuth();
+  const { user } = useUser();
+  const firstName = user?.firstName?.trim();
+  const greeting = firstName ? `Welcome back, ${firstName}` : 'Welcome back';
 
-  const [decks, setDecks] = useState<Deck[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [decks, setDecks] = useState<Deck[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const controller = new AbortController()
+    const controller = new AbortController();
 
     async function loadDecks() {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
       try {
-        const list = await fetchDecks(getToken)
+        const list = await fetchDecks(getToken);
         if (!controller.signal.aborted) {
-          setDecks(list)
+          setDecks(list);
         }
       } catch (err) {
-        if (controller.signal.aborted) return
+        if (controller.signal.aborted) return;
         if (err instanceof ApiError) {
-          setError(err.message)
+          setError(err.message);
         } else {
-          setError('Could not load decks')
+          setError('Could not load decks');
         }
       } finally {
         if (!controller.signal.aborted) {
-          setLoading(false)
+          setLoading(false);
         }
       }
     }
 
-    void loadDecks()
+    void loadDecks();
 
-    return () => controller.abort()
-  }, [getToken])
+    return () => controller.abort();
+  }, [getToken]);
 
   return (
     <>
@@ -87,17 +81,17 @@ export function HomePage() {
                 {decks.map((deck) => (
                   <li key={deck.id} className="flex justify-between gap-4 py-2">
                     <div className="min-w-0">
-                      <Link
-                        to={`/decks/${deck.id}`}
-                        className="font-medium hover:underline"
-                      >
+                      <Link to={`/decks/${deck.id}`} className="font-medium hover:underline">
                         {deck.name}
                       </Link>
                       <p className="text-sm text-muted-foreground">
                         {DECK_FORMAT_LABELS[deck.format]}
                       </p>
                     </div>
-                    <time className="shrink-0 text-sm text-muted-foreground" dateTime={deck.updatedAt}>
+                    <time
+                      className="shrink-0 text-sm text-muted-foreground"
+                      dateTime={deck.updatedAt}
+                    >
                       {new Date(deck.updatedAt).toLocaleDateString()}
                     </time>
                   </li>
@@ -108,5 +102,5 @@ export function HomePage() {
         </Card>
       </main>
     </>
-  )
+  );
 }

@@ -5,7 +5,7 @@ Live admin updates use an **in-process event bus**.
 ## Lib contract
 
 ```ts
-import { runEtlSync, type SyncEvent } from "etl";
+import { runEtlSync, type SyncEvent } from 'etl';
 
 await runEtlSync(pool, logger, options, {
   onEvent: (event: SyncEvent) => {

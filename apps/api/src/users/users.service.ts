@@ -1,18 +1,18 @@
-import { Inject, Injectable } from '@nestjs/common'
-import { eq, isNull, or, sql } from 'drizzle-orm'
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino'
-import { DATABASE, type Database } from '../db/database.module'
-import { users } from '../db/schema'
+import { Inject, Injectable } from '@nestjs/common';
+import { eq, isNull, or, sql } from 'drizzle-orm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { DATABASE, type Database } from '../db/database.module';
+import { users } from '../db/schema';
 
 /** Profile fields Clerk owns; mirrored locally by the user.* webhooks. */
 export type ClerkUserProfile = {
-  clerkUserId: string
-  email: string | null
-  firstName: string | null
-  lastName: string | null
-  imageUrl: string | null
-  clerkUpdatedAt: Date | null
-}
+  clerkUserId: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  imageUrl: string | null;
+  clerkUpdatedAt: Date | null;
+};
 
 @Injectable()
 export class UsersService {
@@ -32,9 +32,9 @@ export class UsersService {
       .insert(users)
       .values({ clerkUserId })
       .onConflictDoUpdate({ target: users.clerkUserId, set: { clerkUserId } })
-      .returning({ id: users.id })
+      .returning({ id: users.id });
 
-    return user.id
+    return user.id;
   }
 
   /**
@@ -42,7 +42,7 @@ export class UsersService {
    * applied, so a delayed `user.updated` cannot overwrite newer data.
    */
   async syncFromClerk(profile: ClerkUserProfile): Promise<void> {
-    const { clerkUserId, ...fields } = profile
+    const { clerkUserId, ...fields } = profile;
 
     const result = await this.db
       .insert(users)
@@ -55,7 +55,7 @@ export class UsersService {
           sql`${users.clerkUpdatedAt} <= ${fields.clerkUpdatedAt ?? new Date()}`,
         ),
       })
-      .returning({ id: users.id })
+      .returning({ id: users.id });
 
     this.logger.info(
       {
@@ -64,7 +64,7 @@ export class UsersService {
         applied: result.length > 0,
       },
       result.length > 0 ? 'Synced user from Clerk' : 'Skipped stale Clerk user event',
-    )
+    );
   }
 
   /**
@@ -76,11 +76,11 @@ export class UsersService {
       .update(users)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
       .where(eq(users.clerkUserId, clerkUserId))
-      .returning({ id: users.id })
+      .returning({ id: users.id });
 
     this.logger.info(
       { event: 'users.deleted', clerkUserId, matched: result.length > 0 },
       'Marked user deleted',
-    )
+    );
   }
 }

@@ -1,6 +1,6 @@
-import { bigserial, index, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { etlJobRuns } from './etl-job-run'
-import { opsSchema } from './ops-schema'
+import { bigserial, index, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { etlJobRuns } from './etl-job-run';
+import { opsSchema } from './ops-schema';
 
 /**
  * Sampled unmatched records from an identifiers job reconciliation.
@@ -22,6 +22,6 @@ export const ingestionUnmatched = opsSchema.table(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index('ingestion_unmatched_run_id_id_idx').on(table.runId, table.id)],
-)
+);
 
-export type IngestionUnmatchedRow = typeof ingestionUnmatched.$inferSelect
+export type IngestionUnmatchedRow = typeof ingestionUnmatched.$inferSelect;

@@ -1,31 +1,20 @@
-import type { Pool } from "pg";
-import { payloadHash } from "../../core/hashing";
-import type { Logger } from "../../core/logger";
-import { ProgressBar, tapByteStream } from "../../core/progress";
-import { emitSyncEvent } from "../../core/stream-events";
-import type { GlobalFlags, IngestionRunStatus, JobContext } from "../../core/types";
-import { upsertCatalogRecords } from "../../repositories/catalog";
-import {
-  finishJobRun,
-  insertIngestionError,
-  startJobRun,
-} from "../../repositories/ingestionRuns";
-import {
-  upsertScryfallCards,
-  type RawScryfallUpsert,
-} from "../../repositories/rawScryfall";
-import {
-  fetchBulkMetadata,
-  openBulkDownload,
-  selectBulkDataset,
-} from "./client";
-import { bulkByteSize, bulkDownloadUri, scryfallCardSchema } from "./schema";
-import { streamJsonlGzip } from "./stream";
-import { transformScryfallCard, type CanonicalRecord } from "./transformer";
+import type { Pool } from 'pg';
+import { payloadHash } from '../../core/hashing';
+import type { Logger } from '../../core/logger';
+import { ProgressBar, tapByteStream } from '../../core/progress';
+import { emitSyncEvent } from '../../core/stream-events';
+import type { GlobalFlags, IngestionRunStatus, JobContext } from '../../core/types';
+import { upsertCatalogRecords } from '../../repositories/catalog';
+import { finishJobRun, insertIngestionError, startJobRun } from '../../repositories/ingestionRuns';
+import { upsertScryfallCards, type RawScryfallUpsert } from '../../repositories/rawScryfall';
+import { fetchBulkMetadata, openBulkDownload, selectBulkDataset } from './client';
+import { bulkByteSize, bulkDownloadUri, scryfallCardSchema } from './schema';
+import { streamJsonlGzip } from './stream';
+import { transformScryfallCard, type CanonicalRecord } from './transformer';
 
-const SOURCE = "catalog";
-const STAGE = "catalog";
-const JOB = "catalog";
+const SOURCE = 'catalog';
+const STAGE = 'catalog';
+const JOB = 'catalog';
 const DEFAULT_BATCH_SIZE = 500;
 
 export type ScryfallImportOptions = GlobalFlags & {
@@ -41,15 +30,13 @@ type BatchItem = {
 
 function resolveStoreRaw(flags: GlobalFlags): boolean {
   if (flags.storeRaw !== undefined) return flags.storeRaw;
-  if (process.env.ETL_STORE_RAW === "false") return false;
+  if (process.env.ETL_STORE_RAW === 'false') return false;
   return true;
 }
 
-function parseSourceUpdatedAt(
-  value: string | number | null | undefined,
-): Date | null {
+function parseSourceUpdatedAt(value: string | number | null | undefined): Date | null {
   if (value === null || value === undefined) return null;
-  if (typeof value === "number") {
+  if (typeof value === 'number') {
     // Scryfall sometimes uses unix seconds
     const ms = value < 1e12 ? value * 1000 : value;
     return new Date(ms);
@@ -70,9 +57,7 @@ export async function runScryfallImport(
   const options: ScryfallImportOptions = {
     ...flags,
     storeRaw: resolveStoreRaw(flags),
-    batchSize:
-      Number.parseInt(process.env.ETL_BATCH_SIZE ?? "", 10) ||
-      DEFAULT_BATCH_SIZE,
+    batchSize: Number.parseInt(process.env.ETL_BATCH_SIZE ?? '', 10) || DEFAULT_BATCH_SIZE,
   };
 
   const started = Date.now();
@@ -88,12 +73,12 @@ export async function runScryfallImport(
   });
 
   emitSyncEvent(ctx.onEvent, {
-    type: "job.started",
+    type: 'job.started',
     syncId: ctx.syncId,
     jobRunId: runId,
     stage: STAGE,
     job: JOB,
-    status: "running",
+    status: 'running',
     startedAt: new Date().toISOString(),
   });
 
@@ -108,13 +93,13 @@ export async function runScryfallImport(
 
   const useCardProgress = options.limit !== undefined;
   const progress = new ProgressBar(
-    "Scryfall",
-    useCardProgress ? "cards" : "bytes",
+    'Scryfall',
+    useCardProgress ? 'cards' : 'bytes',
     logger,
     process.stderr,
     (snap) => {
       emitSyncEvent(ctx.onEvent, {
-        type: "job.progress",
+        type: 'job.progress',
         syncId: ctx.syncId,
         jobRunId: runId,
         stage: STAGE,
@@ -135,9 +120,7 @@ export async function runScryfallImport(
 
   const snapshot = () => ({
     current: useCardProgress ? recordsSeen : bytesRead,
-    total: useCardProgress
-      ? (options.limit ?? null)
-      : (downloadBytes ?? null),
+    total: useCardProgress ? (options.limit ?? null) : (downloadBytes ?? null),
     cards: recordsSeen,
     inserted: recordsInserted,
     updated: recordsUpdated,
@@ -159,7 +142,7 @@ export async function runScryfallImport(
 
     const client = await pool.connect();
     try {
-      await client.query("begin");
+      await client.query('begin');
 
       if (options.storeRaw) {
         await upsertScryfallCards(
@@ -177,9 +160,9 @@ export async function runScryfallImport(
       recordsUpdated += catalogResult.updated;
       recordsUnchanged += catalogResult.unchanged;
 
-      await client.query("commit");
+      await client.query('commit');
     } catch (err) {
-      await client.query("rollback");
+      await client.query('rollback');
       throw err;
     } finally {
       client.release();
@@ -207,25 +190,23 @@ export async function runScryfallImport(
       if (!parsed.success) {
         recordsFailed += 1;
         const externalId =
-          typeof (raw as { id?: unknown })?.id === "string"
-            ? (raw as { id: string }).id
-            : null;
+          typeof (raw as { id?: unknown })?.id === 'string' ? (raw as { id: string }).id : null;
         await insertIngestionError(pool, {
           runId,
           source: SOURCE,
           externalId,
-          stage: "validate",
+          stage: 'validate',
           errorMessage: parsed.error.message,
           payload: raw,
         });
         emitSyncEvent(ctx.onEvent, {
-          type: "job.error",
+          type: 'job.error',
           syncId: ctx.syncId,
           jobRunId: runId,
           error: {
             source: SOURCE,
             externalId,
-            stage: "validate",
+            stage: 'validate',
             errorMessage: parsed.error.message,
             payload: raw,
           },
@@ -241,21 +222,20 @@ export async function runScryfallImport(
           runId,
           source: SOURCE,
           externalId: card.id,
-          stage: "transform",
-          errorMessage:
-            "Missing required fields for catalog (oracle_id / set / collector_number)",
+          stage: 'transform',
+          errorMessage: 'Missing required fields for catalog (oracle_id / set / collector_number)',
           payload: raw,
         });
         emitSyncEvent(ctx.onEvent, {
-          type: "job.error",
+          type: 'job.error',
           syncId: ctx.syncId,
           jobRunId: runId,
           error: {
             source: SOURCE,
             externalId: card.id,
-            stage: "transform",
+            stage: 'transform',
             errorMessage:
-              "Missing required fields for catalog (oracle_id / set / collector_number)",
+              'Missing required fields for catalog (oracle_id / set / collector_number)',
             payload: raw,
           },
         });
@@ -292,14 +272,14 @@ export async function runScryfallImport(
         await flush();
         logger.debug(
           {
-            event: "scryfall.batch",
+            event: 'scryfall.batch',
             seen: recordsSeen,
             inserted: recordsInserted,
             updated: recordsUpdated,
             unchanged: recordsUnchanged,
             failed: recordsFailed,
           },
-          "Flushed Scryfall batch",
+          'Flushed Scryfall batch',
         );
       }
     }
@@ -309,11 +289,10 @@ export async function runScryfallImport(
 
     const status =
       recordsFailed > 0 && recordsSeen > recordsFailed
-        ? "partial_success"
-        : recordsFailed > 0 &&
-            recordsInserted + recordsUpdated + recordsUnchanged === 0
-          ? "failed"
-          : "success";
+        ? 'partial_success'
+        : recordsFailed > 0 && recordsInserted + recordsUpdated + recordsUnchanged === 0
+          ? 'failed'
+          : 'success';
 
     await finishJobRun(pool, {
       runId,
@@ -329,7 +308,7 @@ export async function runScryfallImport(
 
     const completedAt = new Date().toISOString();
     emitSyncEvent(ctx.onEvent, {
-      type: "job.completed",
+      type: 'job.completed',
       syncId: ctx.syncId,
       jobRunId: runId,
       stage: STAGE,
@@ -350,7 +329,7 @@ export async function runScryfallImport(
 
     logger.info(
       {
-        event: "scryfall.complete",
+        event: 'scryfall.complete',
         runId,
         status,
         recordsSeen,
@@ -365,7 +344,7 @@ export async function runScryfallImport(
         limit: options.limit,
         bulkType: dataset.type,
       },
-      "Scryfall import finished (raw + catalog)",
+      'Scryfall import finished (raw + catalog)',
     );
     return status;
   } catch (err) {
@@ -373,7 +352,7 @@ export async function runScryfallImport(
     const message = err instanceof Error ? err.message : String(err);
     await finishJobRun(pool, {
       runId,
-      status: "failed",
+      status: 'failed',
       recordsSeen,
       recordsInserted,
       recordsUpdated,
@@ -384,12 +363,12 @@ export async function runScryfallImport(
       errorMessage: message,
     });
     emitSyncEvent(ctx.onEvent, {
-      type: "job.completed",
+      type: 'job.completed',
       syncId: ctx.syncId,
       jobRunId: runId,
       stage: STAGE,
       job: JOB,
-      status: "failed",
+      status: 'failed',
       metrics: {
         recordsSeen,
         recordsInserted,

@@ -1,25 +1,22 @@
-import type { PoolClient } from 'pg'
-import { payloadHash } from '../../core/hashing'
-import type { MtgjsonEnrichment } from './transformer'
+import type { PoolClient } from 'pg';
+import { payloadHash } from '../../core/hashing';
+import type { MtgjsonEnrichment } from './transformer';
 
 export type DemoBatchItem = {
   raw: {
-    mtgjsonUuid: string
-    scryfallId: string | null
-    payload: unknown
-    payloadHash: string
-  }
-  enrichment: MtgjsonEnrichment
-  sourcePayload: unknown
-}
+    mtgjsonUuid: string;
+    scryfallId: string | null;
+    payload: unknown;
+    payloadHash: string;
+  };
+  enrichment: MtgjsonEnrichment;
+  sourcePayload: unknown;
+};
 
-const DEMO_UNMATCHED_SCRYFALL_ID = '00000000-0000-4000-8000-000000000001'
-const DEMO_AMBIGUOUS_SCRYFALL_ID = '00000000-0000-4000-8000-0000000000aa'
+const DEMO_UNMATCHED_SCRYFALL_ID = '00000000-0000-4000-8000-000000000001';
+const DEMO_AMBIGUOUS_SCRYFALL_ID = '00000000-0000-4000-8000-0000000000aa';
 
-function demoItem(
-  enrichment: MtgjsonEnrichment,
-  note: string,
-): DemoBatchItem {
+function demoItem(enrichment: MtgjsonEnrichment, note: string): DemoBatchItem {
   const payload = {
     demo: true,
     note,
@@ -29,7 +26,7 @@ function demoItem(
     number: enrichment.collectorNumber,
     language: enrichment.language,
     identifiers: { scryfallId: enrichment.scryfallId ?? undefined },
-  }
+  };
   return {
     raw: {
       mtgjsonUuid: enrichment.mtgjsonUuid,
@@ -39,7 +36,7 @@ function demoItem(
     },
     enrichment,
     sourcePayload: payload,
-  }
+  };
 }
 
 /**
@@ -74,7 +71,7 @@ export function buildDemoUnmatchedItems(): DemoBatchItem[] {
       },
       'Synthetic unmatched: valid-looking scryfallId absent from catalog',
     ),
-  ]
+  ];
 }
 
 /**
@@ -85,35 +82,30 @@ export async function installDemoAmbiguousClone(
   client: PoolClient,
 ): Promise<{ item: DemoBatchItem; cleanup: () => Promise<void> } | null> {
   const seed = await client.query<{
-    id: string
-    card_id: string
-    set_id: string
-    collector_number: string
-    set_code: string
-    name: string
+    id: string;
+    card_id: string;
+    set_id: string;
+    collector_number: string;
+    set_code: string;
+    name: string;
   }>(
     `select p.id, p.card_id, p.set_id, p.collector_number, s.code as set_code, c.name
      from catalog.printing p
      join catalog.set s on s.id = p.set_id
      join catalog.card c on c.id = p.card_id
      limit 1`,
-  )
-  if (!seed.rows[0]) return null
+  );
+  if (!seed.rows[0]) return null;
 
-  const row = seed.rows[0]
+  const row = seed.rows[0];
   const inserted = await client.query<{ id: string }>(
     `insert into catalog.printing
        (scryfall_id, card_id, set_id, collector_number, language, rarity, updated_at)
      values ($1::uuid, $2, $3, $4, 'en', 'demo', now())
      returning id`,
-    [
-      DEMO_AMBIGUOUS_SCRYFALL_ID,
-      row.card_id,
-      row.set_id,
-      row.collector_number,
-    ],
-  )
-  const cloneId = inserted.rows[0].id
+    [DEMO_AMBIGUOUS_SCRYFALL_ID, row.card_id, row.set_id, row.collector_number],
+  );
+  const cloneId = inserted.rows[0].id;
 
   const item = demoItem(
     {
@@ -126,12 +118,12 @@ export async function installDemoAmbiguousClone(
       identifiers: [{ provider: 'mtgjson', externalId: 'demo-ambiguous-set-number' }],
     },
     `Synthetic ambiguous: cloned printing ${cloneId} beside ${row.id} for ${row.set_code}#${row.collector_number}`,
-  )
+  );
 
   return {
     item,
     cleanup: async () => {
-      await client.query(`delete from catalog.printing where id = $1`, [cloneId])
+      await client.query(`delete from catalog.printing where id = $1`, [cloneId]);
     },
-  }
+  };
 }

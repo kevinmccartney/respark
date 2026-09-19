@@ -6,17 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>respark</title>
     <script>
-      ;(function () {
+      (function () {
         try {
-          var stored = localStorage.getItem('respark-theme')
+          var stored = localStorage.getItem('respark-theme');
           var dark =
             stored === 'dark' ||
-            (stored !== 'light' &&
-              window.matchMedia('(prefers-color-scheme: dark)').matches)
-          if (dark) document.documentElement.classList.add('dark')
-          document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+            (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
         } catch (e) {}
-      })()
+      })();
     </script>
   </head>
   <body>

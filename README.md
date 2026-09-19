@@ -69,32 +69,36 @@ Local API details: [`apps/api/README.md`](apps/api/README.md). Debug in VS Code:
 
 Common workflows use [Task](https://taskfile.dev/) from the repository root (install via `brew install go-task` or see the Task docs).
 
-| Task                    | Description                                                       |
-| ----------------------- | ----------------------------------------------------------------- |
-| `task build`            | Production build etl, API, web, and admin                         |
-| `task etl:build`        | Compile the ETL CLI                                               |
-| `task web:build`        | Production build of the web app                                   |
-| `task admin:build`      | Production build of the admin app                                 |
-| `task api:build`        | Compile the NestJS API (runs `etl:build` first)                   |
-| `task docker:up`        | Start local Postgres + API + web + admin (Compose watch mode)     |
-| `task docker:down`      | Stop the local Compose stack (keeps DB volume)                    |
-| `task docker:logs`      | Follow local API + web + admin container logs                     |
-| `task api:dev`          | API watch mode on the host (`PORT`, default 3000)                 |
-| `task admin:dev`        | Admin Vite app on port 4000                                       |
-| `task api:debug`        | Host API watch + inspector on 9229                                |
-| `task api:start`        | Run compiled API (after `api:build`)                              |
+| Task                    | Description                                                          |
+| ----------------------- | -------------------------------------------------------------------- |
+| `task install`          | Install JS deps (`npm ci`)                                           |
+| `task format`           | Write Prettier + `terraform fmt`                                     |
+| `task format:check`     | Check formatting (CI); does not write                                |
+| `task format:staged`    | Format staged files only (husky pre-commit)                          |
+| `task build`            | Production build etl, API, web, and admin                            |
+| `task etl:build`        | Compile the ETL CLI                                                  |
+| `task web:build`        | Production build of the web app                                      |
+| `task admin:build`      | Production build of the admin app                                    |
+| `task api:build`        | Compile the NestJS API (runs `etl:build` first)                      |
+| `task docker:up`        | Start local Postgres + API + web + admin (Compose watch mode)        |
+| `task docker:down`      | Stop the local Compose stack (keeps DB volume)                       |
+| `task docker:logs`      | Follow local API + web + admin container logs                        |
+| `task api:dev`          | API watch mode on the host (`PORT`, default 3000)                    |
+| `task admin:dev`        | Admin Vite app on port 4000                                          |
+| `task api:debug`        | Host API watch + inspector on 9229                                   |
+| `task api:start`        | Run compiled API (after `api:build`)                                 |
 | `task infra:plan`       | `terraform` fmt/validate/plan in `infra/envs/$ENV` (default develop) |
-| `task infra:apply`      | Apply plan file if present, else interactive apply (`ENV=…`)      |
-| `task deploy`           | Apply Terraform, deploy API, then web+admin in parallel (`ENV=…`) |
-| `task db:up`            | Start local Postgres only                                         |
-| `task db:migrate`       | Apply Drizzle migrations                                          |
+| `task infra:apply`      | Apply plan file if present, else interactive apply (`ENV=…`)         |
+| `task deploy`           | Apply Terraform, deploy API, then web+admin in parallel (`ENV=…`)    |
+| `task db:up`            | Start local Postgres only                                            |
+| `task db:migrate`       | Apply Drizzle migrations                                             |
 | `task etl -- <cmd>`     | MTG ETL CLI — see [`docs/etl/operations.md`](docs/etl/operations.md) |
-| `task db:tunnel`        | SSM tunnel to RDS for `$ENV` (`localhost:15432`)                  |
-| `task db:url`           | Print `$ENV` `DATABASE_URL` from SSM (has password)               |
-| `task api:secrets:push` | Push `CLERK_SECRET_KEY` to SSM for `$ENV`                         |
-| `task api:deploy`       | Build/push the API image and restart it on EC2 (`ENV=…`)          |
-| `task web:deploy`       | Build against the deployed API, sync to S3, invalidate CloudFront |
-| `task admin:deploy`     | Same for the admin dashboard                                      |
+| `task db:tunnel`        | SSM tunnel to RDS for `$ENV` (`localhost:15432`)                     |
+| `task db:url`           | Print `$ENV` `DATABASE_URL` from SSM (has password)                  |
+| `task api:secrets:push` | Push `CLERK_SECRET_KEY` to SSM for `$ENV`                            |
+| `task api:deploy`       | Build/push the API image and restart it on EC2 (`ENV=…`)             |
+| `task web:deploy`       | Build against the deployed API, sync to S3, invalidate CloudFront    |
+| `task admin:deploy`     | Same for the admin dashboard                                         |
 
 Pass `ENV=production` (or `ENV=develop`) on any infra/deploy task; CI uses the same commands. List all tasks with `task --list`.
 

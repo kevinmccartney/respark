@@ -1,11 +1,11 @@
-import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react'
-import { Link } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import { ThemeToggle } from '@/components/ThemeToggle'
+import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 type SiteHeaderProps = {
-  showAuthActions?: boolean
-}
+  showAuthActions?: boolean;
+};
 
 export function SiteHeader({ showAuthActions = true }: SiteHeaderProps) {
   return (
@@ -57,5 +57,5 @@ export function SiteHeader({ showAuthActions = true }: SiteHeaderProps) {
         ) : null}
       </div>
     </header>
-  )
+  );
 }
