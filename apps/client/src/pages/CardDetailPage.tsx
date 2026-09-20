@@ -4,10 +4,11 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { isLeadershipCommander } from 'schemas/cards';
+import { isLeadershipCommander, printingHasFoilTreatment } from 'schemas/cards';
 import { uuidSchema } from 'schemas/primitives';
 import { ManaCost, ManaText } from 'ui/mana';
 import { FlippableCardImage } from '../components/FlippableCardImage.tsx';
+import { PrintingFinishes } from '../components/FoilMark.tsx';
 import { ApiError, isAbortError, isNotFound } from '../lib/api.ts';
 import { resolveCardFace } from '../lib/card-faces.ts';
 import { fetchCard, type CardDetail, type CardPrintingSummary } from '../lib/cards.ts';
@@ -126,6 +127,7 @@ export const CardDetailPage = () => {
             <FlippableCardImage
               src={displayed.imageSrc}
               alt={displayed.name}
+              foil={selectedPrinting ? printingHasFoilTreatment(selectedPrinting.finishes) : false}
               canFlip={faceView.canFlip}
               nextFaceName={faceView.nextFaceName}
               onFlip={() => {
@@ -199,6 +201,12 @@ export const CardDetailPage = () => {
                     {selectedPrinting.collectorNumber}
                     {selectedPrinting.rarity ? ` · ${selectedPrinting.rarity}` : ''}
                   </p>
+                  {selectedPrinting.finishes.length > 0 ? (
+                    <p className="flex flex-wrap items-center gap-2">
+                      <span>Finishes:</span>
+                      <PrintingFinishes finishes={selectedPrinting.finishes} />
+                    </p>
+                  ) : null}
                   {selectedPrinting.artist ? <p>Illustrated by {selectedPrinting.artist}</p> : null}
                 </div>
               ) : null}
@@ -227,13 +235,19 @@ export const CardDetailPage = () => {
                           active ? 'bg-muted' : ''
                         }`}
                       >
-                        <div className="size-10 shrink-0 overflow-hidden rounded bg-muted">
+                        <div className="relative isolate size-10 shrink-0 overflow-hidden rounded bg-muted">
                           {printing.imageNormal ? (
                             <img
                               src={printing.imageNormal}
                               alt=""
                               className="h-full w-full object-cover"
                               loading="lazy"
+                            />
+                          ) : null}
+                          {printingHasFoilTreatment(printing.finishes) ? (
+                            <div
+                              className="foil-sheen pointer-events-none absolute inset-0"
+                              aria-hidden
                             />
                           ) : null}
                         </div>
@@ -249,6 +263,11 @@ export const CardDetailPage = () => {
                             {printing.rarity ? ` · ${printing.rarity}` : ''}
                             {printing.releasedAt ? ` · ${printing.releasedAt}` : ''}
                           </p>
+                          {printing.finishes.length > 0 ? (
+                            <p className="truncate text-muted-foreground">
+                              <PrintingFinishes finishes={printing.finishes} />
+                            </p>
+                          ) : null}
                         </div>
                       </button>
                     </li>

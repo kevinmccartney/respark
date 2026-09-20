@@ -1,7 +1,14 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { isLegalInFormat, isLeadershipCommander, type LeadershipSkills } from 'schemas/cards';
+import {
+  isLeadershipCommander,
+  isLegalInFormat,
+  printingAllowsFoil,
+  printingFoilIsOptional,
+  resolveDeckLineFoil,
+  type LeadershipSkills,
+} from 'schemas/cards';
 import {
   COLOR_IDENTITY_PIPS,
   colorIdentityPipSchema,
@@ -208,7 +215,7 @@ export class DecksService {
         await tx.insert(deckCards).values({
           deckId: created.id,
           printingId: commanderPrintingId,
-          foil: false,
+          foil: await this.resolveLineFoil(commanderPrintingId, false),
           sideboard: false,
           quantity: 1,
         });
@@ -272,7 +279,6 @@ export class DecksService {
             and(
               eq(deckCards.deckId, deckId),
               eq(deckCards.printingId, nextCommander),
-              eq(deckCards.foil, false),
               eq(deckCards.sideboard, false),
             ),
           )
@@ -281,7 +287,7 @@ export class DecksService {
           await tx.insert(deckCards).values({
             deckId,
             printingId: nextCommander,
-            foil: false,
+            foil: await this.resolveLineFoil(nextCommander, false),
             sideboard: false,
             quantity: 1,
           });
@@ -403,7 +409,7 @@ export class DecksService {
         this.assertColorIdentity(catalog.colorIdentity, allowedIdentity, catalog.name);
       }
       const wantsFoil = line.tags.some((tag) => tag.toUpperCase() === 'F');
-      const foil = wantsFoil && printingAllowsFoil(finishesByPrinting.get(printingId) ?? []);
+      const foil = resolveDeckLineFoil(finishesByPrinting.get(printingId) ?? [], wantsFoil);
       const key = `${printingId}:${foil ? '1' : '0'}:${line.sideboard ? '1' : '0'}`;
       const existing = quantities.get(key);
       if (existing) {
@@ -636,14 +642,14 @@ export class DecksService {
   ): Promise<DeckCard> {
     const line = await this.loadLine(deckId, deckCardId);
     const printingId = next.printingId ?? line.printingId;
-    const foil = next.foil ?? line.foil;
     const sideboard = next.sideboard ?? line.sideboard;
+    const foil = await this.resolveLineFoil(printingId, next.foil ?? line.foil);
 
     if (line.printingId === printingId && line.foil === foil && line.sideboard === sideboard) {
       return this.requireDeckCard(line.id);
     }
 
-    if (next.foil === true || (foil && next.printingId !== undefined)) {
+    if (foil) {
       await this.assertPrintingAllowsFoil(printingId);
     }
 
@@ -734,13 +740,22 @@ export class DecksService {
     }
   }
 
+  private async resolveLineFoil(printingId: string, wantsFoil: boolean): Promise<boolean> {
+    const map = await this.finishesByPrintingId([printingId]);
+    if (!map.has(printingId)) {
+      throw new NotFoundException('Printing not found');
+    }
+    return resolveDeckLineFoil(map.get(printingId) ?? [], wantsFoil);
+  }
+
   private async upsertPrintingLine(
     deckId: string,
     printingId: string,
     addQuantity: number,
-    foil: boolean,
+    wantsFoil: boolean,
     sideboard: boolean,
   ): Promise<{ id: string; quantity: number }> {
+    const foil = await this.resolveLineFoil(printingId, wantsFoil);
     if (foil) {
       await this.assertPrintingAllowsFoil(printingId);
     }
@@ -1018,8 +1033,8 @@ const toDeckCard = (row: DeckCardRow): DeckCard => ({
   typeLine: row.type_line,
   oracleText: row.oracle_text,
   colorIdentity: parseColorIdentity(row.color_identity),
-  foil: row.foil && printingAllowsFoil(row.finishes ?? []),
-  hasFoil: printingAllowsFoil(row.finishes ?? []),
+  foil: resolveDeckLineFoil(row.finishes ?? [], row.foil),
+  hasFoil: printingFoilIsOptional(row.finishes ?? []),
   sideboard: row.sideboard,
   quantity: row.quantity,
   setCode: row.set_code,
@@ -1028,9 +1043,6 @@ const toDeckCard = (row: DeckCardRow): DeckCard => ({
   imageNormal: row.image_normal,
   faces: parseCardFaces(row.faces),
 });
-
-const printingAllowsFoil = (finishes: readonly string[]): boolean =>
-  finishes.length === 0 || finishes.includes('foil');
 
 const parseColorIdentity = (raw: string[] | null): ColorIdentityPip[] => {
   const seen = new Set<ColorIdentityPip>();

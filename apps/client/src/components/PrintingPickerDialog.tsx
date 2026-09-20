@@ -11,9 +11,11 @@ import {
   DialogPopup,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { printingHasFoilTreatment } from 'schemas/cards';
 import { ApiError, isAbortError } from '../lib/api.ts';
 import { fetchCard, type CardPrintingSummary } from '../lib/cards.ts';
 import type { DeckCard } from '../lib/decks.ts';
+import { PrintingFinishes } from './FoilMark.tsx';
 
 type Props = {
   open: boolean;
@@ -118,13 +120,19 @@ export const PrintingPickerDialog = ({ open, onOpenChange, deckCard, onSelect }:
                           active ? 'border-primary bg-muted/40' : ''
                         }`}
                       >
-                        <div className="bg-muted aspect-5/7 overflow-hidden rounded-md">
+                        <div className="relative isolate aspect-5/7 overflow-hidden rounded-md bg-muted">
                           {printing.imageNormal ? (
                             <img
                               src={printing.imageNormal}
                               alt=""
                               className="h-full w-full object-cover"
                               loading="lazy"
+                            />
+                          ) : null}
+                          {printingHasFoilTreatment(printing.finishes) ? (
+                            <div
+                              className="foil-sheen pointer-events-none absolute inset-0"
+                              aria-hidden
                             />
                           ) : null}
                         </div>
@@ -136,6 +144,11 @@ export const PrintingPickerDialog = ({ open, onOpenChange, deckCard, onSelect }:
                             #{printing.collectorNumber}
                             {printing.rarity ? ` · ${printing.rarity}` : ''}
                           </p>
+                          {printing.finishes.length > 0 ? (
+                            <p className="truncate text-xs text-muted-foreground">
+                              <PrintingFinishes finishes={printing.finishes} />
+                            </p>
+                          ) : null}
                           {savingId === printing.id ? (
                             <p className="text-xs text-muted-foreground">Saving…</p>
                           ) : active ? (

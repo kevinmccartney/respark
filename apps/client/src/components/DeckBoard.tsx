@@ -4,6 +4,7 @@ import { ManaCost, ManaText } from 'ui/mana';
 import { ColorIdentity } from './ColorIdentity.tsx';
 import { DeckCardMenu, DeckCardMenuToggle } from './DeckCardMenu.tsx';
 import { FlippableCardImage } from './FlippableCardImage.tsx';
+import { FoilMark } from './FoilMark.tsx';
 import { resolveCardFace } from '../lib/card-faces.ts';
 import type { DeckCardGroup, DeckViewMode } from '../lib/deck-grouping.ts';
 import type { DeckCard } from '../lib/decks.ts';
@@ -125,15 +126,6 @@ export const BoardSection = ({
     </div>
   );
 };
-
-const FoilMark = () => (
-  <span
-    className="foil-label shrink-0 text-[0.65rem] font-semibold tracking-wide"
-    aria-label="Foil"
-  >
-    Foil
-  </span>
-);
 
 const TransformButton = ({
   transformed,

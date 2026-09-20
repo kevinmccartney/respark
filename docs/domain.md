@@ -52,7 +52,7 @@ A player's named list. `format` is `standard`, `commander`, or `modern`. Command
 
 ### Deck line (`app.deck_card`)
 
-One stack in a deck: a **printing** + foil + main/sideboard + quantity. Unique on `(deck_id, printing_id, foil, sideboard)`. Adding a card by oracle id picks a default printing (image + recency). Changing printing/foil/board merges into an existing line when the key collides. Quantity `0` deletes the line.
+One stack in a deck: a **printing** + foil + main/sideboard + quantity. Unique on `(deck_id, printing_id, foil, sideboard)`. Adding a card by oracle id picks a default printing (image + recency). Changing printing/foil/board merges into an existing line when the key collides. Quantity `0` deletes the line. Etched and foil-only printings are always foil (the line flag cannot be turned off).
 
 The line points at `catalog.printing`, not `catalog.card`, so the player can choose set, collector number, and art.
 
@@ -80,7 +80,7 @@ A published set (`code` unique, plus optional Scryfall set id). Printings belong
 
 ### Printing (`catalog.printing`)
 
-One physical or digital printing of a card in a set (`scryfall_id` unique). Collector number, language, rarity, artist, image URLs, and `finishes` (`nonfoil`, `foil`, `etched`, …). A deck line may be foil only when `foil` is in that list (empty means not synced yet). This is what a deck line stores.
+One physical or digital printing of a card in a set (`scryfall_id` unique). Collector number, language, rarity, artist, image URLs, and `finishes` (`nonfoil`, `foil`, `etched`, …). A deck line may be foil when `foil` or `etched` is in that list (empty means not synced yet). Etched and foil-only printings always show the foil overlay; dual `nonfoil`+`foil` printings stay optional. This is what a deck line stores.
 
 ### Card face (`catalog.card_face`)
 

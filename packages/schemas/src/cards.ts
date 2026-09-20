@@ -44,6 +44,45 @@ export const cardPrintingSummarySchema = z.object({
 
 export type CardPrintingSummary = z.infer<typeof cardPrintingSummarySchema>;
 
+const FINISH_LABELS: Record<string, string> = {
+  nonfoil: 'Nonfoil',
+  foil: 'Foil',
+  etched: 'Etched',
+};
+
+/** Scryfall `etched` is a premium finish; treat it like foil for overlay and deck toggles. */
+export const printingHasPremiumFinish = (finishes: readonly string[]): boolean =>
+  finishes.includes('foil') || finishes.includes('etched');
+
+/** Empty finishes (pre-sync) are treated as allowing foil. */
+export const printingAllowsFoil = (finishes: readonly string[]): boolean =>
+  finishes.length === 0 || printingHasPremiumFinish(finishes);
+
+/** Overlay when this printing is etched, or foil-only (not a dual nonfoil/foil printing). */
+export const printingHasFoilTreatment = (finishes: readonly string[]): boolean => {
+  if (finishes.includes('etched')) return true;
+  return finishes.includes('foil') && !finishes.includes('nonfoil');
+};
+
+/** Dual nonfoil+foil printings can toggle; etched / foil-only cannot. */
+export const printingFoilIsOptional = (finishes: readonly string[]): boolean =>
+  printingAllowsFoil(finishes) && !printingHasFoilTreatment(finishes);
+
+/** Persist and display foil for etched/foil-only printings even when the line was stored as non-foil. */
+export const resolveDeckLineFoil = (finishes: readonly string[], wantsFoil: boolean): boolean => {
+  if (printingHasFoilTreatment(finishes)) return true;
+  return wantsFoil && printingAllowsFoil(finishes);
+};
+
+export const premiumFinishLabel = (finishes: readonly string[]): 'Etched' | 'Foil' | null => {
+  if (finishes.includes('etched')) return 'Etched';
+  if (printingHasFoilTreatment(finishes)) return 'Foil';
+  return null;
+};
+
+export const formatPrintingFinishes = (finishes: readonly string[]): string =>
+  finishes.map((finish) => FINISH_LABELS[finish] ?? finish).join(', ');
+
 export const cardLegalitiesSchema = z.record(z.string(), z.string());
 
 export type CardLegalities = z.infer<typeof cardLegalitiesSchema>;
