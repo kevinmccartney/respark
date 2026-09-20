@@ -78,7 +78,7 @@ Events pushed as `{ event: 'chat', data }`:
 
 The orchestrator emits an event stream the WS gateway wraps. SSE remains a fallback if CloudFront WebSocket proves painful; do not add it until then.
 
-Client helper: [`apps/client/src/lib/chat-ws.ts`](../apps/client/src/lib/chat-ws.ts) (connect, reconnect backoff, queue outbound `chat.send` until open), modeled on admin [`etl-ws.ts`](../apps/admin/src/lib/etl-ws.ts).
+Client helper: [`apps/client/src/chat/lib/chat-ws.ts`](../apps/client/src/chat/lib/chat-ws.ts) (connect, reconnect backoff, queue outbound `chat.send` until open), modeled on admin [`etl-ws.ts`](../apps/admin/src/etl-syncs/lib/etl-ws.ts).
 
 ## Tools
 

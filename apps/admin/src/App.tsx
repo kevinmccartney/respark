@@ -1,10 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
-import { AppShell } from './components/AppShell.tsx';
-import { GuestOnly, RequireAuth } from './components/AuthGate.tsx';
-import { NotFoundPage } from './pages/NotFoundPage.tsx';
-import { SyncDetailPage } from './pages/SyncDetailPage.tsx';
-import { SyncsListPage } from './pages/SyncsListPage.tsx';
-import { SignInPage } from './pages/SignInPage.tsx';
+import { GuestOnly, RequireAuth, SignInPage } from '@/auth';
+import { AppShell, NotFoundPage } from '@/core';
+import { SyncDetailPage, SyncsListPage } from '@/etl-syncs';
 
 export default function App() {
   return (

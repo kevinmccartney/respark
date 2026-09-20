@@ -20,6 +20,7 @@ READMEs: [`apps/client`](../../apps/client) (via root README), [`apps/admin/READ
 ## Conventions
 
 - Only `VITE_CLERK_PUBLISHABLE_KEY` in Vite apps — never the secret key.
-- Prefer existing UI primitives under `src/components/ui` (shadcn-style); avoid one-off card chrome in heroes/marketing unless the design system requires it.
+- Feature folders (`core`, `auth`, `cards`, `decks`, `chat` on client; `core`, `auth`, `etl-syncs` on admin) with kind subfolders and a root `index.ts` barrel. Shared chrome lives in `packages/ui` (`ui/theme`, `ui/auth`, `ui/health`, `ui/mana`).
+- Prefer existing UI primitives under `src/core/ui` (shadcn-style); avoid one-off card chrome in heroes/marketing unless the design system requires it.
 - Match Prettier (no semicolons, single quotes) and ESLint flat config at repo root.
-- ESLint ignores generated `components/ui/**`; don’t fight shadcn output unless necessary.
+- ESLint ignores generated `core/ui/**`; don’t fight shadcn output unless necessary.

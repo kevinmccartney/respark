@@ -3,8 +3,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import './index.css';
+import { ThemeProvider } from 'ui/theme';
 import App from './App.tsx';
-import { ThemeProvider } from './lib/theme.tsx';
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -16,7 +16,7 @@ if (!publishableKey) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider>
+    <ThemeProvider storageKey="respark-admin-theme">
       <ClerkProvider
         publishableKey={publishableKey}
         afterSignOutUrl="/sign-in"

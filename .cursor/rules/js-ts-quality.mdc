@@ -15,7 +15,7 @@ Style is enforced by Prettier + ESLint (`task format`, `task lint`). Do not bike
 | Variables, functions, fields | `camelCase` | `deckCard`, `listForUser` |
 | Types, interfaces, classes, React components | `PascalCase` | `DeckDetail`, `DecksService`, `DeckDetailPage` |
 | Constants / const unions | `SCREAMING_SNAKE` or `PascalCase` type + `camel` values | `DECK_FORMATS`, `DeckFormat` |
-| Files — React components / pages | `PascalCase.tsx` | `PrintingPickerDialog.tsx`, `HomePage.tsx` |
+| Files — React components / pages | `PascalCase.tsx` | `PrintingPickerDialog.tsx`, `DeckListPage.tsx` |
 | Files — Nest modules & multi-word utils | `kebab-case.ts` | `clerk-auth.guard.ts`, `moxfield-import.ts` |
 | Files — small libs / single concept | `camelCase.ts` OK | `decks.ts`, `demoMismatches.ts` |
 | Nest symbols | Match Nest idioms | `decks.module.ts`, `DecksService`, `DecksController` |
@@ -30,9 +30,10 @@ Style is enforced by Prettier + ESLint (`task format`, `task lint`). Do not bike
 - **Zod at boundaries**: parse REST/WS with schemas that match the **wire format**, not the DB type. Shared primitives (`z.uuid()`, `z.iso.datetime()`, log levels) live in `packages/schemas/src/primitives.ts` — import those from `schemas/primitives`; don’t redefine them in domain schemas. JSON timestamps are ISO-8601 strings — use `z.iso.datetime()` (Zod 4), not `z.string()` or `z.date()`. Entity IDs that are Postgres `uuid` — use `z.uuid()`, not `z.string()`; serial/bigserial PKs stay `z.number()`. External/provider ids (`externalId`, set codes) stay `z.string()` unless the column is actually uuid. Prefer enums/unions over loose `string`. Infer TS types from schemas (`z.infer<typeof schema>`). Get the model right before wiring UI.
 - **Shared wire schemas** live in `packages/schemas` (import `schemas/decks`, `schemas/cards`, `schemas/etl-sync`). Nest validates requests with `zodPipe`; client/admin parse responses. Do not share Scryfall/MTGJSON ETL source schemas.
 - **Early returns** over deep nesting; keep functions focused.
-- **Import from the defining module**: don’t re-export types/values as a convenience barrel. Callers import `EtlSync` from `schemas/etl-sync`, fetch helpers from `syncs.ts`, etc.
+- **Import from the defining module**: don’t re-export types/values as a convenience barrel. Callers import `EtlSync` from `schemas/etl-sync`, fetch helpers from `syncs.ts`, etc. Exception: Vite feature folders (`apps/client/src/<feature>`, `apps/admin/src/<feature>`) expose a root `index.ts` façade. Outside the feature, import `@/decks` / `@/etl-syncs`. Inside the feature, import from the defining file so the barrel cannot cycle.
+- Client/admin features use kind subfolders (`pages/`, `components/`, `hooks/`, `lib/`, `types/` when needed). No app-root `lib` / `pages` / `hooks` / `components`. Shadcn stays in `core/ui/`.
 - **Arrow functions**: prefer `const fn = () => {}` / `export const Foo = () => {}` over `function` declarations. Class methods stay as methods (Nest services/controllers). Generators and `this`-bound functions may keep `function`. Enforced by ESLint (`prefer-arrow-functions`, `prefer-arrow-callback`).
 - React: arrow-function components; hooks at top level; don’t add `useMemo` / `useCallback` unless the codebase already needs them for a measured reason.
 - Nest: keep business logic in services; controllers stay thin; inject `PinoLogger` for structured logs.
 - ETL: keep stages/jobs aligned with `docs/etl/`; repository functions named after the table/domain they touch.
-- Don’t fight generated `components/ui/**` (shadcn) unless fixing a real bug.
+- Don’t fight generated `core/ui/**` (shadcn) unless fixing a real bug.

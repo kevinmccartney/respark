@@ -1,68 +1,82 @@
+import { Show } from '@clerk/react';
 import { Route, Routes } from 'react-router-dom';
-import { AppShell } from './components/AppShell.tsx';
-import { GuestOnly, RequireAuth } from './components/AuthGate.tsx';
-import { CardDetailPage } from './pages/CardDetailPage.tsx';
-import { DeckDetailPage } from './pages/DeckDetailPage.tsx';
-import { HomePage } from './pages/HomePage.tsx';
-import { NewDeckPage } from './pages/NewDeckPage.tsx';
-import { NotFoundPage } from './pages/NotFoundPage.tsx';
-import { SearchPage } from './pages/SearchPage.tsx';
-import { WelcomePage } from './pages/WelcomePage.tsx';
+import { GuestOnly, RequireAuth } from '@/auth';
+import { CardDetailPage, SearchPage } from '@/cards';
+import { ChatSessionProvider, ChatToggle, GlobalChat } from '@/chat';
+import { AppShell, NotFoundPage, WelcomePage } from '@/core';
+import { DeckDetailPage, DeckListPage, NewDeckPage } from '@/decks';
 
 export default function App() {
   return (
-    <Routes>
-      <Route element={<AppShell />}>
+    <ChatSessionProvider>
+      <Routes>
         <Route
-          path="/"
           element={
-            <GuestOnly>
-              <WelcomePage />
-            </GuestOnly>
+            <AppShell
+              headerExtra={
+                <Show when="signed-in">
+                  <ChatToggle />
+                </Show>
+              }
+              rail={
+                <Show when="signed-in">
+                  <GlobalChat />
+                </Show>
+              }
+            />
           }
-        />
-        <Route
-          path="/home"
-          element={
-            <RequireAuth>
-              <HomePage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/search"
-          element={
-            <RequireAuth>
-              <SearchPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/cards/:id"
-          element={
-            <RequireAuth>
-              <CardDetailPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/decks/new"
-          element={
-            <RequireAuth>
-              <NewDeckPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/decks/:id"
-          element={
-            <RequireAuth>
-              <DeckDetailPage />
-            </RequireAuth>
-          }
-        />
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
-    </Routes>
+        >
+          <Route
+            path="/"
+            element={
+              <GuestOnly>
+                <WelcomePage />
+              </GuestOnly>
+            }
+          />
+          <Route
+            path="/home"
+            element={
+              <RequireAuth>
+                <DeckListPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/search"
+            element={
+              <RequireAuth>
+                <SearchPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/cards/:id"
+            element={
+              <RequireAuth>
+                <CardDetailPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/decks/new"
+            element={
+              <RequireAuth>
+                <NewDeckPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/decks/:id"
+            element={
+              <RequireAuth>
+                <DeckDetailPage />
+              </RequireAuth>
+            }
+          />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Routes>
+    </ChatSessionProvider>
   );
 }

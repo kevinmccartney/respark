@@ -9,12 +9,39 @@
       "import": "./src/mana.ts",
       "require": "./dist/mana.js",
       "default": "./dist/mana.js"
+    },
+    "./theme": {
+      "types": "./dist/theme.d.ts",
+      "import": "./src/theme.tsx",
+      "require": "./dist/theme.js",
+      "default": "./dist/theme.js"
+    },
+    "./auth": {
+      "types": "./dist/auth.d.ts",
+      "import": "./src/auth.tsx",
+      "require": "./dist/auth.js",
+      "default": "./dist/auth.js"
+    },
+    "./health": {
+      "types": "./dist/health.d.ts",
+      "import": "./src/health.tsx",
+      "require": "./dist/health.js",
+      "default": "./dist/health.js"
     }
   },
   "typesVersions": {
     "*": {
       "mana": [
         "./dist/mana.d.ts"
+      ],
+      "theme": [
+        "./dist/theme.d.ts"
+      ],
+      "auth": [
+        "./dist/auth.d.ts"
+      ],
+      "health": [
+        "./dist/health.d.ts"
       ]
     }
   },
@@ -24,11 +51,18 @@
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },
+  "dependencies": {
+    "schemas": "*"
+  },
   "peerDependencies": {
-    "react": "^19.2.0"
+    "@clerk/react": "^6.16.1",
+    "react": "^19.2.0",
+    "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
+    "@clerk/react": "^6.16.1",
     "@types/react": "^19.2.0",
+    "react-router-dom": "^7.18.4",
     "typescript": "~5.8.3"
   }
 }
