@@ -111,8 +111,8 @@ const upsertPrinting = async (
       `insert into catalog.printing
          (card_id, set_id, scryfall_id, collector_number, language, rarity, artist,
           released_at, border_color, frame, full_art, textless, oversized, promo, reprint,
-          image_small, image_normal, image_large, image_png, updated_at)
-       values ($1,$2,$3,$4,$5,$6,$7,$8::date,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19, now())
+          finishes, image_small, image_normal, image_large, image_png, updated_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8::date,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20, now())
        returning id`,
       [
         cardId,
@@ -130,6 +130,7 @@ const upsertPrinting = async (
         p.oversized,
         p.promo,
         p.reprint,
+        p.finishes,
         p.imageSmall,
         p.imageNormal,
         p.imageLarge,
@@ -156,10 +157,11 @@ const upsertPrinting = async (
        oversized = $13,
        promo = $14,
        reprint = $15,
-       image_small = $16,
-       image_normal = $17,
-       image_large = $18,
-       image_png = $19,
+       finishes = $16,
+       image_small = $17,
+       image_normal = $18,
+       image_large = $19,
+       image_png = $20,
        updated_at = now()
      where id = $1
        and (
@@ -177,10 +179,11 @@ const upsertPrinting = async (
          or oversized is distinct from $13
          or promo is distinct from $14
          or reprint is distinct from $15
-         or image_small is distinct from $16
-         or image_normal is distinct from $17
-         or image_large is distinct from $18
-         or image_png is distinct from $19
+         or finishes is distinct from $16
+         or image_small is distinct from $17
+         or image_normal is distinct from $18
+         or image_large is distinct from $19
+         or image_png is distinct from $20
        )
      returning id`,
     [
@@ -199,6 +202,7 @@ const upsertPrinting = async (
       p.oversized,
       p.promo,
       p.reprint,
+      p.finishes,
       p.imageSmall,
       p.imageNormal,
       p.imageLarge,

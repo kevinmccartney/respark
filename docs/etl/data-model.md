@@ -72,7 +72,7 @@ Keeping identity in `app` (not a separate `users` schema) matches the other doma
 | ----------------------------- | -------------------------------------------------------------------------------------------- |
 | `catalog.card`                | Conceptual / oracle card (`oracle_id` from Scryfall). Excludes type lines with a `Card` face |
 | `catalog.set`                 | Set metadata                                                                                 |
-| `catalog.printing`            | One physical (or digital) printing                                                           |
+| `catalog.printing`            | One physical (or digital) printing (`finishes` from Scryfall: `nonfoil` / `foil` / `etched`) |
 | `catalog.card_face`           | Faces for multi-face layouts                                                                 |
 | `catalog.printing_identifier` | External IDs per printing (`provider` + `external_id`)                                       |
 

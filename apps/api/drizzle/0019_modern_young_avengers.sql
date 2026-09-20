@@ -1,0 +1,1 @@
+ALTER TABLE "catalog"."printing" ADD COLUMN "finishes" text[] DEFAULT '{}' NOT NULL;

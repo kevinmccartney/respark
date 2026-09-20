@@ -71,6 +71,7 @@ export const printings = catalogSchema.table('printing', {
   oversized: boolean('oversized'),
   promo: boolean('promo'),
   reprint: boolean('reprint'),
+  finishes: text('finishes').array().notNull().default([]),
   imageSmall: text('image_small'),
   imageNormal: text('image_normal'),
   imageLarge: text('image_large'),

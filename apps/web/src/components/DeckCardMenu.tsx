@@ -106,7 +106,11 @@ const CardActionItems = ({
     <Item render={<Link to={`/cards/${card.cardId}`} />}>View details</Item>
     <Item onClick={() => onPickPrinting(card)}>Change printing</Item>
     <Separator />
-    <Item onClick={() => void onToggleFoil(card)}>{card.foil ? 'Use non-foil' : 'Use foil'}</Item>
+    {card.foil ? (
+      <Item onClick={() => void onToggleFoil(card)}>Use non-foil</Item>
+    ) : card.hasFoil ? (
+      <Item onClick={() => void onToggleFoil(card)}>Use foil</Item>
+    ) : null}
     <Item onClick={() => void onToggleSideboard(card)}>
       {card.sideboard ? 'Move to mainboard' : 'Move to sideboard'}
     </Item>

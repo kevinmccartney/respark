@@ -35,6 +35,7 @@ export const cardPrintingSummarySchema = z.object({
   setName: z.string(),
   imageNormal: z.string().nullable(),
   imageLarge: z.string().nullable(),
+  finishes: z.array(z.string()),
 });
 
 export type CardPrintingSummary = z.infer<typeof cardPrintingSummarySchema>;

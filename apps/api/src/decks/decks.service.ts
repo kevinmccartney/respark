@@ -46,6 +46,7 @@ type DeckCardRow = {
   set_name: string;
   collector_number: string;
   image_normal: string | null;
+  finishes: string[] | null;
 };
 
 type DeckLine = {
@@ -229,6 +230,9 @@ export class DecksService {
     }));
 
     const printingIds = await resolveMoxfieldPrintings(this.db, lines);
+    const finishesByPrinting = await this.finishesByPrintingId(
+      printingIds.filter((id): id is string => Boolean(id)),
+    );
 
     /** Aggregate by printing + foil + board. */
     const quantities = new Map<
@@ -246,7 +250,8 @@ export class DecksService {
         });
         continue;
       }
-      const foil = line.tags.some((tag) => tag.toUpperCase() === 'F');
+      const wantsFoil = line.tags.some((tag) => tag.toUpperCase() === 'F');
+      const foil = wantsFoil && printingAllowsFoil(finishesByPrinting.get(printingId) ?? []);
       const key = `${printingId}:${foil ? '1' : '0'}:${line.sideboard ? '1' : '0'}`;
       const existing = quantities.get(key);
       if (existing) {
@@ -450,6 +455,10 @@ export class DecksService {
       return this.requireDeckCard(line.id);
     }
 
+    if (next.foil === true || (foil && next.printingId !== undefined)) {
+      await this.assertPrintingAllowsFoil(printingId);
+    }
+
     if (next.printingId !== undefined) {
       await this.assertSameCard(line.printingId, printingId);
     }
@@ -510,6 +519,33 @@ export class DecksService {
     }
   }
 
+  private async finishesByPrintingId(printingIds: string[]): Promise<Map<string, string[]>> {
+    const unique = [...new Set(printingIds)];
+    if (unique.length === 0) return new Map();
+
+    const rows = await this.db
+      .select({ id: printings.id, finishes: printings.finishes })
+      .from(printings)
+      .where(inArray(printings.id, unique));
+
+    return new Map(rows.map((row) => [row.id, row.finishes ?? []]));
+  }
+
+  private async assertPrintingAllowsFoil(printingId: string): Promise<void> {
+    const [row] = await this.db
+      .select({ id: printings.id, finishes: printings.finishes })
+      .from(printings)
+      .where(eq(printings.id, printingId))
+      .limit(1);
+
+    if (!row) {
+      throw new NotFoundException('Printing not found');
+    }
+    if (!printingAllowsFoil(row.finishes ?? [])) {
+      throw new BadRequestException('This printing has no foil finish');
+    }
+  }
+
   private async upsertPrintingLine(
     deckId: string,
     printingId: string,
@@ -517,6 +553,10 @@ export class DecksService {
     foil: boolean,
     sideboard: boolean,
   ): Promise<{ id: string; quantity: number }> {
+    if (foil) {
+      await this.assertPrintingAllowsFoil(printingId);
+    }
+
     const existing = await this.findLineByKey(deckId, printingId, foil, sideboard);
 
     if (existing) {
@@ -611,7 +651,8 @@ export class DecksService {
         s.code AS set_code,
         s.name AS set_name,
         p.collector_number,
-        COALESCE(p.image_normal, f.image_normal) AS image_normal
+        COALESCE(p.image_normal, f.image_normal) AS image_normal,
+        p.finishes
       FROM app.deck_card dc
       JOIN catalog.printing p ON p.id = dc.printing_id
       JOIN catalog.card c ON c.id = p.card_id
@@ -689,7 +730,8 @@ const toDeckCard = (row: DeckCardRow): DeckCard => ({
   typeLine: row.type_line,
   oracleText: row.oracle_text,
   colorIdentity: parseColorIdentity(row.color_identity),
-  foil: row.foil,
+  foil: row.foil && printingAllowsFoil(row.finishes ?? []),
+  hasFoil: printingAllowsFoil(row.finishes ?? []),
   sideboard: row.sideboard,
   quantity: row.quantity,
   setCode: row.set_code,
@@ -697,6 +739,9 @@ const toDeckCard = (row: DeckCardRow): DeckCard => ({
   collectorNumber: row.collector_number,
   imageNormal: row.image_normal,
 });
+
+const printingAllowsFoil = (finishes: readonly string[]): boolean =>
+  finishes.length === 0 || finishes.includes('foil');
 
 const parseColorIdentity = (raw: string[] | null): ColorIdentityPip[] => {
   const seen = new Set<ColorIdentityPip>();

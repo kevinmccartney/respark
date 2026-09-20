@@ -57,6 +57,7 @@ export type CanonicalPrinting = {
   oversized: boolean | null;
   promo: boolean | null;
   reprint: boolean | null;
+  finishes: string[];
   imageSmall: string | null;
   imageNormal: string | null;
   imageLarge: string | null;
@@ -225,6 +226,7 @@ export const transformScryfallCard = (raw: unknown): CanonicalRecord | null => {
       oversized: asBool(card.oversized),
       promo: asBool(card.promo),
       reprint: asBool(card.reprint),
+      finishes: asStringArray(card.finishes) ?? [],
       imageSmall: imageField(imageUris, 'small'),
       imageNormal: imageField(imageUris, 'normal'),
       imageLarge: imageField(imageUris, 'large'),

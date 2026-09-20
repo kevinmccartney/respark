@@ -55,6 +55,7 @@ type PrintingDetailRow = {
   image_large: string | null;
   face_image_normal: string | null;
   face_image_large: string | null;
+  finishes: string[] | null;
 };
 
 @Injectable()
@@ -200,7 +201,8 @@ export class CardsService {
         p.image_normal,
         p.image_large,
         f.image_normal AS face_image_normal,
-        f.image_large AS face_image_large
+        f.image_large AS face_image_large,
+        p.finishes
       FROM catalog.printing p
       JOIN catalog.set s ON s.id = p.set_id
       LEFT JOIN catalog.card_face f
@@ -285,4 +287,5 @@ const toPrinting = (row: PrintingDetailRow): CardPrintingSummary => ({
   setName: row.set_name,
   imageNormal: row.image_normal ?? row.face_image_normal,
   imageLarge: row.image_large ?? row.face_image_large ?? row.image_normal ?? row.face_image_normal,
+  finishes: row.finishes ?? [],
 });

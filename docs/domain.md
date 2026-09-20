@@ -72,7 +72,7 @@ A published set (`code` unique, plus optional Scryfall set id). Printings belong
 
 ### Printing (`catalog.printing`)
 
-One physical or digital printing of a card in a set (`scryfall_id` unique). Collector number, language, rarity, artist, image URLs. This is what a deck line stores.
+One physical or digital printing of a card in a set (`scryfall_id` unique). Collector number, language, rarity, artist, image URLs, and `finishes` (`nonfoil`, `foil`, `etched`, …). A deck line may be foil only when `foil` is in that list (empty means not synced yet). This is what a deck line stores.
 
 ### Card face (`catalog.card_face`)
 
