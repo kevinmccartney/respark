@@ -16,7 +16,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/cli.js",
-    "dev": "tsx src/cli.ts"
+    "dev": "tsx src/cli.ts",
+    "test": "tsx --test src/sources/mtgjson/transformer.test.ts"
   },
   "dependencies": {
     "commander": "^14.0.0",

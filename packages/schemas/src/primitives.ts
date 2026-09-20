@@ -18,3 +18,38 @@ export const queryIntSchema = (min: number, max: number) =>
     if (value === undefined || value === '' || value === null) return undefined;
     return value;
   }, z.coerce.number().int().min(min).max(max).optional());
+
+/** Query-string booleans (`true`/`false`/`1`/`0`). Missing or empty stay undefined. */
+export const queryBoolSchema = z.preprocess((value: unknown) => {
+  if (value === undefined || value === '' || value === null) return undefined;
+  if (value === true || value === 'true' || value === '1') return true;
+  if (value === false || value === 'false' || value === '0') return false;
+  return value;
+}, z.boolean().optional());
+
+/** One face of a printing (DFC, MDFC, split, adventure, …). */
+export const cardFaceSchema = z.object({
+  faceIndex: z.number().int().nonnegative(),
+  name: z.string().nullable(),
+  manaCost: z.string().nullable(),
+  typeLine: z.string().nullable(),
+  oracleText: z.string().nullable(),
+  imageNormal: z.string().nullable(),
+  imageLarge: z.string().nullable(),
+});
+
+export type CardFace = z.infer<typeof cardFaceSchema>;
+
+export const parseCardFaces = (raw: unknown): CardFace[] => {
+  const value = typeof raw === 'string' ? parseJson(raw) : raw;
+  const parsed = z.array(cardFaceSchema).safeParse(value);
+  return parsed.success ? parsed.data : [];
+};
+
+const parseJson = (raw: string): unknown => {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+};

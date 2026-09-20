@@ -1,3 +1,4 @@
+import { leadershipSkillsSchema, type LeadershipSkills } from 'schemas/cards';
 import type { MtgjsonCard } from './schema';
 
 export type EnrichmentIdentifier = {
@@ -12,12 +13,19 @@ export type MtgjsonEnrichment = {
   collectorNumber: string | null;
   language: string | null;
   scryfallId: string | null;
+  leadershipSkills: LeadershipSkills | null;
   identifiers: EnrichmentIdentifier[];
 };
 
+const toLeadershipSkills = (skills: MtgjsonCard['leadershipSkills']): LeadershipSkills | null => {
+  const parsed = leadershipSkillsSchema.safeParse(skills);
+  return parsed.success ? parsed.data : null;
+};
+
 /**
- * Extract cross-provider IDs from an MTGJSON card.
- * Scryfall-owned catalog fields are never written here — only identifiers.
+ * Extract cross-provider IDs and leadershipSkills from an MTGJSON card.
+ * Scryfall-owned catalog fields (oracle text, type line, legalities, images) are
+ * never written here.
  */
 export const extractEnrichment = (card: MtgjsonCard): MtgjsonEnrichment => {
   const ids = card.identifiers ?? {};
@@ -41,6 +49,7 @@ export const extractEnrichment = (card: MtgjsonCard): MtgjsonEnrichment => {
     collectorNumber: card.number ?? null,
     language: card.language ?? null,
     scryfallId: ids.scryfallId ?? null,
+    leadershipSkills: toLeadershipSkills(card.leadershipSkills),
     identifiers,
   };
 };

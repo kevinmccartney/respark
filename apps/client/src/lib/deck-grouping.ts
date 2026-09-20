@@ -230,3 +230,17 @@ export const groupDeckCards = (
     };
   });
 };
+
+export const commanderDeckGroup = (
+  cards: DeckCard[],
+  sortMode: DeckSortMode,
+): DeckCardGroup | null => {
+  if (cards.length === 0) return null;
+  const sorted = [...cards].sort(SORT_COMPARATORS[sortMode]);
+  return {
+    key: 'commander',
+    label: 'Commander',
+    cards: sorted,
+    totalQuantity: sumQuantity(sorted),
+  };
+};

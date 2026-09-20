@@ -4,13 +4,18 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { DATABASE, type Database } from '../db/database.module';
 import {
   CARD_SEARCH_DEFAULT_LIMIT,
+  leadershipSkillsSchema,
   type CardDetail,
+  type CardLegalities,
   type CardNameSuggestion,
   type CardPrintingSummary,
   type CardSearchPage,
   type CardSearchResult,
+  type LeadershipSkills,
 } from 'schemas/cards';
-import { bestPrintingOrderSql } from '../catalog/printings';
+import { parseCardFaces } from 'schemas/primitives';
+import type { ColorIdentityPip, DeckFormat } from 'schemas/decks';
+import { bestPrintingOrderSql, printingFacesJsonSql } from '../catalog/printings';
 
 type SearchRow = {
   id: string;
@@ -39,6 +44,8 @@ type CardDetailRow = {
   keywords: string[] | null;
   layout: string | null;
   reserved: boolean | null;
+  legalities: CardLegalities | null;
+  leadership_skills: LeadershipSkills | null;
 };
 
 type PrintingDetailRow = {
@@ -56,6 +63,7 @@ type PrintingDetailRow = {
   face_image_normal: string | null;
   face_image_large: string | null;
   finishes: string[] | null;
+  faces: unknown;
 };
 
 @Injectable()
@@ -67,18 +75,31 @@ export class CardsService {
     private readonly logger: PinoLogger,
   ) {}
 
-  async search(opts: { q?: string; limit?: number; page?: number }): Promise<CardSearchPage> {
+  async search(opts: {
+    q?: string;
+    legalIn?: DeckFormat;
+    colorIdentity?: ColorIdentityPip[];
+    commanderEligible?: boolean;
+    limit?: number;
+    page?: number;
+  }): Promise<CardSearchPage> {
     const q = (opts.q ?? '').trim();
     const pageSize = opts.limit ?? CARD_SEARCH_DEFAULT_LIMIT;
     const requestedPage = opts.page ?? 1;
 
     const pattern = q.length > 0 ? `%${escapeIlike(q)}%` : null;
     const matchPredicate = matchSql(pattern);
+    const legalPredicate = legalInSql(opts.legalIn);
+    const identityPredicate = colorIdentitySql(opts.colorIdentity);
+    const commanderPredicate = commanderEligibleSql(opts.commanderEligible);
 
     const countResult = await this.db.execute<CountRow>(sql`
       SELECT count(*)::int AS total
       FROM catalog.card c
       WHERE ${matchPredicate}
+        AND ${legalPredicate}
+        AND ${identityPredicate}
+        AND ${commanderPredicate}
     `);
     const total = Number(countResult.rows[0]?.total ?? 0);
     const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
@@ -96,6 +117,9 @@ export class CardsService {
           c.oracle_text
         FROM catalog.card c
         WHERE ${matchPredicate}
+          AND ${legalPredicate}
+          AND ${identityPredicate}
+          AND ${commanderPredicate}
         ORDER BY c.name ASC, c.id ASC
         LIMIT ${pageSize}
         OFFSET ${offset}
@@ -129,6 +153,9 @@ export class CardsService {
       {
         event: 'cards.search',
         qLength: q.length,
+        legalIn: opts.legalIn ?? null,
+        colorIdentity: opts.colorIdentity?.join('') ?? null,
+        commanderEligible: opts.commanderEligible ?? null,
         page,
         pageSize,
         resultCount: cards.length,
@@ -144,17 +171,31 @@ export class CardsService {
   /**
    * Deck-builder autocomplete: match card names only, return id + name.
    */
-  async suggestNames(qRaw: string | undefined, limitRaw?: number): Promise<CardNameSuggestion[]> {
+  async suggestNames(
+    qRaw: string | undefined,
+    opts?: {
+      limit?: number;
+      legalIn?: DeckFormat;
+      colorIdentity?: ColorIdentityPip[];
+      commanderEligible?: boolean;
+    },
+  ): Promise<CardNameSuggestion[]> {
     const q = (qRaw ?? '').trim();
     if (q.length < 2) return [];
 
-    const limit = limitRaw ?? 15;
+    const limit = opts?.limit ?? 15;
     const pattern = `%${escapeIlike(q)}%`;
+    const legalPredicate = legalInSql(opts?.legalIn);
+    const identityPredicate = colorIdentitySql(opts?.colorIdentity);
+    const commanderPredicate = commanderEligibleSql(opts?.commanderEligible);
 
     const result = await this.db.execute<{ id: string; name: string }>(sql`
       SELECT c.id, c.name
       FROM catalog.card c
       WHERE c.name ILIKE ${pattern} ESCAPE '\\'
+        AND ${legalPredicate}
+        AND ${identityPredicate}
+        AND ${commanderPredicate}
       ORDER BY c.name ASC
       LIMIT ${limit}
     `);
@@ -175,6 +216,8 @@ export class CardsService {
         c.colors,
         c.color_identity,
         c.keywords,
+        c.legalities,
+        c.leadership_skills,
         c.layout,
         c.reserved
       FROM catalog.card c
@@ -202,7 +245,8 @@ export class CardsService {
         p.image_large,
         f.image_normal AS face_image_normal,
         f.image_large AS face_image_large,
-        p.finishes
+        p.finishes,
+        ${printingFacesJsonSql} AS faces
       FROM catalog.printing p
       JOIN catalog.set s ON s.id = p.set_id
       LEFT JOIN catalog.card_face f
@@ -233,12 +277,45 @@ export class CardsService {
       colors: cardRow.colors,
       colorIdentity: cardRow.color_identity,
       keywords: cardRow.keywords,
+      legalities: parseLegalities(cardRow.legalities),
+      leadershipSkills: parseLeadershipSkills(cardRow.leadership_skills),
       layout: cardRow.layout,
       reserved: cardRow.reserved,
       printings,
     };
   }
 }
+
+const legalInSql = (legalIn: DeckFormat | undefined): SQL => {
+  if (!legalIn) return sql`TRUE`;
+  return sql`(c.legalities ->> ${legalIn}) = 'legal'`;
+};
+
+const commanderEligibleSql = (enabled: boolean | undefined): SQL => {
+  if (!enabled) return sql`TRUE`;
+  return sql`(c.leadership_skills ->> 'commander') = 'true'`;
+};
+
+const colorIdentitySql = (colorIdentity: ColorIdentityPip[] | undefined): SQL => {
+  if (!colorIdentity) return sql`TRUE`;
+  if (colorIdentity.length === 0) {
+    return sql`coalesce(cardinality(c.color_identity), 0) = 0`;
+  }
+  return sql`coalesce(c.color_identity, ARRAY[]::text[]) <@ ARRAY[${sql.join(
+    colorIdentity.map((pip) => sql`${pip}`),
+    sql`, `,
+  )}]::text[]`;
+};
+
+const parseLegalities = (raw: CardLegalities | null): CardLegalities | null => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  return raw;
+};
+
+const parseLeadershipSkills = (raw: LeadershipSkills | null): LeadershipSkills | null => {
+  const parsed = leadershipSkillsSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+};
 
 const matchSql = (pattern: string | null): SQL => sql`
     (
@@ -288,4 +365,5 @@ const toPrinting = (row: PrintingDetailRow): CardPrintingSummary => ({
   imageNormal: row.image_normal ?? row.face_image_normal,
   imageLarge: row.image_large ?? row.face_image_large ?? row.image_normal ?? row.face_image_normal,
   finishes: row.finishes ?? [],
+  faces: parseCardFaces(row.faces),
 });

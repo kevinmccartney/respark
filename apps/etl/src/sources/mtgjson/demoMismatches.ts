@@ -49,6 +49,7 @@ export const buildDemoUnmatchedItems = (): DemoBatchItem[] => [
       collectorNumber: '99999',
       language: null,
       scryfallId: null,
+      leadershipSkills: null,
       identifiers: [{ provider: 'mtgjson', externalId: 'demo-unmatched-no-scryfall' }],
     },
     'Synthetic unmatched: fake set/number, no scryfallId',
@@ -61,6 +62,7 @@ export const buildDemoUnmatchedItems = (): DemoBatchItem[] => [
       collectorNumber: '99998',
       language: 'English',
       scryfallId: DEMO_UNMATCHED_SCRYFALL_ID,
+      leadershipSkills: null,
       identifiers: [
         { provider: 'mtgjson', externalId: 'demo-unmatched-bad-scryfall' },
         { provider: 'tcgplayer', externalId: 'demo-tcg-999' },
@@ -111,6 +113,7 @@ export const installDemoAmbiguousClone = async (
       collectorNumber: row.collector_number,
       language: null, // omit language so both en rows collide
       scryfallId: null,
+      leadershipSkills: null,
       identifiers: [{ provider: 'mtgjson', externalId: 'demo-ambiguous-set-number' }],
     },
     `Synthetic ambiguous: cloned printing ${cloneId} beside ${row.id} for ${row.set_code}#${row.collector_number}`,

@@ -48,7 +48,7 @@ Local row for a Clerk account. Clerk owns sign-in; this table owns the UUID ever
 
 ### Deck (`app.decks`)
 
-A player's named list. `format` is `standard`, `commander`, or `modern`. Deleting a deck cascades to its lines. Deleting a user (hard) would cascade decks; soft-delete does not.
+A player's named list. `format` is `standard`, `commander`, or `modern`. Commander-format decks always have `commander_printing_id` (a `catalog.printing`); other formats leave it null. The commander must be legal in Commander and have `leadershipSkills.commander` from MTGJSON. Deck color identity is the commander's identity for commander, otherwise the union of mainboard cards. Mainboard adds must stay inside that identity on commander decks. Deleting a deck cascades to its lines. Deleting a user (hard) would cascade decks; soft-delete does not.
 
 ### Deck line (`app.deck_card`)
 
@@ -60,11 +60,11 @@ The line points at `catalog.printing`, not `catalog.card`, so the player can cho
 
 ![Catalog ERD](diagrams/erd-catalog.svg)
 
-Scryfall is the source of truth for identity, printings, sets, and images. The identifiers job only attaches extra IDs to **existing** printings.
+Scryfall is the source of truth for identity, printings, sets, images, and format legalities. The identifiers job attaches extra IDs to **existing** printings and copies MTGJSON `leadershipSkills` onto `catalog.card.leadership_skills`.
 
 ### Card (`catalog.card`)
 
-The conceptual / oracle card (`oracle_id` from Scryfall). Shared rules text, colors, type line. Search and autocomplete query this table; the deck builder then picks a printing. Art cards, theme cards, and extras with a bare `Card` face on the type line are not imported. The identifiers job skips the same extras.
+The conceptual / oracle card (`oracle_id` from Scryfall). Shared rules text, colors, type line, format `legalities` (Scryfall map), and `leadership_skills` (MTGJSON `leadershipSkills`, including `commander` / `brawl` / `oathbreaker`). Search and autocomplete query this table; the deck builder then picks a printing. Adds and imports reject cards that are not `legal` in the deck’s format once legalities have been synced. Commander search and commander assignment require `leadershipSkills.commander`. Art cards, theme cards, and extras with a bare `Card` face on the type line are not imported. The identifiers job skips the same extras.
 
 ### Set (`catalog.set`)
 
@@ -76,7 +76,7 @@ One physical or digital printing of a card in a set (`scryfall_id` unique). Coll
 
 ### Card face (`catalog.card_face`)
 
-Per-face text and images for multi-face layouts (DFCs, split, etc.). Unique `(printing_id, face_index)`. Deck/search image fallbacks use face `0` when the printing has no card-level image.
+Per-face text, power/toughness, and images for multi-face layouts (DFCs, split, etc.). Unique `(printing_id, face_index)`. Deck/search image fallbacks use face `0` when the printing has no card-level image.
 
 ### Printing identifier (`catalog.printing_identifier`)
 

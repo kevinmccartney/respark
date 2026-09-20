@@ -1,4 +1,4 @@
-import { isoDateTimeSchema, uuidSchema } from './primitives.js';
+import { cardFaceSchema, isoDateTimeSchema, uuidSchema } from './primitives.js';
 import { z } from 'zod';
 
 export const DECK_FORMATS = ['standard', 'commander', 'modern'] as const;
@@ -15,6 +15,11 @@ export type ColorIdentityPip = z.infer<typeof colorIdentityPipSchema>;
 
 export const colorIdentitySchema = z.array(colorIdentityPipSchema);
 
+export const isColorIdentitySubset = (
+  cardIdentity: readonly ColorIdentityPip[],
+  allowed: readonly ColorIdentityPip[],
+): boolean => cardIdentity.every((pip) => allowed.includes(pip));
+
 const deckNameSchema = z.string().trim().min(1).max(120);
 
 export const deckSchema = z.object({
@@ -22,6 +27,7 @@ export const deckSchema = z.object({
   name: z.string(),
   description: z.string().nullable(),
   format: deckFormatSchema,
+  commanderPrintingId: uuidSchema.nullable(),
   colorIdentity: colorIdentitySchema,
   updatedAt: isoDateTimeSchema,
 });
@@ -46,6 +52,7 @@ export const deckCardSchema = z.object({
   setName: z.string(),
   collectorNumber: z.string(),
   imageNormal: z.string().nullable(),
+  faces: z.array(cardFaceSchema),
 });
 
 export type DeckCard = z.infer<typeof deckCardSchema>;
@@ -57,13 +64,41 @@ export const deckDetailSchema = z.object({
 
 export type DeckDetail = z.infer<typeof deckDetailSchema>;
 
+const commanderMatchesFormat = (
+  format: DeckFormat | undefined,
+  commanderPrintingId: string | null | undefined,
+  ctx: z.RefinementCtx,
+  { requiredWhenCommander }: { requiredWhenCommander: boolean },
+) => {
+  if (format === 'commander' && requiredWhenCommander && !commanderPrintingId) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['commanderPrintingId'],
+      message: 'Commander is required for commander format',
+    });
+  }
+  if (format !== undefined && format !== 'commander' && commanderPrintingId) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['commanderPrintingId'],
+      message: 'Commander is only valid for commander format',
+    });
+  }
+};
+
 export const createDeckBodySchema = z
   .object({
     name: deckNameSchema,
     description: z.string().nullable().optional(),
     format: deckFormatSchema.optional().default('standard'),
+    commanderPrintingId: uuidSchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    commanderMatchesFormat(value.format, value.commanderPrintingId, ctx, {
+      requiredWhenCommander: true,
+    });
+  });
 
 export type CreateDeckInput = z.infer<typeof createDeckBodySchema>;
 
@@ -72,13 +107,22 @@ export const updateDeckBodySchema = z
     name: deckNameSchema.optional(),
     description: z.string().nullable().optional(),
     format: deckFormatSchema.optional(),
+    commanderPrintingId: uuidSchema.nullable().optional(),
   })
   .strict()
   .refine(
     (value) =>
-      value.name !== undefined || value.description !== undefined || value.format !== undefined,
-    { message: 'name, description, or format is required' },
-  );
+      value.name !== undefined ||
+      value.description !== undefined ||
+      value.format !== undefined ||
+      value.commanderPrintingId !== undefined,
+    { message: 'name, description, format, or commanderPrintingId is required' },
+  )
+  .superRefine((value, ctx) => {
+    commanderMatchesFormat(value.format, value.commanderPrintingId, ctx, {
+      requiredWhenCommander: value.format === 'commander',
+    });
+  });
 
 export type UpdateDeckInput = z.infer<typeof updateDeckBodySchema>;
 

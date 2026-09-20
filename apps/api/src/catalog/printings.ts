@@ -8,6 +8,28 @@ export const bestPrintingOrderSql = sql`
   p.id
 `;
 
+export const printingFacesJsonSql = sql`
+  COALESCE(
+    (
+      SELECT json_agg(
+        json_build_object(
+          'faceIndex', cf.face_index,
+          'name', cf.name,
+          'manaCost', cf.mana_cost,
+          'typeLine', cf.type_line,
+          'oracleText', cf.oracle_text,
+          'imageNormal', cf.image_normal,
+          'imageLarge', cf.image_large
+        )
+        ORDER BY cf.face_index
+      )
+      FROM catalog.card_face cf
+      WHERE cf.printing_id = p.id
+    ),
+    '[]'::json
+  )
+`;
+
 export const defaultPrintingId = async (db: Database, cardId: string): Promise<string | null> => {
   const ids = await defaultPrintingIds(db, [cardId]);
   return ids.get(cardId) ?? null;

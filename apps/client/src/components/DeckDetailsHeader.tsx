@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ColorIdentity } from './ColorIdentity.tsx';
+import { CommanderPicker } from './CommanderPicker.tsx';
 import { DECK_FORMAT_LABELS, DECK_FORMATS, type Deck, type DeckFormat } from '../lib/decks.ts';
 
 type Props = {
   deck: Deck;
+  commanderName: string | null;
   mainTotal: number;
   sideTotal: number;
   uniqueCount: number;
@@ -14,6 +17,7 @@ type Props = {
     name: string;
     format: DeckFormat;
     description: string | null;
+    commanderPrintingId: string | null;
   }) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
   onBeginEdit?: () => void;
@@ -21,6 +25,7 @@ type Props = {
 
 export const DeckDetailsHeader = ({
   deck,
+  commanderName,
   mainTotal,
   sideTotal,
   uniqueCount,
@@ -33,6 +38,11 @@ export const DeckDetailsHeader = ({
   const [nameDraft, setNameDraft] = useState(deck.name);
   const [formatDraft, setFormatDraft] = useState<DeckFormat>(deck.format);
   const [descriptionDraft, setDescriptionDraft] = useState(deck.description ?? '');
+  const [commanderDraft, setCommanderDraft] = useState<{ printingId: string; name: string } | null>(
+    deck.commanderPrintingId && commanderName
+      ? { printingId: deck.commanderPrintingId, name: commanderName }
+      : null,
+  );
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -41,18 +51,26 @@ export const DeckDetailsHeader = ({
     setNameDraft(deck.name);
     setFormatDraft(deck.format);
     setDescriptionDraft(deck.description ?? '');
+    setCommanderDraft(
+      deck.commanderPrintingId && commanderName
+        ? { printingId: deck.commanderPrintingId, name: commanderName }
+        : null,
+    );
     setEditing(true);
   };
 
   const save = async () => {
     const trimmedName = nameDraft.trim();
     if (!trimmedName || saving) return;
+    if (formatDraft === 'commander' && !commanderDraft) return;
     setSaving(true);
     try {
       const ok = await onSave({
         name: trimmedName,
         format: formatDraft,
         description: descriptionDraft.trim() || null,
+        commanderPrintingId:
+          formatDraft === 'commander' ? (commanderDraft?.printingId ?? null) : null,
       });
       if (ok) setEditing(false);
     } finally {
@@ -94,7 +112,11 @@ export const DeckDetailsHeader = ({
             <select
               id="deck-format"
               value={formatDraft}
-              onChange={(event) => setFormatDraft(event.target.value as DeckFormat)}
+              onChange={(event) => {
+                const next = event.target.value as DeckFormat;
+                setFormatDraft(next);
+                if (next !== 'commander') setCommanderDraft(null);
+              }}
               disabled={saving}
               className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             >
@@ -105,6 +127,17 @@ export const DeckDetailsHeader = ({
               ))}
             </select>
           </div>
+          {formatDraft === 'commander' ? (
+            <div className="space-y-1.5">
+              <Label>Commander</Label>
+              <CommanderPicker
+                printingId={commanderDraft?.printingId ?? null}
+                name={commanderDraft?.name ?? null}
+                disabled={saving}
+                onChange={setCommanderDraft}
+              />
+            </div>
+          ) : null}
           <div className="space-y-1.5">
             <Label htmlFor="deck-description">Description</Label>
             <textarea
@@ -131,7 +164,9 @@ export const DeckDetailsHeader = ({
             <Button
               type="button"
               size="sm"
-              disabled={saving || !nameDraft.trim()}
+              disabled={
+                saving || !nameDraft.trim() || (formatDraft === 'commander' && !commanderDraft)
+              }
               onClick={() => void save()}
             >
               {saving ? 'Saving…' : 'Save'}
@@ -147,10 +182,14 @@ export const DeckDetailsHeader = ({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-2">
           <h1 className="font-heading text-3xl tracking-tight">{deck.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            {DECK_FORMAT_LABELS[deck.format]} · {mainTotal} card
-            {mainTotal === 1 ? '' : 's'}
-            {sideTotal > 0 ? ` · ${sideTotal} sideboard` : ''} · {uniqueCount} unique
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+            <ColorIdentity colors={deck.colorIdentity} />
+            <span>
+              {DECK_FORMAT_LABELS[deck.format]}
+              {commanderName ? ` · ${commanderName}` : ''} · {mainTotal} card
+              {mainTotal === 1 ? '' : 's'}
+              {sideTotal > 0 ? ` · ${sideTotal} sideboard` : ''} · {uniqueCount} unique
+            </span>
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">

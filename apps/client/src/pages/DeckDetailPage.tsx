@@ -9,6 +9,7 @@ import { DeckImportDialog } from '../components/DeckImportDialog.tsx';
 import { DeckListToolbar } from '../components/DeckListToolbar.tsx';
 import { PrintingPickerDialog } from '../components/PrintingPickerDialog.tsx';
 import {
+  commanderDeckGroup,
   groupDeckCards,
   type DeckGroupMode,
   type DeckSortMode,
@@ -42,6 +43,7 @@ export const DeckDetailPage = () => {
   const [groupMode, setGroupMode] = useState<DeckGroupMode>('type');
   const [sortMode, setSortMode] = useState<DeckSortMode>('name');
   const [previewCardId, setPreviewCardId] = useState<string | null>(null);
+  const [previewFaceIndex, setPreviewFaceIndex] = useState(0);
   const [pickingCard, setPickingCard] = useState<DeckCard | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
@@ -53,10 +55,26 @@ export const DeckDetailPage = () => {
     () => detail?.cards.filter((card) => card.sideboard) ?? [],
     [detail],
   );
-  const mainGroups = useMemo(
-    () => groupDeckCards(mainboardCards, groupMode, sortMode),
-    [mainboardCards, groupMode, sortMode],
+  const commanderPrintingId = detail?.deck.commanderPrintingId ?? null;
+  const commanderCards = useMemo(
+    () =>
+      commanderPrintingId
+        ? mainboardCards.filter((card) => card.printingId === commanderPrintingId)
+        : [],
+    [commanderPrintingId, mainboardCards],
   );
+  const restMainboardCards = useMemo(
+    () =>
+      commanderPrintingId
+        ? mainboardCards.filter((card) => card.printingId !== commanderPrintingId)
+        : mainboardCards,
+    [commanderPrintingId, mainboardCards],
+  );
+  const mainGroups = useMemo(() => {
+    const rest = groupDeckCards(restMainboardCards, groupMode, sortMode);
+    const commander = commanderDeckGroup(commanderCards, sortMode);
+    return commander ? [commander, ...rest] : rest;
+  }, [commanderCards, restMainboardCards, groupMode, sortMode]);
   const sideGroups = useMemo(
     () => groupDeckCards(sideboardCards, groupMode, sortMode),
     [sideboardCards, groupMode, sortMode],
@@ -71,17 +89,37 @@ export const DeckDetailPage = () => {
   useEffect(() => {
     if (previewableCards.length === 0) {
       setPreviewCardId(null);
+      setPreviewFaceIndex(0);
       return;
     }
-    setPreviewCardId((current) =>
-      current && previewableCards.some((card) => card.id === current)
-        ? current
-        : (previewableCards[0]?.id ?? null),
-    );
-  }, [previewableCards]);
+    if (previewCardId && previewableCards.some((card) => card.id === previewCardId)) {
+      return;
+    }
+    setPreviewCardId(previewableCards[0]?.id ?? null);
+    setPreviewFaceIndex(0);
+  }, [previewableCards, previewCardId]);
+
+  const previewCardById = (cardId: string) => {
+    if (cardId !== previewCardId) setPreviewFaceIndex(0);
+    setPreviewCardId(cardId);
+  };
+
+  const transformCard = (cardId: string) => {
+    const card = previewableCards.find((entry) => entry.id === cardId);
+    const faceCount = card?.faces.length ?? 0;
+    if (faceCount < 2) return;
+    if (cardId === previewCardId) {
+      setPreviewFaceIndex((current) => (current + 1) % faceCount);
+      return;
+    }
+    setPreviewCardId(cardId);
+    setPreviewFaceIndex(1);
+  };
 
   const mainTotal = mainboardCards.reduce((sum, card) => sum + card.quantity, 0);
   const sideTotal = sideboardCards.reduce((sum, card) => sum + card.quantity, 0);
+  const commanderName =
+    detail?.cards.find((card) => card.printingId === detail.deck.commanderPrintingId)?.name ?? null;
 
   if (notFound) {
     return (
@@ -116,6 +154,7 @@ export const DeckDetailPage = () => {
         <>
           <DeckDetailsHeader
             deck={detail.deck}
+            commanderName={commanderName}
             mainTotal={mainTotal}
             sideTotal={sideTotal}
             uniqueCount={mainboardCards.length}
@@ -142,10 +181,13 @@ export const DeckDetailPage = () => {
               </h2>
               <div className="flex flex-wrap items-center justify-end gap-3">
                 <DeckAddCardSearch
+                  format={detail.deck.format}
+                  colorIdentity={detail.deck.colorIdentity}
                   onAdd={async (suggestion) => {
                     const card = await addCard(suggestion.id);
                     if (!card) return false;
                     setPreviewCardId(card.id);
+                    setPreviewFaceIndex(0);
                     return true;
                   }}
                 />
@@ -168,7 +210,13 @@ export const DeckDetailPage = () => {
               </p>
             ) : (
               <div className="flex flex-col items-start gap-6 lg:flex-row">
-                <CardPreview card={previewCard} />
+                <CardPreview
+                  card={previewCard}
+                  faceIndex={previewFaceIndex}
+                  onFlip={() => {
+                    if (previewCard) transformCard(previewCard.id);
+                  }}
+                />
                 <div className="min-w-0 flex-1 space-y-8">
                   {mainboardCards.length > 0 ? (
                     <BoardSection
@@ -177,7 +225,9 @@ export const DeckDetailPage = () => {
                       groups={mainGroups}
                       viewMode={viewMode}
                       previewCardId={previewCard?.id ?? null}
-                      onPreview={setPreviewCardId}
+                      previewFaceIndex={previewFaceIndex}
+                      onPreview={previewCardById}
+                      onTransform={transformCard}
                       onPickPrinting={setPickingCard}
                       onBump={bumpQuantity}
                       onToggleFoil={toggleFoil}
@@ -191,7 +241,9 @@ export const DeckDetailPage = () => {
                       groups={sideGroups}
                       viewMode={viewMode}
                       previewCardId={previewCard?.id ?? null}
-                      onPreview={setPreviewCardId}
+                      previewFaceIndex={previewFaceIndex}
+                      onPreview={previewCardById}
+                      onTransform={transformCard}
                       onPickPrinting={setPickingCard}
                       onBump={bumpQuantity}
                       onToggleFoil={toggleFoil}

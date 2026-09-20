@@ -15,7 +15,7 @@ ETL Sync
 ├── Stage: catalog
 │   └── Job: catalog          → Scryfall catalog (source of truth)
 └── Stage: enrichment
-    └── Job: identifiers      → Printing identifiers (MTGJSON)
+    └── Job: identifiers      → Printing identifiers + commander flag (MTGJSON)
     └── (future) pricing, rulings, …
 ```
 
@@ -27,6 +27,7 @@ A sync may run catalog only, enrichment only, or both. Enrichment-only is allowe
 | ----------------------------------------------------------------------------------------------------- | ----------------------------- |
 | Oracle identity, printings, sets, images, legality fields                                             | **Scryfall** (catalog job)    |
 | Cross-provider IDs on existing printings (`mtgjson`, `tcgplayer`, `cardmarket`, `mtgo`, `multiverse`) | **MTGJSON** (identifiers job) |
+| Commander eligibility (`catalog.card.leadership_skills` from MTGJSON `leadershipSkills`)              | **MTGJSON** (identifiers job) |
 
 Enrichment **never creates** `catalog.printing` rows. Unmatched MTGJSON cards are recorded for review; they do not become catalog entities.
 

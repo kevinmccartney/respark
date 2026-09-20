@@ -43,8 +43,8 @@ const upsertCard = async (client: PoolClient, record: CanonicalRecord): Promise<
   const result = await client.query<{ id: string }>(
     `insert into catalog.card as t
        (oracle_id, name, mana_cost, mana_value, type_line, oracle_text,
-        colors, color_identity, keywords, layout, reserved, updated_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
+        colors, color_identity, keywords, legalities, layout, reserved, updated_at)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, now())
      on conflict (oracle_id) do update set
        name = excluded.name,
        mana_cost = excluded.mana_cost,
@@ -54,6 +54,7 @@ const upsertCard = async (client: PoolClient, record: CanonicalRecord): Promise<
        colors = excluded.colors,
        color_identity = excluded.color_identity,
        keywords = excluded.keywords,
+       legalities = excluded.legalities,
        layout = excluded.layout,
        reserved = excluded.reserved,
        updated_at = now()
@@ -65,6 +66,7 @@ const upsertCard = async (client: PoolClient, record: CanonicalRecord): Promise<
         or t.colors is distinct from excluded.colors
         or t.color_identity is distinct from excluded.color_identity
         or t.keywords is distinct from excluded.keywords
+        or t.legalities is distinct from excluded.legalities
         or t.layout is distinct from excluded.layout
         or t.reserved is distinct from excluded.reserved
      returning id`,
@@ -78,6 +80,7 @@ const upsertCard = async (client: PoolClient, record: CanonicalRecord): Promise<
       c.colors,
       c.colorIdentity,
       c.keywords,
+      JSON.stringify(c.legalities),
       c.layout,
       c.reserved,
     ],

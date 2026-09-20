@@ -141,6 +141,34 @@
       "when": 1789866761002,
       "tag": "0019_modern_young_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1789876086395,
+      "tag": "0020_card_legalities",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1789876135016,
+      "tag": "0021_deck_commander",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1789904749167,
+      "tag": "0022_card_is_commander",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1789905600000,
+      "tag": "0023_card_leadership_skills",
+      "breakpoints": true
     }
   ]
 }

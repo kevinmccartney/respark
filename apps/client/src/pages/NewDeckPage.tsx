@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CommanderPicker } from '../components/CommanderPicker.tsx';
 import { ApiError } from '../lib/api.ts';
 import { createDeck, DECK_FORMAT_LABELS, DECK_FORMATS, type DeckFormat } from '../lib/decks.ts';
 
@@ -16,6 +17,7 @@ export const NewDeckPage = () => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [format, setFormat] = useState<DeckFormat>('standard');
+  const [commander, setCommander] = useState<{ printingId: string; name: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,6 +26,7 @@ export const NewDeckPage = () => {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!trimmedName || saving) return;
+    if (format === 'commander' && !commander) return;
 
     setSaving(true);
     setError(null);
@@ -32,6 +35,7 @@ export const NewDeckPage = () => {
         name: trimmedName,
         description: description.trim() || undefined,
         format,
+        commanderPrintingId: commander?.printingId,
       });
       navigate(`/decks/${deck.id}`);
     } catch (err) {
@@ -74,7 +78,11 @@ export const NewDeckPage = () => {
               <select
                 id="deck-format"
                 value={format}
-                onChange={(event) => setFormat(event.target.value as DeckFormat)}
+                onChange={(event) => {
+                  const next = event.target.value as DeckFormat;
+                  setFormat(next);
+                  if (next !== 'commander') setCommander(null);
+                }}
                 disabled={saving}
                 className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
@@ -85,6 +93,18 @@ export const NewDeckPage = () => {
                 ))}
               </select>
             </div>
+
+            {format === 'commander' ? (
+              <div className="space-y-1.5">
+                <Label>Commander</Label>
+                <CommanderPicker
+                  printingId={commander?.printingId ?? null}
+                  name={commander?.name ?? null}
+                  disabled={saving}
+                  onChange={setCommander}
+                />
+              </div>
+            ) : null}
 
             <div className="space-y-1.5">
               <Label htmlFor="deck-description">Description</Label>
@@ -110,7 +130,10 @@ export const NewDeckPage = () => {
               <Button variant="outline" render={<Link to="/home" />}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={!trimmedName || saving}>
+              <Button
+                type="submit"
+                disabled={!trimmedName || saving || (format === 'commander' && !commander)}
+              >
                 {saving ? 'Creating…' : 'Create deck'}
               </Button>
             </div>

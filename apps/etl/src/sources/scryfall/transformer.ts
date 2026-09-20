@@ -25,6 +25,7 @@ export type CanonicalCard = {
   colors: string[] | null;
   colorIdentity: string[] | null;
   keywords: string[] | null;
+  legalities: Record<string, string>;
   layout: string | null;
   reserved: boolean | null;
 };
@@ -177,6 +178,7 @@ export const transformScryfallCard = (card: ScryfallCard): CanonicalRecord | nul
       colors: card.colors ?? null,
       colorIdentity: card.color_identity ?? null,
       keywords: card.keywords ?? null,
+      legalities: card.legalities,
       layout: nonempty(card.layout),
       reserved: card.reserved ?? null,
     },

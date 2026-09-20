@@ -1,0 +1,1 @@
+ALTER TABLE "catalog"."card" ADD COLUMN "legalities" jsonb;

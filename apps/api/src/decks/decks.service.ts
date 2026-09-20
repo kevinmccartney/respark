@@ -1,10 +1,12 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { isLegalInFormat, isLeadershipCommander, type LeadershipSkills } from 'schemas/cards';
 import {
   COLOR_IDENTITY_PIPS,
   colorIdentityPipSchema,
   deckFormatSchema,
+  isColorIdentitySubset,
   type ColorIdentityPip,
   type CreateDeckInput,
   type Deck,
@@ -15,7 +17,12 @@ import {
   type PatchDeckCardBody,
   type UpdateDeckInput,
 } from 'schemas/decks';
-import { defaultPrintingId, resolveMoxfieldPrintings } from '../catalog/printings';
+import { parseCardFaces } from 'schemas/primitives';
+import {
+  defaultPrintingId,
+  printingFacesJsonSql,
+  resolveMoxfieldPrintings,
+} from '../catalog/printings';
 import { DATABASE, type Database } from '../db/database.module';
 import { cards, deckCards, decks, printings } from '../db/schema';
 import { UsersService } from '../users/users.service';
@@ -26,7 +33,15 @@ type DeckRow = {
   name: string;
   description: string | null;
   format: string;
+  commanderPrintingId: string | null;
   updatedAt: Date;
+};
+
+type PrintingCatalog = {
+  name: string;
+  legalities: Record<string, string> | null;
+  colorIdentity: string[] | null;
+  leadershipSkills: LeadershipSkills | null;
 };
 
 type DeckCardRow = {
@@ -47,6 +62,7 @@ type DeckCardRow = {
   collector_number: string;
   image_normal: string | null;
   finishes: string[] | null;
+  faces: unknown;
 };
 
 type DeckLine = {
@@ -75,6 +91,7 @@ export class DecksService {
         name: decks.name,
         description: decks.description,
         format: decks.format,
+        commanderPrintingId: decks.commanderPrintingId,
         updatedAt: decks.updatedAt,
       })
       .from(decks)
@@ -98,6 +115,32 @@ export class DecksService {
     const byDeck = new Map<string, ColorIdentityPip[]>();
     if (deckIds.length === 0) return byDeck;
 
+    const deckRows = await this.db
+      .select({
+        id: decks.id,
+        format: decks.format,
+        commanderPrintingId: decks.commanderPrintingId,
+      })
+      .from(decks)
+      .where(inArray(decks.id, deckIds));
+
+    const commanderPrintings = deckRows
+      .map((row) => row.commanderPrintingId)
+      .filter((id): id is string => Boolean(id));
+    const commanderCatalog = await this.catalogByPrintingId(commanderPrintings);
+
+    const constructedIds: string[] = [];
+    for (const row of deckRows) {
+      if (row.format === 'commander' && row.commanderPrintingId) {
+        const catalog = commanderCatalog.get(row.commanderPrintingId);
+        byDeck.set(row.id, parseColorIdentity(catalog?.colorIdentity ?? null));
+      } else {
+        constructedIds.push(row.id);
+      }
+    }
+
+    if (constructedIds.length === 0) return byDeck;
+
     const rows = await this.db
       .select({
         deckId: deckCards.deckId,
@@ -106,7 +149,7 @@ export class DecksService {
       .from(deckCards)
       .innerJoin(printings, eq(deckCards.printingId, printings.id))
       .innerJoin(cards, eq(printings.cardId, cards.id))
-      .where(and(inArray(deckCards.deckId, deckIds), eq(deckCards.sideboard, false)));
+      .where(and(inArray(deckCards.deckId, constructedIds), eq(deckCards.sideboard, false)));
 
     const seen = new Map<string, Set<ColorIdentityPip>>();
     for (const row of rows) {
@@ -130,21 +173,48 @@ export class DecksService {
   async createForUser(clerkUserId: string, input: CreateDeckInput): Promise<Deck> {
     const userId = await this.users.resolveLocalId(clerkUserId);
     const description = input.description?.trim() || null;
-    const [row] = await this.db
-      .insert(decks)
-      .values({
-        userId,
-        name: input.name,
-        description,
-        format: input.format,
-      })
-      .returning({
-        id: decks.id,
-        name: decks.name,
-        description: decks.description,
-        format: decks.format,
-        updatedAt: decks.updatedAt,
-      });
+    const format = input.format;
+    const commanderPrintingId = format === 'commander' ? (input.commanderPrintingId ?? null) : null;
+    if (format === 'commander') {
+      if (!commanderPrintingId) {
+        throw new BadRequestException('Commander is required for commander format');
+      }
+      const catalog = await this.requirePrintingCatalog(commanderPrintingId);
+      this.assertLegalInFormat('commander', catalog.legalities, catalog.name);
+      this.assertEligibleCommander(catalog);
+    }
+
+    const row = await this.db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(decks)
+        .values({
+          userId,
+          name: input.name,
+          description,
+          format,
+          commanderPrintingId,
+        })
+        .returning({
+          id: decks.id,
+          name: decks.name,
+          description: decks.description,
+          format: decks.format,
+          commanderPrintingId: decks.commanderPrintingId,
+          updatedAt: decks.updatedAt,
+        });
+
+      if (commanderPrintingId) {
+        await tx.insert(deckCards).values({
+          deckId: created.id,
+          printingId: commanderPrintingId,
+          foil: false,
+          sideboard: false,
+          quantity: 1,
+        });
+      }
+
+      return created;
+    });
 
     this.logger.info(
       {
@@ -156,37 +226,93 @@ export class DecksService {
       'Created deck for user',
     );
 
-    return toDeck(row, this.logger);
+    return this.toDeckWithColorIdentity(row);
   }
 
   async updateForUser(clerkUserId: string, deckId: string, input: UpdateDeckInput): Promise<Deck> {
-    await this.requireOwnedDeck(clerkUserId, deckId);
-
-    const patch: {
-      name?: string;
-      description?: string | null;
-      format?: DeckFormat;
-      updatedAt?: Date;
-    } = {};
-
-    if (input.name !== undefined) {
-      patch.name = input.name;
+    const current = await this.requireOwnedDeck(clerkUserId, deckId);
+    const nextFormat = input.format ?? current.format;
+    let nextCommander =
+      input.commanderPrintingId !== undefined
+        ? input.commanderPrintingId
+        : current.commanderPrintingId;
+    if (nextFormat !== 'commander') {
+      nextCommander = null;
     }
-    if (input.description !== undefined) {
-      patch.description = input.description?.trim() || null;
-    }
-    if (input.format !== undefined) {
-      patch.format = input.format;
+    if (nextFormat === 'commander' && !nextCommander) {
+      throw new BadRequestException('Commander is required for commander format');
     }
 
-    patch.updatedAt = new Date();
+    const commanderChanged = nextCommander !== current.commanderPrintingId;
+    if (nextCommander && commanderChanged) {
+      const catalog = await this.requirePrintingCatalog(nextCommander);
+      this.assertLegalInFormat('commander', catalog.legalities, catalog.name);
+      this.assertEligibleCommander(catalog);
+    }
 
-    const [row] = await this.db.update(decks).set(patch).where(eq(decks.id, deckId)).returning({
-      id: decks.id,
-      name: decks.name,
-      description: decks.description,
-      format: decks.format,
-      updatedAt: decks.updatedAt,
+    const row = await this.db.transaction(async (tx) => {
+      if (commanderChanged && current.commanderPrintingId) {
+        await tx
+          .delete(deckCards)
+          .where(
+            and(
+              eq(deckCards.deckId, deckId),
+              eq(deckCards.printingId, current.commanderPrintingId),
+              eq(deckCards.sideboard, false),
+            ),
+          );
+      }
+
+      if (nextCommander) {
+        const existing = await tx
+          .select({ id: deckCards.id, quantity: deckCards.quantity })
+          .from(deckCards)
+          .where(
+            and(
+              eq(deckCards.deckId, deckId),
+              eq(deckCards.printingId, nextCommander),
+              eq(deckCards.foil, false),
+              eq(deckCards.sideboard, false),
+            ),
+          )
+          .limit(1);
+        if (existing.length === 0) {
+          await tx.insert(deckCards).values({
+            deckId,
+            printingId: nextCommander,
+            foil: false,
+            sideboard: false,
+            quantity: 1,
+          });
+        }
+      }
+
+      const [updated] = await tx
+        .update(decks)
+        .set({
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.description !== undefined
+            ? { description: input.description?.trim() || null }
+            : {}),
+          format: nextFormat,
+          commanderPrintingId: nextCommander,
+          updatedAt: new Date(),
+        })
+        .where(eq(decks.id, deckId))
+        .returning({
+          id: decks.id,
+          name: decks.name,
+          description: decks.description,
+          format: decks.format,
+          commanderPrintingId: decks.commanderPrintingId,
+          updatedAt: decks.updatedAt,
+        });
+
+      if (nextCommander) {
+        await this.assertMainboardFitsCommander(tx, deckId, nextCommander, []);
+      }
+
+      return updated;
     });
 
     this.logger.info(
@@ -198,7 +324,7 @@ export class DecksService {
       'Updated deck',
     );
 
-    return toDeck(row, this.logger);
+    return this.toDeckWithColorIdentity(row);
   }
 
   async deleteForUser(clerkUserId: string, deckId: string): Promise<void> {
@@ -221,7 +347,7 @@ export class DecksService {
     deckId: string,
     text: string,
   ): Promise<DeckImportResult> {
-    await this.requireOwnedDeck(clerkUserId, deckId);
+    const deck = await this.requireOwnedDeck(clerkUserId, deckId);
 
     const { lines, skipped } = parseMoxfieldExport(text);
     const unmatched = skipped.map((row) => ({
@@ -233,6 +359,33 @@ export class DecksService {
     const finishesByPrinting = await this.finishesByPrintingId(
       printingIds.filter((id): id is string => Boolean(id)),
     );
+    const catalogByPrinting = await this.catalogByPrintingId(
+      printingIds.filter((id): id is string => Boolean(id)),
+    );
+
+    let nextCommander = deck.commanderPrintingId;
+    if (deck.format === 'commander') {
+      const commanderIndex = lines.findIndex((line, index) => line.commander && printingIds[index]);
+      if (commanderIndex >= 0) {
+        nextCommander = printingIds[commanderIndex];
+      }
+      if (!nextCommander) {
+        throw new BadRequestException('Commander is required for commander format');
+      }
+    } else {
+      nextCommander = null;
+    }
+
+    const commanderCatalog = nextCommander
+      ? (catalogByPrinting.get(nextCommander) ?? (await this.requirePrintingCatalog(nextCommander)))
+      : null;
+    if (nextCommander && commanderCatalog) {
+      this.assertLegalInFormat('commander', commanderCatalog.legalities, commanderCatalog.name);
+      this.assertEligibleCommander(commanderCatalog);
+    }
+    const allowedIdentity = commanderCatalog
+      ? parseColorIdentity(commanderCatalog.colorIdentity)
+      : [];
 
     /** Aggregate by printing + foil + board. */
     const quantities = new Map<
@@ -250,6 +403,14 @@ export class DecksService {
         });
         continue;
       }
+      const catalog = catalogByPrinting.get(printingId);
+      if (!catalog) {
+        throw new BadRequestException(`No catalog card for ${line.name}`);
+      }
+      this.assertLegalInFormat(deck.format, catalog.legalities, catalog.name);
+      if (deck.format === 'commander' && !line.sideboard) {
+        this.assertColorIdentity(catalog.colorIdentity, allowedIdentity, catalog.name);
+      }
       const wantsFoil = line.tags.some((tag) => tag.toUpperCase() === 'F');
       const foil = wantsFoil && printingAllowsFoil(finishesByPrinting.get(printingId) ?? []);
       const key = `${printingId}:${foil ? '1' : '0'}:${line.sideboard ? '1' : '0'}`;
@@ -266,17 +427,46 @@ export class DecksService {
       }
     }
 
-    let imported = 0;
-    for (const entry of quantities.values()) {
-      await this.upsertPrintingLine(
-        deckId,
-        entry.printingId,
-        entry.quantity,
-        entry.foil,
-        entry.sideboard,
-      );
-      imported += 1;
+    if (deck.format === 'commander' && nextCommander) {
+      const exceptPrintingIds =
+        nextCommander !== deck.commanderPrintingId && deck.commanderPrintingId
+          ? [deck.commanderPrintingId]
+          : [];
+      await this.assertMainboardFitsCommander(this.db, deckId, nextCommander, exceptPrintingIds);
     }
+
+    const imported = await this.db.transaction(async (tx) => {
+      if (nextCommander !== deck.commanderPrintingId) {
+        if (deck.commanderPrintingId) {
+          await tx
+            .delete(deckCards)
+            .where(
+              and(
+                eq(deckCards.deckId, deckId),
+                eq(deckCards.printingId, deck.commanderPrintingId),
+                eq(deckCards.sideboard, false),
+              ),
+            );
+        }
+        await tx
+          .update(decks)
+          .set({ commanderPrintingId: nextCommander, updatedAt: new Date() })
+          .where(eq(decks.id, deckId));
+      }
+
+      let count = 0;
+      for (const entry of quantities.values()) {
+        await this.upsertPrintingLine(
+          deckId,
+          entry.printingId,
+          entry.quantity,
+          entry.foil,
+          entry.sideboard,
+        );
+        count += 1;
+      }
+      return count;
+    });
 
     if (imported > 0) {
       await this.touchDeck(deckId);
@@ -313,15 +503,24 @@ export class DecksService {
 
   /** Add by oracle card: resolves a default printing, then stacks on that printing. */
   async addCard(clerkUserId: string, deckId: string, cardId: string): Promise<DeckCard> {
-    await this.requireOwnedDeck(clerkUserId, deckId);
+    const deck = await this.requireOwnedDeck(clerkUserId, deckId);
 
     const [card] = await this.db
-      .select({ id: cards.id })
+      .select({
+        id: cards.id,
+        name: cards.name,
+        legalities: cards.legalities,
+        colorIdentity: cards.colorIdentity,
+      })
       .from(cards)
       .where(eq(cards.id, cardId))
       .limit(1);
     if (!card) {
       throw new NotFoundException('Card not found');
+    }
+    this.assertLegalInFormat(deck.format, card.legalities, card.name);
+    if (deck.format === 'commander') {
+      this.assertColorIdentity(card.colorIdentity, deck.colorIdentity, card.name);
     }
 
     const printingId = await defaultPrintingId(this.db, cardId);
@@ -354,7 +553,18 @@ export class DecksService {
     deckCardId: string,
     patch: PatchDeckCardBody,
   ): Promise<DeckCard | null> {
-    await this.requireOwnedDeck(clerkUserId, deckId);
+    const deck = await this.requireOwnedDeck(clerkUserId, deckId);
+    const line = await this.loadLine(deckId, deckCardId);
+    const isCommanderLine = deck.commanderPrintingId === line.printingId;
+
+    if (isCommanderLine && (patch.sideboard === true || patch.quantity === 0)) {
+      throw new BadRequestException('Cannot sideboard or remove the commander');
+    }
+
+    if (patch.sideboard === false && deck.format === 'commander') {
+      const catalog = await this.requirePrintingCatalog(line.printingId);
+      this.assertColorIdentity(catalog.colorIdentity, deck.colorIdentity, catalog.name);
+    }
 
     let lineId = deckCardId;
     let card: DeckCard | null | undefined;
@@ -362,6 +572,14 @@ export class DecksService {
     if (patch.printingId !== undefined) {
       card = await this.relocateLine(deckId, lineId, { printingId: patch.printingId });
       lineId = card.id;
+      if (isCommanderLine && patch.printingId !== line.printingId) {
+        const catalog = await this.requirePrintingCatalog(patch.printingId);
+        this.assertEligibleCommander(catalog);
+        await this.db
+          .update(decks)
+          .set({ commanderPrintingId: patch.printingId, updatedAt: new Date() })
+          .where(eq(decks.id, deckId));
+      }
     }
 
     if (patch.foil !== undefined) {
@@ -403,7 +621,11 @@ export class DecksService {
   }
 
   async removeCard(clerkUserId: string, deckId: string, deckCardId: string): Promise<void> {
-    await this.requireOwnedDeck(clerkUserId, deckId);
+    const deck = await this.requireOwnedDeck(clerkUserId, deckId);
+    const line = await this.loadLine(deckId, deckCardId);
+    if (deck.commanderPrintingId === line.printingId) {
+      throw new BadRequestException('Cannot remove the commander');
+    }
     await this.deleteLine(deckId, deckCardId);
     await this.touchDeck(deckId);
 
@@ -652,7 +874,8 @@ export class DecksService {
         s.name AS set_name,
         p.collector_number,
         COALESCE(p.image_normal, f.image_normal) AS image_normal,
-        p.finishes
+        p.finishes,
+        ${printingFacesJsonSql} AS faces
       FROM app.deck_card dc
       JOIN catalog.printing p ON p.id = dc.printing_id
       JOIN catalog.card c ON c.id = p.card_id
@@ -682,6 +905,7 @@ export class DecksService {
         name: decks.name,
         description: decks.description,
         format: decks.format,
+        commanderPrintingId: decks.commanderPrintingId,
         updatedAt: decks.updatedAt,
       })
       .from(decks)
@@ -692,7 +916,102 @@ export class DecksService {
       throw new NotFoundException('Deck not found');
     }
 
-    return toDeck(row, this.logger);
+    return this.toDeckWithColorIdentity(row);
+  }
+
+  private async catalogByPrintingId(printingIds: string[]): Promise<Map<string, PrintingCatalog>> {
+    const unique = [...new Set(printingIds)];
+    const byPrinting = new Map<string, PrintingCatalog>();
+    if (unique.length === 0) return byPrinting;
+
+    const rows = await this.db
+      .select({
+        printingId: printings.id,
+        name: cards.name,
+        legalities: cards.legalities,
+        colorIdentity: cards.colorIdentity,
+        leadershipSkills: cards.leadershipSkills,
+      })
+      .from(printings)
+      .innerJoin(cards, eq(printings.cardId, cards.id))
+      .where(inArray(printings.id, unique));
+
+    for (const row of rows) {
+      byPrinting.set(row.printingId, {
+        name: row.name,
+        legalities: row.legalities,
+        colorIdentity: row.colorIdentity,
+        leadershipSkills: row.leadershipSkills,
+      });
+    }
+    return byPrinting;
+  }
+
+  private async requirePrintingCatalog(printingId: string): Promise<PrintingCatalog> {
+    const catalog = (await this.catalogByPrintingId([printingId])).get(printingId);
+    if (!catalog) {
+      throw new NotFoundException('Printing not found');
+    }
+    return catalog;
+  }
+
+  private async assertMainboardFitsCommander(
+    db: Database,
+    deckId: string,
+    commanderPrintingId: string,
+    exceptPrintingIds: string[],
+  ): Promise<void> {
+    const commander = (await this.catalogByPrintingId([commanderPrintingId])).get(
+      commanderPrintingId,
+    );
+    if (!commander) {
+      throw new NotFoundException('Printing not found');
+    }
+    const allowed = parseColorIdentity(commander.colorIdentity);
+
+    const rows = await db
+      .select({
+        printingId: deckCards.printingId,
+        name: cards.name,
+        colorIdentity: cards.colorIdentity,
+      })
+      .from(deckCards)
+      .innerJoin(printings, eq(deckCards.printingId, printings.id))
+      .innerJoin(cards, eq(printings.cardId, cards.id))
+      .where(and(eq(deckCards.deckId, deckId), eq(deckCards.sideboard, false)));
+
+    for (const row of rows) {
+      if (exceptPrintingIds.includes(row.printingId)) continue;
+      this.assertColorIdentity(row.colorIdentity, allowed, row.name);
+    }
+  }
+
+  private assertEligibleCommander(catalog: PrintingCatalog): void {
+    if (isLeadershipCommander(catalog.leadershipSkills)) return;
+    throw new BadRequestException(`${catalog.name} cannot be a commander`);
+  }
+
+  private assertLegalInFormat(
+    format: DeckFormat,
+    legalities: Record<string, string> | null,
+    cardName: string,
+  ): void {
+    if (isLegalInFormat(legalities, format)) return;
+    throw new BadRequestException(`${cardName} is not legal in ${format}`);
+  }
+
+  private assertColorIdentity(
+    cardIdentity: string[] | null,
+    allowed: ColorIdentityPip[],
+    cardName: string,
+  ): void {
+    if (isColorIdentitySubset(parseColorIdentity(cardIdentity), allowed)) return;
+    throw new BadRequestException(`${cardName} is outside this deck's color identity`);
+  }
+
+  private async toDeckWithColorIdentity(row: DeckRow): Promise<Deck> {
+    const colorByDeck = await this.colorIdentityByDeck([row.id]);
+    return toDeck(row, this.logger, colorByDeck.get(row.id) ?? []);
   }
 
   private async touchDeck(deckId: string): Promise<void> {
@@ -715,6 +1034,7 @@ const toDeck = (row: DeckRow, logger: PinoLogger, colorIdentity: ColorIdentityPi
     name: row.name,
     description: row.description,
     format: format.data,
+    commanderPrintingId: row.commanderPrintingId,
     colorIdentity,
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -738,6 +1058,7 @@ const toDeckCard = (row: DeckCardRow): DeckCard => ({
   setName: row.set_name,
   collectorNumber: row.collector_number,
   imageNormal: row.image_normal,
+  faces: parseCardFaces(row.faces),
 });
 
 const printingAllowsFoil = (finishes: readonly string[]): boolean =>

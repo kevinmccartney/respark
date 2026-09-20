@@ -58,23 +58,23 @@ Identifiers-job summary and sampled unmatched MTGJSON rows (keyed by job-run id)
 
 ## App
 
-| Table           | Role                                                                                                                      |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `app.users`     | Local identity + Clerk profile cache (`clerk_user_id`)                                                                    |
-| `app.decks`     | User decks (`user_id` → `app.users`; optional `description`; `format`: `standard` \| `commander` \| `modern`)             |
-| `app.deck_card` | Deck lines (`printing_id` → `catalog.printing`, `foil`, `sideboard`, quantity; unique per deck + printing + foil + board) |
+| Table           | Role                                                                                                                                                                    |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app.users`     | Local identity + Clerk profile cache (`clerk_user_id`)                                                                                                                  |
+| `app.decks`     | User decks (`user_id` → `app.users`; optional `description`; `format`: `standard` \| `commander` \| `modern`; `commander_printing_id` required iff format is commander) |
+| `app.deck_card` | Deck lines (`printing_id` → `catalog.printing`, `foil`, `sideboard`, quantity; unique per deck + printing + foil + board)                                               |
 
 Keeping identity in `app` (not a separate `users` schema) matches the other domain boundaries: one schema per product surface, not per table.
 
 ## Catalog (canonical)
 
-| Table                         | Role                                                                                         |
-| ----------------------------- | -------------------------------------------------------------------------------------------- |
-| `catalog.card`                | Conceptual / oracle card (`oracle_id` from Scryfall). Excludes type lines with a `Card` face |
-| `catalog.set`                 | Set metadata                                                                                 |
-| `catalog.printing`            | One physical (or digital) printing (`finishes` from Scryfall: `nonfoil` / `foil` / `etched`) |
-| `catalog.card_face`           | Faces for multi-face layouts                                                                 |
-| `catalog.printing_identifier` | External IDs per printing (`provider` + `external_id`)                                       |
+| Table                         | Role                                                                                                                                                                                                                                                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `catalog.card`                | Conceptual / oracle card (`oracle_id` from Scryfall). Excludes type lines with a `Card` face. `legalities` jsonb from Scryfall (`standard` / `commander` / `modern` / … → `legal` \| `not_legal` \| `banned` \| `restricted`). `leadership_skills` jsonb from MTGJSON (`commander` / `brawl` / `oathbreaker`, identifiers job) |
+| `catalog.set`                 | Set metadata                                                                                                                                                                                                                                                                                                                   |
+| `catalog.printing`            | One physical (or digital) printing (`finishes` from Scryfall: `nonfoil` / `foil` / `etched`)                                                                                                                                                                                                                                   |
+| `catalog.card_face`           | Faces for multi-face layouts                                                                                                                                                                                                                                                                                                   |
+| `catalog.printing_identifier` | External IDs per printing (`provider` + `external_id`)                                                                                                                                                                                                                                                                         |
 
 Internal PKs are UUIDs. Third-party IDs are unique constraints / identifier rows, not primary keys.
 

@@ -57,6 +57,7 @@ export const scryfallCardSchema = z
     promo: z.boolean().optional(),
     reprint: z.boolean().optional(),
     finishes: optionalStringList,
+    legalities: z.record(z.string(), z.string()),
     image_uris: imageUrisSchema,
     card_faces: z.array(scryfallFaceSchema).optional(),
     tcgplayer_id: optionalId,

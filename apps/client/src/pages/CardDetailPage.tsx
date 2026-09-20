@@ -4,10 +4,14 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { isLeadershipCommander } from 'schemas/cards';
 import { uuidSchema } from 'schemas/primitives';
 import { ManaCost, ManaText } from 'ui/mana';
+import { FlippableCardImage } from '../components/FlippableCardImage.tsx';
 import { ApiError, isAbortError, isNotFound } from '../lib/api.ts';
+import { resolveCardFace } from '../lib/card-faces.ts';
 import { fetchCard, type CardDetail, type CardPrintingSummary } from '../lib/cards.ts';
+import { DECK_FORMAT_LABELS, DECK_FORMATS } from '../lib/decks.ts';
 import { goBackOrHome } from '../lib/navigation.ts';
 import { NotFoundPage } from './NotFoundPage.tsx';
 
@@ -22,6 +26,7 @@ export const CardDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [faceIndex, setFaceIndex] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -61,6 +66,10 @@ export const CardDetailPage = () => {
     return card.printings.find((p) => p.id === printingParam) ?? card.printings[0];
   }, [card, printingParam]);
 
+  useEffect(() => {
+    setFaceIndex(0);
+  }, [selectedPrinting?.id]);
+
   const selectPrinting = (printing: CardPrintingSummary) => {
     const next = new URLSearchParams(searchParams);
     // Default printing is the first (newest); omit param when selected.
@@ -69,13 +78,24 @@ export const CardDetailPage = () => {
     setSearchParams(next, { replace: true });
   };
 
-  const imageSrc = selectedPrinting?.imageLarge ?? selectedPrinting?.imageNormal ?? null;
+  const faceView = resolveCardFace({
+    faces: selectedPrinting?.faces ?? [],
+    faceIndex,
+    name: card?.name ?? '',
+    manaCost: card?.manaCost ?? null,
+    typeLine: card?.typeLine ?? null,
+    oracleText: card?.oracleText ?? null,
+    imageNormal: selectedPrinting?.imageNormal ?? null,
+    imageLarge: selectedPrinting?.imageLarge ?? null,
+    preferLarge: true,
+  });
+  const displayed = faceView.displayed;
 
   if (notFound) {
     return (
       <NotFoundPage
         title="Card not found"
-        description="That card isn’t in the catalog — it may have been skipped on import."
+        description="That card isn not in the catalog — it may have been skipped on import."
       />
     );
   }
@@ -103,27 +123,34 @@ export const CardDetailPage = () => {
       {!loading && card ? (
         <>
           <div className="grid gap-8 md:grid-cols-[minmax(0,280px)_1fr]">
-            <div className="overflow-hidden rounded-md bg-muted">
-              {imageSrc ? (
-                <img src={imageSrc} alt={card.name} className="h-auto w-full" />
-              ) : (
-                <div className="flex aspect-5/7 items-center justify-center p-6 text-sm text-muted-foreground">
-                  No image
-                </div>
-              )}
-            </div>
+            <FlippableCardImage
+              src={displayed.imageSrc}
+              alt={displayed.name}
+              canFlip={faceView.canFlip}
+              nextFaceName={faceView.nextFaceName}
+              onFlip={() => {
+                const faceCount = selectedPrinting?.faces.length ?? 0;
+                if (faceCount < 2) return;
+                setFaceIndex((current) => (current + 1) % faceCount);
+              }}
+            />
 
             <div className="space-y-4">
               <header className="space-y-1">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <h1 className="font-heading text-3xl tracking-tight">{card.name}</h1>
-                  {card.manaCost ? <ManaCost cost={card.manaCost} size={18} /> : null}
+                  <h1 className="font-heading text-3xl tracking-tight">{displayed.name}</h1>
+                  {displayed.manaCost ? <ManaCost cost={displayed.manaCost} size={18} /> : null}
                 </div>
-                {card.typeLine ? <p className="text-muted-foreground">{card.typeLine}</p> : null}
+                {displayed.typeLine ? (
+                  <p className="text-muted-foreground">{displayed.typeLine}</p>
+                ) : null}
               </header>
 
-              {card.oracleText ? (
-                <ManaText text={card.oracleText} className="leading-relaxed whitespace-pre-wrap" />
+              {displayed.oracleText ? (
+                <ManaText
+                  text={displayed.oracleText}
+                  className="leading-relaxed whitespace-pre-wrap"
+                />
               ) : (
                 <p className="text-sm text-muted-foreground">No oracle text.</p>
               )}
@@ -139,7 +166,26 @@ export const CardDetailPage = () => {
                   label="Keywords"
                   value={card.keywords?.length ? card.keywords.join(', ') : null}
                 />
-                <Meta label="Mana value" value={card.manaValue} />
+                <Meta
+                  label="Legal in"
+                  value={
+                    card.legalities
+                      ? DECK_FORMATS.filter((format) => card.legalities?.[format] === 'legal')
+                          .map((format) => DECK_FORMAT_LABELS[format])
+                          .join(', ') || 'None of Standard, Commander, Modern'
+                      : null
+                  }
+                />
+                <Meta
+                  label="Commander"
+                  value={
+                    card.leadershipSkills
+                      ? isLeadershipCommander(card.leadershipSkills)
+                        ? 'Yes'
+                        : 'No'
+                      : null
+                  }
+                />
                 <Meta
                   label="Reserved"
                   value={card.reserved === null ? null : card.reserved ? 'Yes' : 'No'}

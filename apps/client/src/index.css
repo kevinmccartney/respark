@@ -156,6 +156,18 @@
   animation: foil-sheen 4.5s ease-in-out infinite alternate;
 }
 
+.foil-label {
+  background-image: linear-gradient(
+    90deg,
+    oklch(0.72 0.14 200),
+    oklch(0.7 0.16 330),
+    oklch(0.74 0.12 90)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .foil-sheen {
     animation: none;

@@ -1,28 +1,31 @@
 import { z } from 'zod';
 
 /** Subset of MTGJSON Card (Set) fields needed for raw storage + reconciliation. */
-export const mtgjsonIdentifiersSchema = z
-  .object({
-    scryfallId: z.string().optional(),
-    tcgplayerProductId: z.string().optional(),
-    tcgplayerEtchedProductId: z.string().optional(),
-    mcmId: z.string().optional(),
-    mtgoId: z.string().optional(),
-    multiverseId: z.string().optional(),
-  })
-  .passthrough();
+export const mtgjsonIdentifiersSchema = z.looseObject({
+  scryfallId: z.string().optional(),
+  tcgplayerProductId: z.string().optional(),
+  tcgplayerEtchedProductId: z.string().optional(),
+  mcmId: z.string().optional(),
+  mtgoId: z.string().optional(),
+  multiverseId: z.string().optional(),
+});
 
-export const mtgjsonCardSchema = z
-  .object({
-    uuid: z.string().min(1),
-    name: z.string().optional(),
-    setCode: z.string().optional(),
-    number: z.string().optional(),
-    language: z.string().optional(),
-    type: z.string().optional(),
-    identifiers: mtgjsonIdentifiersSchema.optional(),
-  })
-  .passthrough();
+export const mtgjsonLeadershipSkillsSchema = z.looseObject({
+  brawl: z.boolean().optional(),
+  commander: z.boolean().optional(),
+  oathbreaker: z.boolean().optional(),
+});
+
+export const mtgjsonCardSchema = z.looseObject({
+  uuid: z.string().min(1),
+  name: z.string().optional(),
+  setCode: z.string().optional(),
+  number: z.string().optional(),
+  language: z.string().optional(),
+  type: z.string().optional(),
+  identifiers: mtgjsonIdentifiersSchema.optional(),
+  leadershipSkills: mtgjsonLeadershipSkillsSchema.optional(),
+});
 
 export type MtgjsonCard = z.infer<typeof mtgjsonCardSchema>;
 

@@ -1,28 +1,31 @@
 import { useAuth } from '@clerk/react';
 import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { isLeadershipCommander } from 'schemas/cards';
 import { isAbortError } from '../lib/api.ts';
-import { suggestCardNames, type CardNameSuggestion } from '../lib/cards.ts';
-import type { ColorIdentityPip, DeckFormat } from '../lib/decks.ts';
+import { fetchCard, suggestCardNames, type CardNameSuggestion } from '../lib/cards.ts';
 
 const SUGGEST_DEBOUNCE_MS = 200;
 
 type Props = {
-  format: DeckFormat;
-  colorIdentity?: ColorIdentityPip[];
-  onAdd: (suggestion: CardNameSuggestion) => Promise<boolean>;
+  printingId: string | null;
+  name: string | null;
+  disabled?: boolean;
+  onChange: (next: { printingId: string; name: string } | null) => void;
 };
 
-export const DeckAddCardSearch = ({ format, colorIdentity, onAdd }: Props) => {
+export const CommanderPicker = ({ printingId, name, disabled, onChange }: Props) => {
   const { getToken } = useAuth();
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<CardNameSuggestion[]>([]);
   const [suggesting, setSuggesting] = useState(false);
-  const [addingId, setAddingId] = useState<string | null>(null);
+  const [pickingId, setPickingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const trimmed = query.trim();
-    if (trimmed.length < 2) {
+    if (trimmed.length < 2 || printingId) {
       setSuggestions([]);
       setSuggesting(false);
       return;
@@ -35,7 +38,7 @@ export const DeckAddCardSearch = ({ format, colorIdentity, onAdd }: Props) => {
         getToken,
         trimmed,
         { signal: controller.signal },
-        { legalIn: format, colorIdentity: format === 'commander' ? colorIdentity : undefined },
+        { legalIn: 'commander', commanderEligible: true },
       )
         .then((rows) => {
           if (!controller.signal.aborted) setSuggestions(rows);
@@ -53,34 +56,65 @@ export const DeckAddCardSearch = ({ format, colorIdentity, onAdd }: Props) => {
       controller.abort();
       window.clearTimeout(handle);
     };
-  }, [colorIdentity, format, getToken, query]);
+  }, [getToken, printingId, query]);
 
-  const handleAdd = async (suggestion: CardNameSuggestion) => {
-    if (addingId) return;
-    setAddingId(suggestion.id);
+  const pick = async (suggestion: CardNameSuggestion) => {
+    if (pickingId) return;
+    setPickingId(suggestion.id);
+    setError(null);
     try {
-      const added = await onAdd(suggestion);
-      if (added) {
-        setQuery('');
-        setSuggestions([]);
+      const card = await fetchCard(getToken, suggestion.id);
+      if (!isLeadershipCommander(card.leadershipSkills)) {
+        setError('That card cannot be a commander');
+        return;
       }
+      const printing = card.printings[0];
+      if (!printing) {
+        setError('That card has no printings');
+        return;
+      }
+      onChange({ printingId: printing.id, name: card.name });
+      setQuery('');
+      setSuggestions([]);
+    } catch (err) {
+      if (isAbortError(err)) return;
+      setError('Could not load that commander');
     } finally {
-      setAddingId(null);
+      setPickingId(null);
     }
   };
 
+  if (printingId && name) {
+    return (
+      <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+        <span>
+          Commander: <span className="font-medium">{name}</span>
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={disabled}
+          onClick={() => onChange(null)}
+        >
+          Change
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative w-72">
+    <div className="relative">
       <Input
-        id="deck-card-search"
         type="search"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Find and add cards…"
-        aria-label="Find and add cards"
+        placeholder="Search for a commander…"
+        aria-label="Search for a commander"
         autoComplete="off"
-        className="w-full"
+        disabled={disabled}
       />
+      {error ? <p className="mt-1 text-sm text-destructive">{error}</p> : null}
       {suggesting ? (
         <p className="absolute top-full z-10 mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm">
           Searching…
@@ -98,12 +132,12 @@ export const DeckAddCardSearch = ({ format, colorIdentity, onAdd }: Props) => {
               <button
                 type="button"
                 className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted/60 disabled:opacity-50"
-                onClick={() => void handleAdd(suggestion)}
-                disabled={addingId === suggestion.id}
+                onClick={() => void pick(suggestion)}
+                disabled={pickingId === suggestion.id}
               >
                 <span className="font-medium">{suggestion.name}</span>
                 <span className="text-muted-foreground">
-                  {addingId === suggestion.id ? 'Adding…' : 'Add'}
+                  {pickingId === suggestion.id ? 'Selecting…' : 'Select'}
                 </span>
               </button>
             </li>

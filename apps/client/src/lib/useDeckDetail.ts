@@ -13,6 +13,7 @@ import {
   setDeckCardSideboard,
   updateDeck,
   upsertDeckCard,
+  withDeckCards,
   type DeckCard,
   type DeckDetail,
   type DeckFormat,
@@ -22,6 +23,7 @@ type SaveDeckDetailsInput = {
   name: string;
   format: DeckFormat;
   description: string | null;
+  commanderPrintingId: string | null;
 };
 
 export const useDeckDetail = (id: string) => {
@@ -97,7 +99,12 @@ export const useDeckDetail = (id: string) => {
       if (nextQty <= 0) {
         await removeDeckCard(getToken, current.deck.id, card.id);
         setDetail((prev) =>
-          prev ? { ...prev, cards: prev.cards.filter((row) => row.id !== card.id) } : prev,
+          prev
+            ? withDeckCards(
+                prev,
+                prev.cards.filter((row) => row.id !== card.id),
+              )
+            : prev,
         );
         return;
       }
@@ -137,8 +144,9 @@ export const useDeckDetail = (id: string) => {
       return false;
     }
     const ok = await runAction(async (current) => {
-      const deck = await updateDeck(getToken, current.deck.id, input);
-      setDetail((prev) => (prev ? { ...prev, deck } : prev));
+      await updateDeck(getToken, current.deck.id, input);
+      const next = await fetchDeck(getToken, current.deck.id);
+      setDetail(next);
       return true;
     }, 'Could not save deck details');
     return ok === true;

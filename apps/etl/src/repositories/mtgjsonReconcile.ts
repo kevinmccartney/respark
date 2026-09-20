@@ -1,4 +1,5 @@
 import type { PoolClient } from 'pg';
+import type { LeadershipSkills } from 'schemas/cards';
 import type { EnrichmentIdentifier, MtgjsonEnrichment } from '../sources/mtgjson/transformer';
 
 export type MatchStatus = 'matched' | 'unmatched' | 'ambiguous';
@@ -132,6 +133,32 @@ export const enrichPrintingIdentifiers = async (
   return added;
 };
 
+/**
+ * Copy MTGJSON leadershipSkills onto the matched oracle card.
+ * A later printing does not clear `commander: true` already stored.
+ */
+export const applyCardLeadershipSkills = async (
+  client: PoolClient,
+  printingId: string,
+  leadershipSkills: LeadershipSkills | null,
+): Promise<void> => {
+  if (!leadershipSkills) return;
+  await client.query(
+    `update catalog.card c
+     set leadership_skills = $2::jsonb, updated_at = now()
+     from catalog.printing p
+     where p.id = $1
+       and p.card_id = c.id
+       and (
+         c.leadership_skills is null
+         or (c.leadership_skills->>'commander') is distinct from 'true'
+         or $2::jsonb->>'commander' = 'true'
+       )
+       and c.leadership_skills is distinct from $2::jsonb`,
+    [printingId, JSON.stringify(leadershipSkills)],
+  );
+};
+
 export const reconcileMtgjsonCard = async (
   client: PoolClient,
   enrichment: MtgjsonEnrichment,
@@ -151,6 +178,7 @@ export const reconcileMtgjsonCard = async (
     match.printingId,
     enrichment.identifiers,
   );
+  await applyCardLeadershipSkills(client, match.printingId, enrichment.leadershipSkills);
 
   return {
     status: 'matched',

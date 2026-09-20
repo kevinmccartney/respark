@@ -71,6 +71,11 @@ tasks:
     cmds:
       - npm run eslint
 
+  test:
+    desc: Run unit tests
+    cmds:
+      - npm test -w etl
+
   precommit:
     desc: Format staged files, ESLint on staged files, terraform validate (husky)
     cmds:

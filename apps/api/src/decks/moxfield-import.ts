@@ -14,13 +14,14 @@ export type MoxfieldLine = {
   collectorNumber: string;
   tags: string[];
   sideboard: boolean;
+  commander: boolean;
 };
 
 /** qty  name  (SET)  collector  [*tags…] */
 const MOXFIELD_LINE_RE =
   /^(\d+)\s+(.+?)\s+\(([A-Za-z0-9]+)\)\s+(\S+)(?:\s+((?:\*[^*\s]+\*\s*)+))?\s*$/;
 
-type BoardSection = 'main' | 'sideboard' | 'skip';
+type BoardSection = 'main' | 'sideboard' | 'commander' | 'skip';
 
 export const parseMoxfieldExport = (
   text: string,
@@ -44,6 +45,7 @@ export const parseMoxfieldExport = (
 
     let lineText = raw;
     let sideboard = section === 'sideboard';
+    const commander = section === 'commander';
 
     if (/^sb:\s*/i.test(lineText)) {
       lineText = lineText.replace(/^sb:\s*/i, '').trim();
@@ -77,6 +79,7 @@ export const parseMoxfieldExport = (
       collectorNumber: match[4],
       tags,
       sideboard,
+      commander,
     });
   }
 
@@ -85,7 +88,8 @@ export const parseMoxfieldExport = (
 
 const parseSectionHeader = (raw: string): BoardSection | null => {
   if (/^sideboard\s*:?\s*$/i.test(raw)) return 'sideboard';
-  if (/^(deck|mainboard|commander)\s*:?\s*$/i.test(raw)) return 'main';
+  if (/^commander\s*:?\s*$/i.test(raw)) return 'commander';
+  if (/^(deck|mainboard)\s*:?\s*$/i.test(raw)) return 'main';
   if (/^maybeboard\s*:?\s*$/i.test(raw)) return 'skip';
   return null;
 };

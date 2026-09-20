@@ -4,6 +4,7 @@ import {
   boolean,
   date,
   integer,
+  jsonb,
   numeric,
   primaryKey,
   text,
@@ -29,6 +30,13 @@ export const cards = catalogSchema.table('card', {
   colors: text('colors').array(),
   colorIdentity: text('color_identity').array(),
   keywords: text('keywords').array(),
+  legalities: jsonb('legalities').$type<Record<string, string>>(),
+  /** MTGJSON `leadershipSkills` (`brawl`, `commander`, `oathbreaker`). */
+  leadershipSkills: jsonb('leadership_skills').$type<{
+    brawl: boolean;
+    commander: boolean;
+    oathbreaker: boolean;
+  }>(),
   layout: text('layout'),
   reserved: boolean('reserved'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
