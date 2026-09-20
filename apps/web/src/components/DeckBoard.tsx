@@ -87,9 +87,7 @@ export const BoardSection = ({
       ) : null}
       <div
         className={
-          viewMode === 'list'
-            ? 'flex flex-wrap items-start gap-x-8 gap-y-6'
-            : 'flex flex-wrap items-start gap-x-5 gap-y-8'
+          viewMode === 'list' ? 'columns-3xs gap-x-8' : 'flex flex-wrap items-start gap-x-5 gap-y-8'
         }
       >
         {groups.map((group) =>
@@ -119,7 +117,7 @@ const ListGroup = ({
   previewCardId,
   ...handlers
 }: { group: DeckCardGroup } & BoardHandlers) => (
-  <div className="min-w-55 max-w-75 flex-1">
+  <div className="mb-6 break-inside-avoid">
     <GroupHeader group={group} />
     <ul>
       {group.cards.map((card) => {

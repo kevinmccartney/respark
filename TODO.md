@@ -4,7 +4,7 @@ Writing down ideas for the future
 
 ## Stuff to do
 
-- (web) Deck view dynamic layout
+- (web) foil treatment on card preview
 - (web) Tech debt analysis
 - (web) chatbot 👀
 - (arch) domain planning (rename web?)
