@@ -67,6 +67,18 @@ task etl -- report
 
 Writes `reports/etl-size-report.json` (schema/table sizes, row counts, recent job metrics). Use this when sizing RDS or deciding whether to keep raw payloads.
 
+## One-off: purge `Card` type-line extras
+
+Catalog syncs skip objects whose type line has a bare `Card` face, but they do not delete rows imported before that filter. To mop up develop RDS (same SQL used locally):
+
+```bash
+task db:tunnel                 # leave running
+task db:purge-non-playable     # counts only
+task db:purge-non-playable -- apply
+```
+
+Printings still listed on a deck stay (`RESTRICT`). Pass `local` to hit Compose instead of RDS (`task db:purge-non-playable -- local`).
+
 ## Env knobs
 
 | Variable         | Where     | Purpose                                   |

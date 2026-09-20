@@ -228,6 +228,15 @@ tasks:
           --query Parameter.Value \
           --output text
 
+  db:purge-non-playable:
+    desc: Delete catalog/raw extras whose type line has a Card face ({{.ENV}} via tunnel; dry-run unless -- apply)
+    env:
+      AWS_REGION: '{{.AWS_REGION}}'
+      ENV: '{{.ENV}}'
+      TF_DIR: '{{.TF_DIR}}'
+    cmds:
+      - bash scripts/purge-non-playable-cards.sh {{.CLI_ARGS}}
+
   api:dev:
     desc: Run the API in watch mode on PORT (default {{.API_PORT}})
     deps:
