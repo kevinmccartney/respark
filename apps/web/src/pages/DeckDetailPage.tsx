@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ManaCost } from '../components/ManaCost.tsx';
+import { BoardSection, CardPreview } from '../components/DeckBoard.tsx';
 import { DeckImportDialog } from '../components/DeckImportDialog.tsx';
 import { PrintingPickerDialog } from '../components/PrintingPickerDialog.tsx';
 import { SiteHeader } from '../components/SiteHeader.tsx';
@@ -16,9 +16,14 @@ import { suggestCardNames, type CardNameSuggestion } from '../lib/cards.ts';
 import {
   DECK_GROUP_LABELS,
   DECK_GROUP_MODES,
+  DECK_SORT_LABELS,
+  DECK_SORT_MODES,
+  DECK_VIEW_LABELS,
+  DECK_VIEW_MODES,
   groupDeckCards,
-  type DeckCardGroup,
   type DeckGroupMode,
+  type DeckSortMode,
+  type DeckViewMode,
 } from '../lib/deck-grouping.ts';
 import {
   addCardToDeck,
@@ -39,7 +44,8 @@ import {
 
 const SUGGEST_DEBOUNCE_MS = 200;
 
-type ViewMode = 'list' | 'grid';
+const SELECT_CLASS =
+  'border-input bg-background h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50';
 
 export const DeckDetailPage = () => {
   const { id = '' } = useParams<{ id: string }>();
@@ -51,8 +57,10 @@ export const DeckDetailPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [groupMode, setGroupMode] = useState<DeckGroupMode>('none');
+  const [viewMode, setViewMode] = useState<DeckViewMode>('list');
+  const [groupMode, setGroupMode] = useState<DeckGroupMode>('type');
+  const [sortMode, setSortMode] = useState<DeckSortMode>('name');
+  const [previewCardId, setPreviewCardId] = useState<string | null>(null);
   const [pickingCard, setPickingCard] = useState<DeckCard | null>(null);
   const [editingDetails, setEditingDetails] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
@@ -76,13 +84,31 @@ export const DeckDetailPage = () => {
     [detail],
   );
   const mainGroups = useMemo(
-    () => groupDeckCards(mainboardCards, groupMode),
-    [mainboardCards, groupMode],
+    () => groupDeckCards(mainboardCards, groupMode, sortMode),
+    [mainboardCards, groupMode, sortMode],
   );
   const sideGroups = useMemo(
-    () => groupDeckCards(sideboardCards, groupMode),
-    [sideboardCards, groupMode],
+    () => groupDeckCards(sideboardCards, groupMode, sortMode),
+    [sideboardCards, groupMode, sortMode],
   );
+  const previewableCards = useMemo(
+    () => [...mainGroups, ...sideGroups].flatMap((group) => group.cards),
+    [mainGroups, sideGroups],
+  );
+  const previewCard =
+    previewableCards.find((card) => card.id === previewCardId) ?? previewableCards[0] ?? null;
+
+  useEffect(() => {
+    if (previewableCards.length === 0) {
+      setPreviewCardId(null);
+      return;
+    }
+    setPreviewCardId((current) =>
+      current && previewableCards.some((card) => card.id === current)
+        ? current
+        : (previewableCards[0]?.id ?? null),
+    );
+  }, [previewableCards]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -154,6 +180,7 @@ export const DeckDetailPage = () => {
     try {
       const card = await addCardToDeck(getToken, detail.deck.id, suggestion.id);
       setDetail((prev) => (prev ? upsertDeckCard(prev, card.id, card) : prev));
+      setPreviewCardId(card.id);
       setQuery('');
       setSuggestions([]);
     } catch (err) {
@@ -294,7 +321,7 @@ export const DeckDetailPage = () => {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-8 text-left">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-6 py-8 text-left">
         <div>
           <Button variant="outline" size="sm" render={<Link to="/home" />}>
             Back to decks
@@ -337,7 +364,7 @@ export const DeckDetailPage = () => {
                       value={formatDraft}
                       onChange={(event) => setFormatDraft(event.target.value as DeckFormat)}
                       disabled={savingDetails}
-                      className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      className={`${SELECT_CLASS} w-full`}
                     >
                       {DECK_FORMATS.map((value) => (
                         <option key={value} value={value}>
@@ -423,45 +450,6 @@ export const DeckDetailPage = () => {
               )}
             </header>
 
-            <section className="space-y-2" aria-labelledby="add-cards-heading">
-              <h2 id="add-cards-heading" className="font-heading text-xl">
-                Add cards
-              </h2>
-              <div className="space-y-1.5">
-                <Label htmlFor="deck-card-search">Search by name</Label>
-                <Input
-                  id="deck-card-search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Start typing a card name…"
-                  autoComplete="off"
-                />
-              </div>
-              {suggesting ? <p className="text-sm text-muted-foreground">Searching…</p> : null}
-              {!suggesting && query.trim().length >= 2 && suggestions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No matching names.</p>
-              ) : null}
-              {suggestions.length > 0 ? (
-                <ul className="divide-y rounded-md border">
-                  {suggestions.map((suggestion) => (
-                    <li key={suggestion.id}>
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted/60 disabled:opacity-50"
-                        onClick={() => void handleAdd(suggestion)}
-                        disabled={addingId === suggestion.id}
-                      >
-                        <span className="font-medium">{suggestion.name}</span>
-                        <span className="text-muted-foreground">
-                          {addingId === suggestion.id ? 'Adding…' : 'Add'}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </section>
-
             {actionError ? (
               <Alert variant="destructive">
                 <AlertDescription>{actionError}</AlertDescription>
@@ -473,28 +461,83 @@ export const DeckDetailPage = () => {
                 <h2 id="deck-list-heading" className="font-heading text-xl">
                   Deck list
                 </h2>
-                {detail.cards.length > 0 ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <ToggleGroup<DeckGroupMode>
-                      label="Group by"
-                      value={groupMode}
-                      options={DECK_GROUP_MODES.map((mode) => ({
-                        value: mode,
-                        label: DECK_GROUP_LABELS[mode],
-                      }))}
-                      onChange={setGroupMode}
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                  <div className="relative w-72">
+                    <Input
+                      id="deck-card-search"
+                      type="search"
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder="Find and add cards…"
+                      aria-label="Find and add cards"
+                      autoComplete="off"
+                      className="w-full"
                     />
-                    <ToggleGroup<ViewMode>
-                      label="Layout"
-                      value={viewMode}
-                      options={[
-                        { value: 'list', label: 'List' },
-                        { value: 'grid', label: 'Grid' },
-                      ]}
-                      onChange={setViewMode}
-                    />
+                    {suggesting ? (
+                      <p className="absolute top-full z-10 mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm">
+                        Searching…
+                      </p>
+                    ) : null}
+                    {!suggesting && query.trim().length >= 2 && suggestions.length === 0 ? (
+                      <p className="absolute top-full z-10 mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm">
+                        No matching names.
+                      </p>
+                    ) : null}
+                    {suggestions.length > 0 ? (
+                      <ul className="absolute top-full z-10 mt-1 max-h-72 w-full divide-y overflow-auto rounded-md border bg-background shadow-sm">
+                        {suggestions.map((suggestion) => (
+                          <li key={suggestion.id}>
+                            <button
+                              type="button"
+                              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted/60 disabled:opacity-50"
+                              onClick={() => void handleAdd(suggestion)}
+                              disabled={addingId === suggestion.id}
+                            >
+                              <span className="font-medium">{suggestion.name}</span>
+                              <span className="text-muted-foreground">
+                                {addingId === suggestion.id ? 'Adding…' : 'Add'}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </div>
-                ) : null}
+                  {detail.cards.length > 0 ? (
+                    <>
+                      <ToolbarSelect<DeckViewMode>
+                        id="deck-view"
+                        label="View"
+                        value={viewMode}
+                        options={DECK_VIEW_MODES.map((mode) => ({
+                          value: mode,
+                          label: DECK_VIEW_LABELS[mode],
+                        }))}
+                        onChange={setViewMode}
+                      />
+                      <ToolbarSelect<DeckGroupMode>
+                        id="deck-group"
+                        label="Group"
+                        value={groupMode}
+                        options={DECK_GROUP_MODES.map((mode) => ({
+                          value: mode,
+                          label: DECK_GROUP_LABELS[mode],
+                        }))}
+                        onChange={setGroupMode}
+                      />
+                      <ToolbarSelect<DeckSortMode>
+                        id="deck-sort"
+                        label="Sort"
+                        value={sortMode}
+                        options={DECK_SORT_MODES.map((mode) => ({
+                          value: mode,
+                          label: DECK_SORT_LABELS[mode],
+                        }))}
+                        onChange={setSortMode}
+                      />
+                    </>
+                  ) : null}
+                </div>
               </div>
 
               {detail.cards.length === 0 ? (
@@ -502,33 +545,38 @@ export const DeckDetailPage = () => {
                   No cards yet — search by name above to add some.
                 </p>
               ) : (
-                <div className="space-y-8">
-                  {mainboardCards.length > 0 ? (
-                    <BoardSection
-                      title="Mainboard"
-                      showTitle={sideboardCards.length > 0}
-                      groups={mainGroups}
-                      groupMode={groupMode}
-                      viewMode={viewMode}
-                      onPickPrinting={setPickingCard}
-                      onBump={bumpQuantity}
-                      onToggleFoil={toggleFoil}
-                      onToggleSideboard={toggleSideboard}
-                    />
-                  ) : null}
-                  {sideboardCards.length > 0 ? (
-                    <BoardSection
-                      title="Sideboard"
-                      showTitle
-                      groups={sideGroups}
-                      groupMode={groupMode}
-                      viewMode={viewMode}
-                      onPickPrinting={setPickingCard}
-                      onBump={bumpQuantity}
-                      onToggleFoil={toggleFoil}
-                      onToggleSideboard={toggleSideboard}
-                    />
-                  ) : null}
+                <div className="flex flex-col items-start gap-6 lg:flex-row">
+                  <CardPreview card={previewCard} />
+                  <div className="min-w-0 flex-1 space-y-8">
+                    {mainboardCards.length > 0 ? (
+                      <BoardSection
+                        title="Mainboard"
+                        showTitle={sideboardCards.length > 0}
+                        groups={mainGroups}
+                        viewMode={viewMode}
+                        previewCardId={previewCard?.id ?? null}
+                        onPreview={setPreviewCardId}
+                        onPickPrinting={setPickingCard}
+                        onBump={bumpQuantity}
+                        onToggleFoil={toggleFoil}
+                        onToggleSideboard={toggleSideboard}
+                      />
+                    ) : null}
+                    {sideboardCards.length > 0 ? (
+                      <BoardSection
+                        title="Sideboard"
+                        showTitle
+                        groups={sideGroups}
+                        viewMode={viewMode}
+                        previewCardId={previewCard?.id ?? null}
+                        onPreview={setPreviewCardId}
+                        onPickPrinting={setPickingCard}
+                        onBump={bumpQuantity}
+                        onToggleFoil={toggleFoil}
+                        onToggleSideboard={toggleSideboard}
+                      />
+                    ) : null}
+                  </div>
                 </div>
               )}
             </section>
@@ -554,289 +602,36 @@ export const DeckDetailPage = () => {
   );
 };
 
-const ToggleGroup = <T extends string>({
+const ToolbarSelect = <T extends string>({
+  id,
   label,
   value,
   options,
   onChange,
 }: {
+  id: string;
   label: string;
   value: T;
   options: { value: T; label: string }[];
   onChange: (value: T) => void;
 }) => (
-  <div className="inline-flex items-center gap-2">
-    <span className="text-xs text-muted-foreground">{label}</span>
-    <div className="inline-flex rounded-md border" role="group" aria-label={label}>
-      {options.map((option, index) => (
-        <Button
-          key={option.value}
-          type="button"
-          variant={value === option.value ? 'secondary' : 'ghost'}
-          size="sm"
-          className={
-            index === 0
-              ? 'rounded-r-none'
-              : index === options.length - 1
-                ? 'rounded-l-none'
-                : 'rounded-none'
-          }
-          aria-pressed={value === option.value}
-          onClick={() => onChange(option.value)}
-        >
-          {option.label}
-        </Button>
-      ))}
-    </div>
-  </div>
-);
-
-const BoardSection = ({
-  title,
-  showTitle,
-  groups,
-  groupMode,
-  viewMode,
-  onPickPrinting,
-  onBump,
-  onToggleFoil,
-  onToggleSideboard,
-}: {
-  title: string;
-  showTitle: boolean;
-  groups: DeckCardGroup[];
-  groupMode: DeckGroupMode;
-  viewMode: ViewMode;
-  onPickPrinting: (card: DeckCard) => void;
-  onBump: (card: DeckCard, delta: number) => void;
-  onToggleFoil: (card: DeckCard) => void;
-  onToggleSideboard: (card: DeckCard) => void;
-}) => {
-  const total = groups.reduce((sum, group) => sum + group.totalQuantity, 0);
-
-  return (
-    <div className="space-y-4">
-      {showTitle ? (
-        <h3 className="flex items-baseline justify-between gap-3 font-heading text-lg">
-          <span>{title}</span>
-          <span className="text-sm font-normal text-muted-foreground">{total}</span>
-        </h3>
-      ) : null}
-      <div className="space-y-6">
-        {groups.map((group) => (
-          <div key={`${title}-${group.key}`} className="space-y-3">
-            {groupMode !== 'none' ? (
-              <h4 className="flex items-baseline justify-between gap-3 border-b pb-1 font-heading text-base">
-                <span>{group.label}</span>
-                <span className="text-sm font-normal text-muted-foreground">
-                  {group.totalQuantity}
-                </span>
-              </h4>
-            ) : null}
-            {group.subgroups && group.subgroups.length > 0 ? (
-              <div className="space-y-4">
-                {group.subgroups.map((subgroup) => (
-                  <div key={subgroup.key} className="space-y-2">
-                    <p className="flex items-baseline justify-between gap-3 text-sm font-medium text-muted-foreground">
-                      <span>{subgroup.label}</span>
-                      <span className="font-normal tabular-nums">{subgroup.totalQuantity}</span>
-                    </p>
-                    <CardCollection
-                      cards={subgroup.cards}
-                      viewMode={viewMode}
-                      onPickPrinting={onPickPrinting}
-                      onBump={onBump}
-                      onToggleFoil={onToggleFoil}
-                      onToggleSideboard={onToggleSideboard}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <CardCollection
-                cards={group.cards}
-                viewMode={viewMode}
-                onPickPrinting={onPickPrinting}
-                onBump={onBump}
-                onToggleFoil={onToggleFoil}
-                onToggleSideboard={onToggleSideboard}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const CardCollection = ({
-  cards,
-  viewMode,
-  onPickPrinting,
-  onBump,
-  onToggleFoil,
-  onToggleSideboard,
-}: {
-  cards: DeckCard[];
-  viewMode: ViewMode;
-  onPickPrinting: (card: DeckCard) => void;
-  onBump: (card: DeckCard, delta: number) => void;
-  onToggleFoil: (card: DeckCard) => void;
-  onToggleSideboard: (card: DeckCard) => void;
-}) => {
-  if (viewMode === 'list') {
-    return (
-      <ul className="divide-y rounded-md border">
-        {cards.map((card) => (
-          <ListCardRow
-            key={card.id}
-            card={card}
-            onPickPrinting={onPickPrinting}
-            onBump={onBump}
-            onToggleFoil={onToggleFoil}
-            onToggleSideboard={onToggleSideboard}
-          />
-        ))}
-      </ul>
-    );
-  }
-
-  return (
-    <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-      {cards.map((card) => (
-        <GridCardCell
-          key={card.id}
-          card={card}
-          onPickPrinting={onPickPrinting}
-          onBump={onBump}
-          onToggleFoil={onToggleFoil}
-          onToggleSideboard={onToggleSideboard}
-        />
-      ))}
-    </ul>
-  );
-};
-
-const ListCardRow = ({
-  card,
-  onPickPrinting,
-  onBump,
-  onToggleFoil,
-  onToggleSideboard,
-}: {
-  card: DeckCard;
-  onPickPrinting: (card: DeckCard) => void;
-  onBump: (card: DeckCard, delta: number) => void;
-  onToggleFoil: (card: DeckCard) => void;
-  onToggleSideboard: (card: DeckCard) => void;
-}) => (
-  <li className="flex items-center justify-between gap-3 px-3 py-2">
-    <div className="flex min-w-0 items-center gap-3">
-      <button
-        type="button"
-        className="shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        onClick={() => onPickPrinting(card)}
-        aria-label={`Change printing for ${card.name}`}
-      >
-        {card.imageNormal ? (
-          <img src={card.imageNormal} alt="" className="h-12 w-auto rounded-sm" loading="lazy" />
-        ) : (
-          <div className="bg-muted flex h-12 w-9 items-center justify-center rounded-sm text-[10px]">
-            ?
-          </div>
-        )}
-      </button>
-      <div className="min-w-0">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-          <Link to={`/cards/${card.cardId}`} className="font-medium hover:underline">
-            {card.name}
-          </Link>
-          <ManaCost cost={card.manaCost} />
-          {card.foil ? (
-            <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Foil</span>
-          ) : null}
-        </div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-          <button type="button" className="hover:underline" onClick={() => onPickPrinting(card)}>
-            {card.setCode.toUpperCase()} #{card.collectorNumber}
-          </button>
-          <button type="button" className="hover:underline" onClick={() => void onToggleFoil(card)}>
-            {card.foil ? 'Make non-foil' : 'Make foil'}
-          </button>
-          <button
-            type="button"
-            className="hover:underline"
-            onClick={() => void onToggleSideboard(card)}
-          >
-            {card.sideboard ? 'To mainboard' : 'To sideboard'}
-          </button>
-        </div>
-      </div>
-    </div>
-    <QuantityControls card={card} onBump={onBump} />
-  </li>
-);
-
-const GridCardCell = ({
-  card,
-  onPickPrinting,
-  onBump,
-  onToggleFoil,
-  onToggleSideboard,
-}: {
-  card: DeckCard;
-  onPickPrinting: (card: DeckCard) => void;
-  onBump: (card: DeckCard, delta: number) => void;
-  onToggleFoil: (card: DeckCard) => void;
-  onToggleSideboard: (card: DeckCard) => void;
-}) => (
-  <li className="flex flex-col gap-2">
-    <button
-      type="button"
-      className="block w-full rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      onClick={() => onPickPrinting(card)}
-      aria-label={`Change printing for ${card.name}`}
+  <div className="flex items-center gap-2">
+    <Label htmlFor={id} className="text-xs text-muted-foreground">
+      {label}
+    </Label>
+    <select
+      id={id}
+      value={value}
+      onChange={(event) => onChange(event.target.value as T)}
+      className={SELECT_CLASS}
     >
-      {card.imageNormal ? (
-        <img src={card.imageNormal} alt={card.name} className="w-full rounded-md" loading="lazy" />
-      ) : (
-        <div className="bg-muted flex aspect-5/7 items-center justify-center rounded-md px-2 text-center text-sm font-medium">
-          {card.name}
-        </div>
-      )}
-    </button>
-    <div className="flex flex-col items-center gap-1.5">
-      <Link
-        to={`/cards/${card.cardId}`}
-        className="w-full truncate text-center text-sm font-medium hover:underline"
-      >
-        {card.name}
-      </Link>
-      <button
-        type="button"
-        className="text-xs text-muted-foreground hover:underline"
-        onClick={() => onPickPrinting(card)}
-      >
-        {card.setCode.toUpperCase()} #{card.collectorNumber}
-        {card.foil ? ' · Foil' : ''}
-      </button>
-      <button
-        type="button"
-        className="text-xs text-muted-foreground hover:underline"
-        onClick={() => void onToggleFoil(card)}
-      >
-        {card.foil ? 'Make non-foil' : 'Make foil'}
-      </button>
-      <button
-        type="button"
-        className="text-xs text-muted-foreground hover:underline"
-        onClick={() => void onToggleSideboard(card)}
-      >
-        {card.sideboard ? 'To mainboard' : 'To sideboard'}
-      </button>
-      <QuantityControls card={card} onBump={onBump} />
-    </div>
-  </li>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  </div>
 );
 
 const upsertDeckCard = (detail: DeckDetail, previousId: string, next: DeckCard): DeckDetail => {
@@ -851,33 +646,3 @@ const upsertDeckCard = (detail: DeckDetail, previousId: string, next: DeckCard):
     cards,
   };
 };
-
-const QuantityControls = ({
-  card,
-  onBump,
-}: {
-  card: DeckCard;
-  onBump: (card: DeckCard, delta: number) => void;
-}) => (
-  <div className="flex shrink-0 items-center gap-1">
-    <Button
-      type="button"
-      variant="outline"
-      size="icon-sm"
-      aria-label={`Decrease ${card.name}`}
-      onClick={() => void onBump(card, -1)}
-    >
-      −
-    </Button>
-    <span className="min-w-8 text-center tabular-nums text-sm">{card.quantity}</span>
-    <Button
-      type="button"
-      variant="outline"
-      size="icon-sm"
-      aria-label={`Increase ${card.name}`}
-      onClick={() => void onBump(card, 1)}
-    >
-      +
-    </Button>
-  </div>
-);

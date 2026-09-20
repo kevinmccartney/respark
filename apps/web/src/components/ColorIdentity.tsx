@@ -1,5 +1,5 @@
 import type { ColorIdentityPip } from 'schemas/decks';
-import { ManaCost } from './ManaCost.tsx';
+import { ManaCost } from 'ui/mana';
 
 export const ColorIdentity = ({
   colors,

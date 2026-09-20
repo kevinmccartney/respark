@@ -81,6 +81,7 @@ tasks:
     desc: Production build etl, API, web, and admin
     deps:
       - schemas:build
+      - ui:build
       - etl:build
       - api:build
       - web:build
@@ -90,6 +91,7 @@ tasks:
     desc: Production build of the React web app (uses VITE_* from env / .env.local)
     deps:
       - schemas:build
+      - ui:build
     cmds:
       - npm run build:web
 
@@ -97,6 +99,7 @@ tasks:
     desc: Production build of the admin app (uses VITE_* from env / .env.local)
     deps:
       - schemas:build
+      - ui:build
     cmds:
       - npm run build:admin
 
@@ -112,6 +115,7 @@ tasks:
     desc: Start local app stack via Docker Compose
     deps:
       - schemas:build
+      - ui:build
       - etl:build
     cmds:
       - docker compose -f {{.COMPOSE_FILE}} up -d --build --wait
@@ -177,6 +181,11 @@ tasks:
     desc: Compile shared Zod wire schemas to packages/schemas/dist
     cmds:
       - npm run build -w schemas
+
+  ui:build:
+    desc: Compile shared UI package to packages/ui/dist
+    cmds:
+      - npm run build -w ui
 
   docs:diagrams:
     desc: Render docs/**/*.mmd Mermaid sources to sibling .svg files

@@ -35,8 +35,8 @@ Production deploys are intentional: use **Actions → CI / CD → Run workflow**
 | ------- | ------------------------------------------------------------------------------------------------ |
 | `etl`   | `apps/etl/**`                                                                                    |
 | `api`   | `apps/api/**`, API deploy scripts (etl and `packages/schemas` changes count as API)              |
-| `web`   | `apps/web/**` (also `packages/schemas`)                                                          |
-| `admin` | `apps/admin/**` (also `packages/schemas`)                                                        |
+| `web`   | `apps/web/**` (also `packages/schemas`, `packages/ui`)                                           |
+| `admin` | `apps/admin/**` (also `packages/schemas`, `packages/ui`)                                         |
 | `infra` | `infra/**`, TF backend bootstrap script                                                          |
 
 - **Build** runs only the matching `task *:build` steps.

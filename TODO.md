@@ -2,18 +2,14 @@
 
 Writing down ideas for the future
 
-## Repo
+## Stuff to do
 
-## Admin
-
-- Table of cards/sets/etc
-- User management
-
-## UI
-
-- Deck building view UX tweaks
-- Chatbot 👀
-
-## ETL
-
-- Is there a more accurate way to find unplayable cards?
+- (web) Deck view dynamic layout
+- (web) Tech debt analysis
+- (web) chatbot 👀
+- (arch) domain planning (rename web?)
+- (admin) Table of cards/sets/etc
+- (admin) User management
+- (etl) tech debt analysis
+- (etl) only some printings have foils - how to identify?
+- (etl) is there a more accurate way to find unplayable cards?

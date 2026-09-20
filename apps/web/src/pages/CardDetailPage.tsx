@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SiteHeader } from '../components/SiteHeader.tsx';
 import { uuidSchema } from 'schemas/primitives';
+import { ManaCost, ManaText } from 'ui/mana';
 import { ApiError, isNotFound } from '../lib/api.ts';
 import { fetchCard, type CardDetail, type CardPrintingSummary } from '../lib/cards.ts';
 import { NotFoundPage } from './NotFoundPage.tsx';
@@ -136,17 +137,16 @@ export const CardDetailPage = () => {
                 <header className="space-y-1">
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <h1 className="font-heading text-3xl tracking-tight">{card.name}</h1>
-                    {card.manaCost ? (
-                      <span className="font-mono text-lg text-muted-foreground">
-                        {card.manaCost}
-                      </span>
-                    ) : null}
+                    {card.manaCost ? <ManaCost cost={card.manaCost} size={18} /> : null}
                   </div>
                   {card.typeLine ? <p className="text-muted-foreground">{card.typeLine}</p> : null}
                 </header>
 
                 {card.oracleText ? (
-                  <p className="whitespace-pre-wrap leading-relaxed">{card.oracleText}</p>
+                  <ManaText
+                    text={card.oracleText}
+                    className="leading-relaxed whitespace-pre-wrap"
+                  />
                 ) : (
                   <p className="text-sm text-muted-foreground">No oracle text.</p>
                 )}

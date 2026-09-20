@@ -122,6 +122,8 @@ jobs:
               - 'Taskfile.yml'
             schemas:
               - 'packages/schemas/**'
+            ui:
+              - 'packages/ui/**'
             etl:
               - 'apps/etl/**'
             api:
@@ -141,6 +143,7 @@ jobs:
           FORCE: ${{ needs.config.outputs.force }}
           F_SHARED: ${{ steps.filter.outputs.shared || 'false' }}
           F_SCHEMAS: ${{ steps.filter.outputs.schemas || 'false' }}
+          F_UI: ${{ steps.filter.outputs.ui || 'false' }}
           F_ETL: ${{ steps.filter.outputs.etl || 'false' }}
           F_API: ${{ steps.filter.outputs.api || 'false' }}
           F_WEB: ${{ steps.filter.outputs.web || 'false' }}
@@ -162,8 +165,8 @@ jobs:
             ETL=$(or "$F_ETL" "$F_SHARED")
             # API image includes etl + schemas; treat those as API build/deploy.
             API=$(or "$F_API" "$F_ETL" "$F_SCHEMAS" "$F_SHARED")
-            WEB=$(or "$F_WEB" "$F_SCHEMAS" "$F_SHARED")
-            ADMIN=$(or "$F_ADMIN" "$F_SCHEMAS" "$F_SHARED")
+            WEB=$(or "$F_WEB" "$F_SCHEMAS" "$F_UI" "$F_SHARED")
+            ADMIN=$(or "$F_ADMIN" "$F_SCHEMAS" "$F_UI" "$F_SHARED")
             INFRA=$(true_if "$F_INFRA")
           fi
 

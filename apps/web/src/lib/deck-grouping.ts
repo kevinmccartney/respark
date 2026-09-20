@@ -1,12 +1,29 @@
-import type { DeckCard } from './decks.ts';
+import type { ColorIdentityPip, DeckCard } from './decks.ts';
 
-export const DECK_GROUP_MODES = ['none', 'cmc', 'type'] as const;
+export const DECK_GROUP_MODES = ['type', 'color', 'cmc'] as const;
 export type DeckGroupMode = (typeof DECK_GROUP_MODES)[number];
 
 export const DECK_GROUP_LABELS: Record<DeckGroupMode, string> = {
-  none: 'None',
-  cmc: 'CMC',
   type: 'Type',
+  color: 'Color identity',
+  cmc: 'CMC',
+};
+
+export const DECK_SORT_MODES = ['name', 'cmc', 'color'] as const;
+export type DeckSortMode = (typeof DECK_SORT_MODES)[number];
+
+export const DECK_SORT_LABELS: Record<DeckSortMode, string> = {
+  name: 'Name',
+  cmc: 'CMC',
+  color: 'Color',
+};
+
+export const DECK_VIEW_MODES = ['list', 'visual'] as const;
+export type DeckViewMode = (typeof DECK_VIEW_MODES)[number];
+
+export const DECK_VIEW_LABELS: Record<DeckViewMode, string> = {
+  list: 'List',
+  visual: 'Visual',
 };
 
 export type DeckCardGroup = {
@@ -14,41 +31,33 @@ export type DeckCardGroup = {
   label: string;
   cards: DeckCard[];
   totalQuantity: number;
-  /** Secondary groups (e.g. types within a CMC bucket). */
-  subgroups?: DeckCardGroup[];
+  colorIdentity?: ColorIdentityPip[];
 };
 
-/** Card types in display order for primary type grouping. */
 const TYPE_PRIORITY = [
-  'Land',
-  'Creature',
   'Planeswalker',
+  'Creature',
   'Battle',
   'Instant',
   'Sorcery',
   'Enchantment',
   'Artifact',
+  'Land',
 ] as const;
 
 const TYPE_SORT_INDEX = new Map(TYPE_PRIORITY.map((type, index) => [type, index]));
 
-export const groupDeckCards = (cards: DeckCard[], mode: DeckGroupMode): DeckCardGroup[] => {
-  if (mode === 'none') {
-    return [
-      {
-        key: 'all',
-        label: 'Cards',
-        cards: [...cards].sort(compareByName),
-        totalQuantity: sumQuantity(cards),
-      },
-    ];
-  }
+const COLOR_GROUP_ORDER = ['W', 'U', 'B', 'R', 'G', 'multicolor', 'colorless'] as const;
+const COLOR_GROUP_INDEX = new Map(COLOR_GROUP_ORDER.map((key, index) => [key, index]));
 
-  if (mode === 'cmc') {
-    return groupByCmcThenType(cards);
-  }
-
-  return groupByTypeThenCmc(cards);
+const COLOR_GROUP_LABELS: Record<(typeof COLOR_GROUP_ORDER)[number], string> = {
+  W: 'White',
+  U: 'Blue',
+  B: 'Black',
+  R: 'Red',
+  G: 'Green',
+  multicolor: 'Multicolor',
+  colorless: 'Colorless',
 };
 
 export const primaryCardType = (typeLine: string | null | undefined): string => {
@@ -62,53 +71,45 @@ export const primaryCardType = (typeLine: string | null | undefined): string => 
   return 'Other';
 };
 
-const groupByCmcThenType = (cards: DeckCard[]): DeckCardGroup[] => {
-  const byCmc = bucketBy(cards, cmcGroupKey);
-  const cmcKeys = [...byCmc.keys()].sort(compareCmcKeys);
+const typeGroupKey = (card: DeckCard): string => primaryCardType(card.typeLine);
 
-  return cmcKeys.map((cmcKey) => {
-    const cmcCards = byCmc.get(cmcKey) ?? [];
-    const byType = bucketBy(cmcCards, typeGroupKey);
-    const typeKeys = [...byType.keys()].sort((a, b) => a.localeCompare(b));
-
-    const subgroups = typeKeys.map((typeKey) => {
-      const typeCards = [...(byType.get(typeKey) ?? [])].sort(compareByName);
-      return {
-        key: `${cmcKey}:${typeKey}`,
-        label: typeGroupLabel(typeKey),
-        cards: typeCards,
-        totalQuantity: sumQuantity(typeCards),
-      };
-    });
-
-    return {
-      key: cmcKey,
-      label: cmcGroupLabel(cmcKey),
-      cards: subgroups.flatMap((group) => group.cards),
-      totalQuantity: sumQuantity(cmcCards),
-      subgroups,
-    };
-  });
+const typeGroupLabel = (key: string): string => {
+  if (key === 'Other') return 'Other';
+  if (key === 'Sorcery') return 'Sorceries';
+  if (key.endsWith('y')) return `${key.slice(0, -1)}ies`;
+  if (key.endsWith('s')) return key;
+  return `${key}s`;
 };
 
-const groupByTypeThenCmc = (cards: DeckCard[]): DeckCardGroup[] => {
-  const byType = bucketBy(cards, typeGroupKey);
-  const typeKeys = [...byType.keys()].sort(compareTypeKeys);
+const colorGroupKey = (card: DeckCard): string => {
+  if (card.colorIdentity.length === 0) return 'colorless';
+  if (card.colorIdentity.length > 1) return 'multicolor';
+  return card.colorIdentity[0] ?? 'colorless';
+};
 
-  return typeKeys.map((typeKey) => {
-    const typeCards = [...(byType.get(typeKey) ?? [])].sort((a, b) => {
-      const byCmc = compareCmcKeys(cmcGroupKey(a), cmcGroupKey(b));
-      if (byCmc !== 0) return byCmc;
-      return compareByName(a, b);
-    });
+const colorGroupLabel = (key: string): string => {
+  if (key in COLOR_GROUP_LABELS) {
+    return COLOR_GROUP_LABELS[key as (typeof COLOR_GROUP_ORDER)[number]];
+  }
+  return key;
+};
 
-    return {
-      key: typeKey,
-      label: typeGroupLabel(typeKey),
-      cards: typeCards,
-      totalQuantity: sumQuantity(typeCards),
-    };
-  });
+const colorGroupPips = (key: string): ColorIdentityPip[] | undefined => {
+  if (key === 'W' || key === 'U' || key === 'B' || key === 'R' || key === 'G') {
+    return [key];
+  }
+  return undefined;
+};
+
+const cmcGroupKey = (card: DeckCard): string => {
+  const value = manaValueNumber(card);
+  if (value === Number.POSITIVE_INFINITY) return 'unknown';
+  return String(Math.floor(value));
+};
+
+const cmcGroupLabel = (key: string): string => {
+  if (key === 'unknown') return 'CMC —';
+  return `CMC ${key}`;
 };
 
 const bucketBy = (
@@ -125,33 +126,26 @@ const bucketBy = (
   return buckets;
 };
 
-const typeGroupKey = (card: DeckCard): string => primaryCardType(card.typeLine);
-
-const typeGroupLabel = (key: string): string => {
-  if (key === 'Other') return 'Other';
-  if (key === 'Sorcery') return 'Sorceries';
-  if (key.endsWith('y')) return `${key.slice(0, -1)}ies`;
-  if (key.endsWith('s')) return key;
-  return `${key}s`;
+const compareByName = (a: DeckCard, b: DeckCard): number => {
+  const byName = a.name.localeCompare(b.name);
+  if (byName !== 0) return byName;
+  return a.setCode.localeCompare(b.setCode);
 };
 
-const cmcGroupKey = (card: DeckCard): string => {
-  if (card.manaValue == null || card.manaValue === '') return 'unknown';
-  const value = Number(card.manaValue);
-  if (!Number.isFinite(value)) return 'unknown';
-  if (Number.isInteger(value)) return String(value);
-  return String(Math.round(value * 10) / 10);
+const compareByCmc = (a: DeckCard, b: DeckCard): number => {
+  const byCmc = manaValueNumber(a) - manaValueNumber(b);
+  if (byCmc !== 0) return byCmc;
+  return compareByName(a, b);
 };
 
-const cmcGroupLabel = (key: string): string => {
-  if (key === 'unknown') return 'CMC —';
-  return `CMC ${key}`;
-};
-
-const compareCmcKeys = (a: string, b: string): number => {
-  if (a === 'unknown') return 1;
-  if (b === 'unknown') return -1;
-  return Number(a) - Number(b);
+const compareByColor = (a: DeckCard, b: DeckCard): number => {
+  const aKey = a.colorIdentity.join('');
+  const bKey = b.colorIdentity.join('');
+  if (!aKey && bKey) return 1;
+  if (aKey && !bKey) return -1;
+  const byColor = aKey.localeCompare(bKey);
+  if (byColor !== 0) return byColor;
+  return compareByName(a, b);
 };
 
 const compareTypeKeys = (a: string, b: string): number => {
@@ -161,11 +155,78 @@ const compareTypeKeys = (a: string, b: string): number => {
   return a.localeCompare(b);
 };
 
-const compareByName = (a: DeckCard, b: DeckCard): number => {
-  const byName = a.name.localeCompare(b.name);
-  if (byName !== 0) return byName;
-  return a.setCode.localeCompare(b.setCode);
+const compareColorGroupKeys = (a: string, b: string): number => {
+  const ai = COLOR_GROUP_INDEX.get(a as (typeof COLOR_GROUP_ORDER)[number]) ?? 99;
+  const bi = COLOR_GROUP_INDEX.get(b as (typeof COLOR_GROUP_ORDER)[number]) ?? 99;
+  if (ai !== bi) return ai - bi;
+  return a.localeCompare(b);
+};
+
+const compareCmcKeys = (a: string, b: string): number => {
+  if (a === 'unknown') return 1;
+  if (b === 'unknown') return -1;
+  return Number(a) - Number(b);
+};
+
+const manaValueNumber = (card: DeckCard): number => {
+  if (card.manaValue == null || card.manaValue === '') return Number.POSITIVE_INFINITY;
+  const value = Number(card.manaValue);
+  return Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;
 };
 
 const sumQuantity = (cards: DeckCard[]): number =>
   cards.reduce((sum, card) => sum + card.quantity, 0);
+
+type GroupStrategy = {
+  keyOf: (card: DeckCard) => string;
+  compareKeys: (a: string, b: string) => number;
+  labelOf: (key: string) => string;
+  colorIdentityOf?: (key: string) => ColorIdentityPip[] | undefined;
+};
+
+const GROUP_STRATEGIES: Record<DeckGroupMode, GroupStrategy> = {
+  type: {
+    keyOf: typeGroupKey,
+    compareKeys: compareTypeKeys,
+    labelOf: typeGroupLabel,
+  },
+  color: {
+    keyOf: colorGroupKey,
+    compareKeys: compareColorGroupKeys,
+    labelOf: colorGroupLabel,
+    colorIdentityOf: colorGroupPips,
+  },
+  cmc: {
+    keyOf: cmcGroupKey,
+    compareKeys: compareCmcKeys,
+    labelOf: cmcGroupLabel,
+  },
+};
+
+const SORT_COMPARATORS: Record<DeckSortMode, (a: DeckCard, b: DeckCard) => number> = {
+  name: compareByName,
+  cmc: compareByCmc,
+  color: compareByColor,
+};
+
+export const groupDeckCards = (
+  cards: DeckCard[],
+  groupMode: DeckGroupMode,
+  sortMode: DeckSortMode,
+): DeckCardGroup[] => {
+  const group = GROUP_STRATEGIES[groupMode];
+  const compareCards = SORT_COMPARATORS[sortMode];
+  const buckets = bucketBy(cards, group.keyOf);
+  const keys = [...buckets.keys()].sort(group.compareKeys);
+
+  return keys.map((key) => {
+    const groupCards = [...(buckets.get(key) ?? [])].sort(compareCards);
+    return {
+      key,
+      label: group.labelOf(key),
+      cards: groupCards,
+      totalQuantity: sumQuantity(groupCards),
+      colorIdentity: group.colorIdentityOf?.(key),
+    };
+  });
+};

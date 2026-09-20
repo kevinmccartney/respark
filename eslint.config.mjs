@@ -61,6 +61,22 @@ export default tseslint.config(
     },
   },
   {
+    files: ['packages/ui/**/*.{ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: globals.browser,
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+      },
+    },
+    plugins: {
+      'react-hooks': reactHooks,
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+    },
+  },
+  {
     files: ['apps/api/**/*.ts', 'apps/etl/**/*.ts', 'packages/schemas/**/*.ts'],
     languageOptions: {
       ecmaVersion: 2022,

@@ -8,11 +8,13 @@ WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY apps/admin/package.json apps/admin/
 COPY packages/schemas/package.json packages/schemas/
+COPY packages/ui/package.json packages/ui/
 ENV HUSKY=0
-RUN npm ci --workspace=admin --workspace=schemas
+RUN npm ci --workspace=admin --workspace=schemas --workspace=ui
 
 COPY apps/admin apps/admin
 COPY packages/schemas packages/schemas
+COPY packages/ui packages/ui
 
 WORKDIR /repo/apps/admin
 ENV NODE_ENV=development

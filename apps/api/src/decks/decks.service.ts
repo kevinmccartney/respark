@@ -37,6 +37,8 @@ type DeckCardRow = {
   mana_cost: string | null;
   mana_value: string | null;
   type_line: string | null;
+  oracle_text: string | null;
+  color_identity: string[] | null;
   foil: boolean;
   sideboard: boolean;
   quantity: number;
@@ -601,6 +603,8 @@ export class DecksService {
         c.mana_cost,
         c.mana_value::text AS mana_value,
         c.type_line,
+        c.oracle_text,
+        c.color_identity,
         dc.foil,
         dc.sideboard,
         dc.quantity,
@@ -683,6 +687,8 @@ const toDeckCard = (row: DeckCardRow): DeckCard => ({
   manaCost: row.mana_cost,
   manaValue: row.mana_value,
   typeLine: row.type_line,
+  oracleText: row.oracle_text,
+  colorIdentity: parseColorIdentity(row.color_identity),
   foil: row.foil,
   sideboard: row.sideboard,
   quantity: row.quantity,
@@ -691,3 +697,12 @@ const toDeckCard = (row: DeckCardRow): DeckCard => ({
   collectorNumber: row.collector_number,
   imageNormal: row.image_normal,
 });
+
+const parseColorIdentity = (raw: string[] | null): ColorIdentityPip[] => {
+  const seen = new Set<ColorIdentityPip>();
+  for (const value of raw ?? []) {
+    const pip = colorIdentityPipSchema.safeParse(value);
+    if (pip.success) seen.add(pip.data);
+  }
+  return COLOR_IDENTITY_PIPS.filter((pip) => seen.has(pip));
+};
