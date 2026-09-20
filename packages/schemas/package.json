@@ -41,6 +41,12 @@
       "require": "./dist/chat.js",
       "default": "./dist/chat.js"
     },
+    "./recommendations": {
+      "types": "./dist/recommendations.d.ts",
+      "import": "./src/recommendations.ts",
+      "require": "./dist/recommendations.js",
+      "default": "./dist/recommendations.js"
+    },
     "./platform": {
       "types": "./dist/platform.d.ts",
       "import": "./src/platform.ts",
@@ -67,6 +73,9 @@
       ],
       "chat": [
         "./dist/chat.d.ts"
+      ],
+      "recommendations": [
+        "./dist/recommendations.d.ts"
       ],
       "platform": [
         "./dist/platform.d.ts"

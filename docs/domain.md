@@ -60,6 +60,10 @@ The line points at `catalog.printing`, not `catalog.card`, so the player can cho
 
 One thread per user, not per page. Optional sticky **`deck_id`** and **`card_id`** are last-picked discussion context (`getDeck` / `getCard` or an explicit send), not conversation identity. Follow-ups keep those values unless the client sets or clears them. Deleting a deck or catalog card sets the matching column to null; the thread remains. The open page is sent per turn as view metadata and is not stored on this row.
 
+### Recommendation downweight (`app.recommendation_downweight`)
+
+Admin-maintained policy list of cards that win global EDHREC % without implying a play pattern (Rhystic Study, generic tutors, extra turns, stax). Soft flag on search / getCard and a short chat prompt appendix. Not a catalog fact and not a search ban. Starter rows are inserted by migration; list/add/remove is on `/admin/recommendation-downweights`.
+
 ### Chat message (`app.chat_message`)
 
 A turn in a conversation: `user` / `assistant` / `tool`, with structured `parts` jsonb (text, card ids). Tool rows (name, args, compact result) are stored for debugging and are not replayed unbounded into the next model call. See [`docs/ai-chat.md`](ai-chat.md).
@@ -68,11 +72,11 @@ A turn in a conversation: `user` / `assistant` / `tool`, with structured `parts`
 
 ![Catalog ERD](diagrams/erd-catalog.svg)
 
-Scryfall is the source of truth for identity, printings, sets, images, and format legalities. The identifiers job attaches extra IDs to **existing** printings and copies MTGJSON `leadershipSkills` onto `catalog.card.leadership_skills`.
+Scryfall is the source of truth for identity, printings, sets, images, and format legalities. The identifiers job attaches extra IDs to **existing** printings and copies MTGJSON `leadershipSkills` onto `catalog.card.leadership_skills`, plus EDHREC salt.
 
 ### Card (`catalog.card`)
 
-The conceptual / oracle card (`oracle_id` from Scryfall). Shared rules text, colors, type line, format `legalities` (Scryfall map), and `leadership_skills` (MTGJSON `leadershipSkills`, including `commander` / `brawl` / `oathbreaker`). Search and autocomplete query this table; the deck builder then picks a printing. Adds and imports reject cards that are not `legal` in the deck’s format once legalities have been synced. Commander search and commander assignment require `leadershipSkills.commander`. Tokens, emblems, art series, minigames, planes, schemes, vanguards, and other Scryfall extras are not imported (`layout` / `set_type`, not legalities). The identifiers job skips the same extras.
+The conceptual / oracle card (`oracle_id` from Scryfall). Shared rules text, colors, type line, format `legalities` (Scryfall map), and `leadership_skills` (MTGJSON `leadershipSkills`, including `commander` / `brawl` / `oathbreaker`). Global Commander popularity is `edhrec_rank` (Scryfall) and `edhrec_saltiness` (MTGJSON); `is_game_changer` comes from Scryfall, with MTGJSON as fallback. Search and autocomplete query this table; the deck builder then picks a printing. `GET /cards` accepts `sort=name` (default) or `sort=edhrecRank`. Per-commander inclusion is not stored ([commander-stats.md](commander-stats.md)). Adds and imports reject cards that are not `legal` in the deck’s format once legalities have been synced. Commander search and commander assignment require `leadershipSkills.commander`. Tokens, emblems, art series, minigames, planes, schemes, vanguards, and other Scryfall extras are not imported (`layout` / `set_type`, not legalities). The identifiers job skips the same extras.
 
 ### Set (`catalog.set`)
 

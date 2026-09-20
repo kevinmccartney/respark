@@ -128,7 +128,7 @@ searchCards({
 
 Without a sticky deck, skip `getDeck` unless the player named a list; do not inject format/identity/excludes.
 
-Do **not** send the catalog. Do **not** require pgvector. Keyword `q` is still weak for "interaction"; identity + legality + exclude + a 25-hit search is the MVP bet.
+Do **not** send the catalog. Do **not** require pgvector. Keyword `q` is still weak for "interaction"; identity + legality + exclude + a 25-hit search is the MVP bet. `GET /cards` defaults to `sort=name`. Chat `searchCards` defaults to `sort=edhrecRank` (most played in Commander first); pass `sort=name` for A–Z. Name match still wins when `q` is set. Hits may include a `downweight` flag from the admin overperformers list — staples/tutors the model should skip unless the player asked for that class or the attached deck already plays that pattern. Per-commander inclusion (what people put in _this_ commander) is not ingested; see [commander-stats.md](commander-stats.md).
 
 ## Structured parts
 
@@ -229,6 +229,6 @@ Vitest in `apps/api`. CI runs fixture evals **without Bedrock**:
 
 ## Out of MVP
 
-Collection, prices, tournaments, rules RAG, pgvector / semantic search, multi-agent, Scryfall search syntax, autonomous deck edits, partner commanders.
+Collection, prices, tournaments, rules RAG, pgvector / semantic search, multi-agent, Scryfall search syntax, autonomous deck edits, partner commanders, per-commander EDHREC inclusion ([commander-stats.md](commander-stats.md)).
 
 New capability later = domain service → Zod tool → register → eval. Same orchestrator.

@@ -39,6 +39,12 @@ export const cards = catalogSchema.table('card', {
   }>(),
   layout: text('layout'),
   reserved: boolean('reserved'),
+  /** Scryfall `edhrec_rank` — global Commander popularity (1 = most played). */
+  edhrecRank: integer('edhrec_rank'),
+  /** MTGJSON `edhrecSaltiness` — EDHREC salt survey score. */
+  edhrecSaltiness: numeric('edhrec_saltiness'),
+  /** Scryfall `game_changer` (MTGJSON `isGameChanger` if Scryfall is null). */
+  isGameChanger: boolean('is_game_changer'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

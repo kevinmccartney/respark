@@ -8,6 +8,7 @@ import type { DeckCard, DeckDetail } from 'schemas/decks';
 import type { CardSearchPage } from 'schemas/cards';
 import type { CardsService } from '../../cards/cards.service';
 import type { DecksService } from '../../decks/decks.service';
+import type { RecommendationsService } from '../../recommendations/recommendations.service';
 import { allowlistCardIds } from '../allowlist';
 import type { ChatService } from '../chat.service';
 import { ChatOrchestrator } from '../orchestrator';
@@ -100,6 +101,10 @@ const toSearchCard = (card: FixtureCard) => ({
   oracleText: card.oracleText,
   colorIdentity: card.colorIdentity,
   imageNormal: null,
+  edhrecRank: null,
+  edhrecSaltiness: null,
+  isGameChanger: null,
+  downweight: null,
 });
 
 const stubCards = (): CardsService =>
@@ -129,6 +134,10 @@ const stubCards = (): CardsService =>
         leadershipSkills: null,
         layout: 'normal',
         reserved: false,
+        edhrecRank: null,
+        edhrecSaltiness: null,
+        isGameChanger: null,
+        downweight: null,
         printings: [],
       };
     },
@@ -190,6 +199,7 @@ describe('chat fixture evals', () => {
       } as unknown as DecksService,
       cards,
       chat as unknown as ChatService,
+      { listForPrompt: async () => [] } as unknown as RecommendationsService,
       silentLogger,
     );
 

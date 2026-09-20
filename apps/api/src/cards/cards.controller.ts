@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import {
   CARD_SEARCH_DEFAULT_LIMIT,
+  CARD_SEARCH_DEFAULT_SORT,
   cardSearchQuerySchema,
   cardSuggestionsQuerySchema,
   type CardSearchQuery,
@@ -26,6 +27,7 @@ export class CardsController {
       typeContains: query.typeContains,
       maxManaValue: query.maxManaValue,
       excludeCardIds: query.excludeCardIds,
+      sort: query.sort ?? CARD_SEARCH_DEFAULT_SORT,
       limit: query.limit ?? CARD_SEARCH_DEFAULT_LIMIT,
       page: query.page ?? 1,
     });

@@ -159,6 +159,33 @@ export const applyCardLeadershipSkills = async (
   );
 };
 
+/**
+ * Copy MTGJSON salt onto the matched oracle card. Fills `is_game_changer`
+ * only when Scryfall left it null.
+ */
+export const applyCardEdhrecStats = async (
+  client: PoolClient,
+  printingId: string,
+  opts: { edhrecSaltiness: number | null; isGameChanger: boolean | null },
+): Promise<void> => {
+  if (opts.edhrecSaltiness === null && opts.isGameChanger === null) return;
+  await client.query(
+    `update catalog.card c
+     set
+       edhrec_saltiness = coalesce($2::numeric, c.edhrec_saltiness),
+       is_game_changer = coalesce(c.is_game_changer, $3),
+       updated_at = now()
+     from catalog.printing p
+     where p.id = $1
+       and p.card_id = c.id
+       and (
+         c.edhrec_saltiness is distinct from coalesce($2::numeric, c.edhrec_saltiness)
+         or c.is_game_changer is distinct from coalesce(c.is_game_changer, $3)
+       )`,
+    [printingId, opts.edhrecSaltiness, opts.isGameChanger],
+  );
+};
+
 export const reconcileMtgjsonCard = async (
   client: PoolClient,
   enrichment: MtgjsonEnrichment,
@@ -179,6 +206,10 @@ export const reconcileMtgjsonCard = async (
     enrichment.identifiers,
   );
   await applyCardLeadershipSkills(client, match.printingId, enrichment.leadershipSkills);
+  await applyCardEdhrecStats(client, match.printingId, {
+    edhrecSaltiness: enrichment.edhrecSaltiness,
+    isGameChanger: enrichment.isGameChanger,
+  });
 
   return {
     status: 'matched',

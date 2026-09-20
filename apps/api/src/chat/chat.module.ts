@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CardsModule } from '../cards/cards.module';
 import { DecksModule } from '../decks/decks.module';
+import { RecommendationsModule } from '../recommendations/recommendations.module';
 import { UsersModule } from '../users/users.module';
 import { ChatController } from './chat.controller';
 import { ChatGateway } from './chat.gateway';
@@ -20,7 +21,7 @@ const resolveChatProvider = (
 };
 
 @Module({
-  imports: [DecksModule, CardsModule, UsersModule],
+  imports: [DecksModule, CardsModule, RecommendationsModule, UsersModule],
   controllers: [ChatController],
   providers: [
     ChatService,

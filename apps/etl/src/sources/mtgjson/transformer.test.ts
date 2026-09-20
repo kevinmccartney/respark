@@ -20,4 +20,14 @@ describe('extractEnrichment', () => {
     );
     assert.equal(extractEnrichment({ uuid: 'c' }).leadershipSkills, null);
   });
+
+  it('keeps edhrecSaltiness and isGameChanger', () => {
+    assert.equal(
+      extractEnrichment({ uuid: 'd', edhrecSaltiness: 1.25, isGameChanger: true }).edhrecSaltiness,
+      1.25,
+    );
+    assert.equal(extractEnrichment({ uuid: 'd', isGameChanger: true }).isGameChanger, true);
+    assert.equal(extractEnrichment({ uuid: 'e' }).edhrecSaltiness, null);
+    assert.equal(extractEnrichment({ uuid: 'e' }).isGameChanger, null);
+  });
 });

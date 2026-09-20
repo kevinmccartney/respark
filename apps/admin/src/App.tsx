@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 import { GuestOnly, RequireAuth, SignInPage } from '@/auth';
 import { AppShell, NotFoundPage } from '@/core';
 import { SyncDetailPage, SyncsListPage } from '@/etl-syncs';
+import { DownweightsPage } from '@/recommendations';
 
 export default function App() {
   return (
@@ -28,6 +29,14 @@ export default function App() {
           element={
             <RequireAuth>
               <SyncDetailPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/overperformers"
+          element={
+            <RequireAuth>
+              <DownweightsPage />
             </RequireAuth>
           }
         />

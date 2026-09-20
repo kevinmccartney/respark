@@ -7,6 +7,7 @@ import {
   type CardPrintingSummary,
   type CardSearchPage,
   type CardSearchResult,
+  type CardSearchSort,
 } from 'schemas/cards';
 import type { ColorIdentityPip, DeckFormat } from 'schemas/decks';
 import { apiFetchJson, type GetToken } from '@/core';
@@ -26,6 +27,7 @@ export const searchCards = (
     legalIn?: DeckFormat;
     colorIdentity?: ColorIdentityPip[];
     commanderEligible?: boolean;
+    sort?: CardSearchSort;
     limit?: number;
     page?: number;
   },
@@ -36,6 +38,7 @@ export const searchCards = (
   if (opts.legalIn) params.set('legalIn', opts.legalIn);
   if (opts.colorIdentity) params.set('colorIdentity', opts.colorIdentity.join(','));
   if (opts.commanderEligible) params.set('commanderEligible', 'true');
+  if (opts.sort) params.set('sort', opts.sort);
   if (opts.limit !== undefined) params.set('limit', String(opts.limit));
   if (opts.page !== undefined && opts.page > 1) params.set('page', String(opts.page));
   const qs = params.toString();

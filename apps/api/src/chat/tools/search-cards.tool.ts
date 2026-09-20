@@ -1,6 +1,7 @@
 import {
   EXCLUDE_CARD_IDS_MAX,
   SEARCH_CARDS_TOOL_DEFAULT_LIMIT,
+  SEARCH_CARDS_TOOL_DEFAULT_SORT,
   SEARCH_CARDS_TOOL_MAX_LIMIT,
   searchCardsInputSchema,
   type SearchCardsInput,
@@ -18,6 +19,10 @@ export type SearchCardsToolResult = {
     typeLine: string | null;
     oracleText: string | null;
     colorIdentity: string[] | null;
+    edhrecRank: number | null;
+    edhrecSaltiness: number | null;
+    isGameChanger: boolean | null;
+    downweight: { kind: string; note: string | null } | null;
   }>;
   total: number;
 };
@@ -28,7 +33,7 @@ export const searchCardsTool = (
 ): ChatTool<SearchCardsInput, SearchCardsToolResult> => ({
   name: 'searchCards',
   description:
-    'Search the catalog. When a sticky deck is attached, the server injects format legality, commander identity (commander format), and in-deck excludes. Otherwise pass legalIn or colorIdentity if the player specified them.',
+    'Search the catalog. When a sticky deck is attached, the server injects format legality, commander identity (commander format), and in-deck excludes. Otherwise pass legalIn or colorIdentity if the player specified them. sort defaults to edhrecRank (most played in Commander first); pass name for A–Z.',
   inputSchema: searchCardsInputSchema,
   execute: async (input, ctx) => {
     const limit = Math.min(
@@ -56,6 +61,7 @@ export const searchCardsTool = (
       legalIn,
       colorIdentity,
       excludeCardIds,
+      sort: input.sort ?? SEARCH_CARDS_TOOL_DEFAULT_SORT,
       limit,
       page: 1,
     });
@@ -71,6 +77,10 @@ export const searchCardsTool = (
           typeLine: card.typeLine,
           oracleText: card.oracleText,
           colorIdentity: card.colorIdentity,
+          edhrecRank: card.edhrecRank,
+          edhrecSaltiness: card.edhrecSaltiness,
+          isGameChanger: card.isGameChanger,
+          downweight: card.downweight,
         })),
       },
     };

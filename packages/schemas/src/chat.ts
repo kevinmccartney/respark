@@ -1,8 +1,10 @@
 import { isoDateTimeSchema, uuidSchema } from './primitives.js';
+import { cardSearchSortSchema } from './cards.js';
 import { colorIdentitySchema, deckFormatSchema } from './decks.js';
 import { z } from 'zod';
 
 export const SEARCH_CARDS_TOOL_DEFAULT_LIMIT = 25;
+export const SEARCH_CARDS_TOOL_DEFAULT_SORT = 'edhrecRank' as const;
 export const SEARCH_CARDS_TOOL_MAX_LIMIT = 50;
 export const EXCLUDE_CARD_IDS_MAX = 400;
 export const PRESENT_RECOMMENDATIONS_MAX = 25;
@@ -257,6 +259,7 @@ export const searchCardsInputSchema = z
     typeContains: z.string().trim().min(1).max(80).optional(),
     maxManaValue: z.number().int().min(0).max(20).optional(),
     excludeCardIds: z.array(uuidSchema).max(EXCLUDE_CARD_IDS_MAX).optional(),
+    sort: cardSearchSortSchema.optional(),
     limit: z.number().int().min(1).max(SEARCH_CARDS_TOOL_MAX_LIMIT).optional(),
   })
   .strict();

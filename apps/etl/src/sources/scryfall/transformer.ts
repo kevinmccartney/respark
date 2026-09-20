@@ -28,6 +28,8 @@ export type CanonicalCard = {
   legalities: Record<string, string>;
   layout: string | null;
   reserved: boolean | null;
+  edhrecRank: number | null;
+  isGameChanger: boolean | null;
 };
 
 export type CanonicalFace = {
@@ -91,6 +93,11 @@ const asDateOnly = (value: string | null | undefined): string | null => {
 const asManaValue = (value: number | string | null | undefined): string | null => {
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   return nonempty(typeof value === 'string' ? value : null);
+};
+
+const asEdhrecRank = (value: number | null | undefined): number | null => {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) return null;
+  return value;
 };
 
 const imageField = (
@@ -187,6 +194,8 @@ export const transformScryfallCard = (card: ScryfallCard): CanonicalRecord | nul
       legalities: card.legalities,
       layout: nonempty(card.layout),
       reserved: card.reserved ?? null,
+      edhrecRank: asEdhrecRank(card.edhrec_rank),
+      isGameChanger: card.game_changer ?? null,
     },
     printing: {
       scryfallId: card.id,

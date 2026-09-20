@@ -26,6 +26,8 @@ export const mtgjsonCardSchema = z.looseObject({
   layout: z.string().optional(),
   identifiers: mtgjsonIdentifiersSchema.optional(),
   leadershipSkills: mtgjsonLeadershipSkillsSchema.optional(),
+  edhrecSaltiness: z.number().optional(),
+  isGameChanger: z.boolean().optional(),
 });
 
 export type MtgjsonCard = z.infer<typeof mtgjsonCardSchema>;

@@ -43,8 +43,9 @@ const upsertCard = async (client: PoolClient, record: CanonicalRecord): Promise<
   const result = await client.query<{ id: string }>(
     `insert into catalog.card as t
        (oracle_id, name, mana_cost, mana_value, type_line, oracle_text,
-        colors, color_identity, keywords, legalities, layout, reserved, updated_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, now())
+        colors, color_identity, keywords, legalities, layout, reserved,
+        edhrec_rank, is_game_changer, updated_at)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14, now())
      on conflict (oracle_id) do update set
        name = excluded.name,
        mana_cost = excluded.mana_cost,
@@ -57,6 +58,8 @@ const upsertCard = async (client: PoolClient, record: CanonicalRecord): Promise<
        legalities = excluded.legalities,
        layout = excluded.layout,
        reserved = excluded.reserved,
+       edhrec_rank = excluded.edhrec_rank,
+       is_game_changer = coalesce(excluded.is_game_changer, t.is_game_changer),
        updated_at = now()
      where t.name is distinct from excluded.name
         or t.mana_cost is distinct from excluded.mana_cost
@@ -69,6 +72,8 @@ const upsertCard = async (client: PoolClient, record: CanonicalRecord): Promise<
         or t.legalities is distinct from excluded.legalities
         or t.layout is distinct from excluded.layout
         or t.reserved is distinct from excluded.reserved
+        or t.edhrec_rank is distinct from excluded.edhrec_rank
+        or t.is_game_changer is distinct from coalesce(excluded.is_game_changer, t.is_game_changer)
      returning id`,
     [
       c.oracleId,
@@ -83,6 +88,8 @@ const upsertCard = async (client: PoolClient, record: CanonicalRecord): Promise<
       JSON.stringify(c.legalities),
       c.layout,
       c.reserved,
+      c.edhrecRank,
+      c.isGameChanger,
     ],
   );
 

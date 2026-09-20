@@ -14,6 +14,8 @@ export type MtgjsonEnrichment = {
   language: string | null;
   scryfallId: string | null;
   leadershipSkills: LeadershipSkills | null;
+  edhrecSaltiness: number | null;
+  isGameChanger: boolean | null;
   identifiers: EnrichmentIdentifier[];
 };
 
@@ -50,6 +52,13 @@ export const extractEnrichment = (card: MtgjsonCard): MtgjsonEnrichment => {
     language: card.language ?? null,
     scryfallId: ids.scryfallId ?? null,
     leadershipSkills: toLeadershipSkills(card.leadershipSkills),
+    edhrecSaltiness: asSaltiness(card.edhrecSaltiness),
+    isGameChanger: card.isGameChanger ?? null,
     identifiers,
   };
+};
+
+const asSaltiness = (value: number | undefined): number | null => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return value;
 };

@@ -68,6 +68,8 @@ export const scryfallCardSchema = z
     toughness: optionalText,
     loyalty: optionalText,
     defense: optionalText,
+    edhrec_rank: z.number().int().optional().nullable(),
+    game_changer: z.boolean().optional().nullable(),
   })
   .passthrough();
 

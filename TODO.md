@@ -4,7 +4,8 @@ Writing down ideas for the future
 
 ## Stuff to do
 
-- EDHREC toolcall
+- Per-commander inclusion — see docs/commander-stats.md
+- Commander spellbook toolcall
 - Can I add MTG rules to AI?
 - (etl) set imports
 - (admin) Table of cards/sets/etc

@@ -28,6 +28,8 @@ A sync may run catalog only, enrichment only, or both. Enrichment-only is allowe
 | Oracle identity, printings, sets, images, legality fields                                             | **Scryfall** (catalog job)    |
 | Cross-provider IDs on existing printings (`mtgjson`, `tcgplayer`, `cardmarket`, `mtgo`, `multiverse`) | **MTGJSON** (identifiers job) |
 | Commander eligibility (`catalog.card.leadership_skills` from MTGJSON `leadershipSkills`)              | **MTGJSON** (identifiers job) |
+| Global EDHREC rank + game-changer (`catalog.card.edhrec_rank`, `is_game_changer`)                     | **Scryfall** (catalog job)    |
+| EDHREC salt (`catalog.card.edhrec_saltiness`); `is_game_changer` only if Scryfall left it null        | **MTGJSON** (identifiers job) |
 
 Enrichment **never creates** `catalog.printing` rows. Unmatched MTGJSON cards are recorded for review; they do not become catalog entities.
 

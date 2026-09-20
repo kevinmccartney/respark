@@ -69,6 +69,7 @@ describe('searchCardsTool', () => {
       legalIn: 'commander',
       colorIdentity: ['G', 'U'],
       excludeCardIds: [inDeckId],
+      sort: 'edhrecRank',
       limit: SEARCH_CARDS_TOOL_MAX_LIMIT,
       page: 1,
     });
@@ -101,8 +102,35 @@ describe('searchCardsTool', () => {
       legalIn: 'modern',
       colorIdentity: undefined,
       excludeCardIds: [],
+      sort: 'edhrecRank',
       limit: 10,
       page: 1,
     });
+  });
+
+  it('passes an explicit sort through', async () => {
+    const search = vi.fn(async (): Promise<CardSearchPage> => ({
+      cards: [],
+      total: 0,
+      page: 1,
+      pageSize: 15,
+      totalPages: 0,
+    }));
+    const tool = searchCardsTool(
+      { getForUser: vi.fn() } as unknown as DecksService,
+      { search } as unknown as CardsService,
+    );
+
+    await tool.execute(
+      { q: 'bolt', sort: 'name' },
+      { clerkUserId: 'user_1', deckId: null, cardId: null, retrievedCardIds: new Set() },
+    );
+
+    expect(search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        q: 'bolt',
+        sort: 'name',
+      }),
+    );
   });
 });

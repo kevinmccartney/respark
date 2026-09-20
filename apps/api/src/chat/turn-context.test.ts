@@ -34,6 +34,16 @@ describe('formatTurnContext', () => {
     expect(text).toContain('searchQ: bolt');
     expect(text).toContain('not sticky');
     expect(text).toContain('none yet');
+    expect(text).toContain('none configured');
+  });
+
+  it('lists admin downweights in the system appendix', () => {
+    const text = formatTurnContext({
+      stickyDeckId: null,
+      stickyCardId: null,
+      downweights: [{ name: 'Rhystic Study', kind: 'staple' }],
+    });
+    expect(text).toContain('Rhystic Study (staple)');
   });
 
   it('includes grounded names in the system appendix', () => {

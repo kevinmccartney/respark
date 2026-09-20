@@ -30,6 +30,10 @@ export const getCardTool = (cards: CardsService): ChatTool<GetCardInput, GetCard
         leadershipSkills: card.leadershipSkills,
         layout: card.layout,
         reserved: card.reserved,
+        edhrecRank: card.edhrecRank,
+        edhrecSaltiness: card.edhrecSaltiness,
+        isGameChanger: card.isGameChanger,
+        downweight: card.downweight,
       },
     };
   },

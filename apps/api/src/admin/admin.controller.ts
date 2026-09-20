@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ADMIN_LIST_DEFAULT_LIMIT,
   SYNC_LOG_DEFAULT_LIMIT,
@@ -7,10 +17,15 @@ import {
   type AdminListQuery,
   type StartEtlSyncBody,
 } from 'schemas/etl-sync';
+import {
+  createRecommendationDownweightBodySchema,
+  type CreateRecommendationDownweightBody,
+} from 'schemas/recommendations';
 import { uuidSchema } from 'schemas/primitives';
 import { AdminRoleGuard } from '../auth/admin-role.guard';
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard';
 import { zodPipe } from '../lib/zod-pipe';
+import { RecommendationsService } from '../recommendations/recommendations.service';
 import { AdminEtlService } from './admin-etl.service';
 import { AdminService } from './admin.service';
 
@@ -20,6 +35,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly adminEtl: AdminEtlService,
+    private readonly recommendations: RecommendationsService,
   ) {}
 
   @Post('etl-syncs')
@@ -103,5 +119,24 @@ export class AdminController {
       unmatched: result.unmatched,
       total: result.total,
     };
+  }
+
+  @Get('recommendation-downweights')
+  async listRecommendationDownweights() {
+    return { downweights: await this.recommendations.list() };
+  }
+
+  @Post('recommendation-downweights')
+  async createRecommendationDownweight(
+    @Body(zodPipe(createRecommendationDownweightBodySchema))
+    body: CreateRecommendationDownweightBody,
+  ) {
+    return { downweight: await this.recommendations.create(body) };
+  }
+
+  @Delete('recommendation-downweights/:cardId')
+  @HttpCode(204)
+  async deleteRecommendationDownweight(@Param('cardId', zodPipe(uuidSchema)) cardId: string) {
+    await this.recommendations.remove(cardId);
   }
 }

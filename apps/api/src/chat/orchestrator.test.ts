@@ -5,6 +5,7 @@ import type { ChatPart, ChatServerEvent } from 'schemas/chat';
 import type { DeckCard, DeckDetail } from 'schemas/decks';
 import type { CardsService } from '../cards/cards.service';
 import type { DecksService } from '../decks/decks.service';
+import type { RecommendationsService } from '../recommendations/recommendations.service';
 import { CHAT_MAX_TOOL_CALLS } from './chat.constants';
 import { ChatOrchestrator } from './orchestrator';
 import { ScriptedChatProvider } from './provider/scripted.provider';
@@ -38,6 +39,10 @@ const searchPage = (): CardSearchPage => ({
       oracleText: 'Draw a card. You may put a land card from your hand onto the battlefield.',
       colorIdentity: ['G', 'U'],
       imageNormal: null,
+      edhrecRank: null,
+      edhrecSaltiness: null,
+      isGameChanger: null,
+      downweight: null,
     },
   ],
   total: 1,
@@ -132,6 +137,7 @@ const runTurn = async (
     opts?.decks ?? stubDecks(),
     stubCards(),
     opts?.chat ?? stubChat(),
+    { listForPrompt: async () => [] } as unknown as RecommendationsService,
     logger,
   );
   const result = await orchestrator.runTurn({

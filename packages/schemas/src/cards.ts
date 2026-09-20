@@ -1,5 +1,6 @@
 import { cardFaceSchema, queryBoolSchema, queryIntSchema, uuidSchema } from './primitives.js';
 import { colorIdentitySchema, deckFormatSchema, type DeckFormat } from './decks.js';
+import { recommendationDownweightFlagSchema } from './recommendations.js';
 import { z } from 'zod';
 
 export const cardSearchResultSchema = z.object({
@@ -12,6 +13,10 @@ export const cardSearchResultSchema = z.object({
   oracleText: z.string().nullable(),
   colorIdentity: z.array(z.string()).nullable(),
   imageNormal: z.string().nullable(),
+  edhrecRank: z.number().int().nullable(),
+  edhrecSaltiness: z.number().nullable(),
+  isGameChanger: z.boolean().nullable(),
+  downweight: recommendationDownweightFlagSchema.nullable(),
 });
 
 export type CardSearchResult = z.infer<typeof cardSearchResultSchema>;
@@ -123,6 +128,10 @@ export const cardDetailSchema = z.object({
   leadershipSkills: leadershipSkillsSchema.nullable(),
   layout: z.string().nullable(),
   reserved: z.boolean().nullable(),
+  edhrecRank: z.number().int().nullable(),
+  edhrecSaltiness: z.number().nullable(),
+  isGameChanger: z.boolean().nullable(),
+  downweight: recommendationDownweightFlagSchema.nullable(),
   printings: z.array(cardPrintingSummarySchema),
 });
 
@@ -144,6 +153,11 @@ export type CardSuggestionsResponse = z.infer<typeof cardSuggestionsResponseSche
 export const CARD_SEARCH_DEFAULT_LIMIT = 60;
 export const CARD_SEARCH_MAX_LIMIT = 100;
 export const CARD_SEARCH_EXCLUDE_IDS_MAX = 400;
+
+export const CARD_SEARCH_SORTS = ['name', 'edhrecRank'] as const;
+export const cardSearchSortSchema = z.enum(CARD_SEARCH_SORTS);
+export type CardSearchSort = z.infer<typeof cardSearchSortSchema>;
+export const CARD_SEARCH_DEFAULT_SORT: CardSearchSort = 'name';
 
 const optionalQueryString = <S extends z.ZodType>(schema: S) =>
   z.preprocess((value: unknown) => {
@@ -183,6 +197,7 @@ export const cardSearchQuerySchema = z.object({
   typeContains: optionalQueryString(z.string().trim().min(1).max(80)),
   maxManaValue: queryIntSchema(0, 20),
   excludeCardIds: uuidListQuerySchema,
+  sort: optionalQueryString(cardSearchSortSchema),
   limit: queryIntSchema(1, CARD_SEARCH_MAX_LIMIT),
   page: queryIntSchema(1, 10_000),
 });

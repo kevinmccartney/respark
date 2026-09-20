@@ -7,6 +7,7 @@ export type ChatTurnStopReason =
 export const CHAT_ROUND_TIMEOUT_MS = 45_000;
 export const CHAT_HISTORY_LIMIT = 12;
 export const CHAT_GROUNDED_CARD_PROMPT_CAP = 80;
+export const CHAT_DOWNWEIGHT_PROMPT_CAP = 40;
 export const GET_DECK_LINE_CAP = 400;
 export const CHAT_WS_PATH = '/chat/ws';
 export const CHAT_WS_PING_MS = 25_000;

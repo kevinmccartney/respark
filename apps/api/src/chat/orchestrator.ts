@@ -3,8 +3,10 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import type { ChatPart, ChatServerEvent, ChatStatusCode, ChatView, ToolResult } from 'schemas/chat';
 import { CardsService } from '../cards/cards.service';
 import { DecksService } from '../decks/decks.service';
+import { RecommendationsService } from '../recommendations/recommendations.service';
 import { collectLinkableCards, rewriteCardLinks } from './card-links';
 import {
+  CHAT_DOWNWEIGHT_PROMPT_CAP,
   CHAT_MAX_ROUNDS,
   CHAT_MAX_TOOL_CALLS,
   CHAT_PROVIDER_TOKEN,
@@ -58,6 +60,7 @@ export class ChatOrchestrator {
     private readonly decks: DecksService,
     private readonly cards: CardsService,
     private readonly chat: ChatService,
+    private readonly recommendations: RecommendationsService,
     @InjectPinoLogger(ChatOrchestrator.name)
     private readonly logger: PinoLogger,
   ) {}
@@ -81,6 +84,7 @@ export class ChatOrchestrator {
 
     const retrievedCardIds = new Set<string>();
     const linkableCards = await this.chat.loadLinkableCards(opts.conversationId);
+    const downweights = await this.recommendations.listForPrompt(CHAT_DOWNWEIGHT_PROMPT_CAP);
     const ctx: ToolContext = {
       clerkUserId: opts.clerkUserId,
       deckId: opts.deckId ?? null,
@@ -113,6 +117,7 @@ export class ChatOrchestrator {
           stickyCardId: ctx.cardId,
           view: opts.view,
           groundedCards: linkableCards,
+          downweights,
         });
         opts.emit({ type: 'status', code: 'thinking' });
         const pending: PendingCall[] = [];

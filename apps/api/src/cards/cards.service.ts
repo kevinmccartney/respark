@@ -4,6 +4,7 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { DATABASE, type Database } from '../db/database.module';
 import {
   CARD_SEARCH_DEFAULT_LIMIT,
+  CARD_SEARCH_DEFAULT_SORT,
   leadershipSkillsSchema,
   type CardDetail,
   type CardLegalities,
@@ -11,8 +12,13 @@ import {
   type CardPrintingSummary,
   type CardSearchPage,
   type CardSearchResult,
+  type CardSearchSort,
   type LeadershipSkills,
 } from 'schemas/cards';
+import {
+  recommendationDownweightKindSchema,
+  type RecommendationDownweightFlag,
+} from 'schemas/recommendations';
 import { parseCardFaces } from 'schemas/primitives';
 import type { ColorIdentityPip, DeckFormat } from 'schemas/decks';
 import { bestPrintingOrderSql, printingFacesJsonSql } from '../catalog/printings';
@@ -27,6 +33,11 @@ type SearchRow = {
   oracle_text: string | null;
   color_identity: string[] | null;
   image_normal: string | null;
+  edhrec_rank: number | null;
+  edhrec_saltiness: string | number | null;
+  is_game_changer: boolean | null;
+  downweight_kind: string | null;
+  downweight_note: string | null;
 };
 
 type CountRow = {
@@ -48,6 +59,11 @@ type CardDetailRow = {
   reserved: boolean | null;
   legalities: CardLegalities | null;
   leadership_skills: LeadershipSkills | null;
+  edhrec_rank: number | null;
+  edhrec_saltiness: string | number | null;
+  is_game_changer: boolean | null;
+  downweight_kind: string | null;
+  downweight_note: string | null;
 };
 
 type PrintingDetailRow = {
@@ -85,12 +101,14 @@ export class CardsService {
     typeContains?: string;
     maxManaValue?: number;
     excludeCardIds?: string[];
+    sort?: CardSearchSort;
     limit?: number;
     page?: number;
   }): Promise<CardSearchPage> {
     const q = (opts.q ?? '').trim();
     const pageSize = opts.limit ?? CARD_SEARCH_DEFAULT_LIMIT;
     const requestedPage = opts.page ?? 1;
+    const sort = opts.sort ?? CARD_SEARCH_DEFAULT_SORT;
 
     const pattern = q.length > 0 ? `%${escapeIlike(q)}%` : null;
     const matchPredicate = matchSql(pattern);
@@ -117,6 +135,11 @@ export class CardsService {
     const page = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages);
     const offset = (page - 1) * pageSize;
 
+    const orderSql = searchOrderSql({
+      namePattern: pattern,
+      sort,
+    });
+
     const pageResult = await this.db.execute<SearchRow>(sql`
       WITH matched AS (
         SELECT
@@ -127,8 +150,14 @@ export class CardsService {
           c.mana_value::text AS mana_value,
           c.type_line,
           c.oracle_text,
-          c.color_identity
+          c.color_identity,
+          c.edhrec_rank,
+          c.edhrec_saltiness,
+          c.is_game_changer,
+          dw.kind AS downweight_kind,
+          dw.note AS downweight_note
         FROM catalog.card c
+        LEFT JOIN app.recommendation_downweight dw ON dw.card_id = c.id
         WHERE ${matchPredicate}
           AND ${legalPredicate}
           AND ${identityPredicate}
@@ -136,7 +165,7 @@ export class CardsService {
           AND ${typePredicate}
           AND ${manaPredicate}
           AND ${excludePredicate}
-        ORDER BY c.name ASC, c.id ASC
+        ORDER BY ${orderSql}
         LIMIT ${pageSize}
         OFFSET ${offset}
       )
@@ -149,6 +178,11 @@ export class CardsService {
         m.type_line,
         m.oracle_text,
         m.color_identity,
+        m.edhrec_rank,
+        m.edhrec_saltiness,
+        m.is_game_changer,
+        m.downweight_kind,
+        m.downweight_note,
         COALESCE(img.image_normal, img.face_image_normal) AS image_normal
       FROM matched m
       LEFT JOIN LATERAL (
@@ -162,7 +196,11 @@ export class CardsService {
         ORDER BY ${bestPrintingOrderSql}
         LIMIT 1
       ) img ON true
-      ORDER BY m.name ASC, m.id ASC
+      ORDER BY ${searchOrderSql({
+        namePattern: pattern,
+        sort,
+        tableAlias: 'm',
+      })}
     `);
 
     const cards = pageResult.rows.map(toCard);
@@ -175,6 +213,7 @@ export class CardsService {
         legalIn: opts.legalIn ?? null,
         colorIdentity: opts.colorIdentity?.join('') ?? null,
         commanderEligible: opts.commanderEligible ?? null,
+        sort,
         typeContains: opts.typeContains ?? null,
         maxManaValue: opts.maxManaValue ?? null,
         excludeCount: opts.excludeCardIds?.length ?? 0,
@@ -225,6 +264,17 @@ export class CardsService {
     return result.rows.map((row) => ({ id: row.id, name: row.name }));
   }
 
+  async findIdByExactName(name: string): Promise<{ id: string; name: string } | null> {
+    const result = await this.db.execute<{ id: string; name: string }>(sql`
+      SELECT c.id, c.name
+      FROM catalog.card c
+      WHERE lower(c.name) = lower(${name.trim()})
+      LIMIT 2
+    `);
+    if (result.rows.length !== 1) return null;
+    return result.rows[0];
+  }
+
   async getById(id: string): Promise<CardDetail> {
     const cardResult = await this.db.execute<CardDetailRow>(sql`
       SELECT
@@ -241,8 +291,14 @@ export class CardsService {
         c.legalities,
         c.leadership_skills,
         c.layout,
-        c.reserved
+        c.reserved,
+        c.edhrec_rank,
+        c.edhrec_saltiness,
+        c.is_game_changer,
+        dw.kind AS downweight_kind,
+        dw.note AS downweight_note
       FROM catalog.card c
+      LEFT JOIN app.recommendation_downweight dw ON dw.card_id = c.id
       WHERE c.id = ${id}::uuid
       LIMIT 1
     `);
@@ -303,6 +359,10 @@ export class CardsService {
       leadershipSkills: parseLeadershipSkills(cardRow.leadership_skills),
       layout: cardRow.layout,
       reserved: cardRow.reserved,
+      edhrecRank: cardRow.edhrec_rank,
+      edhrecSaltiness: parseNullableNumber(cardRow.edhrec_saltiness),
+      isGameChanger: cardRow.is_game_changer,
+      downweight: toDownweight(cardRow.downweight_kind, cardRow.downweight_note),
       printings,
     };
   }
@@ -359,6 +419,42 @@ const parseLeadershipSkills = (raw: LeadershipSkills | null): LeadershipSkills |
   return parsed.success ? parsed.data : null;
 };
 
+const searchOrderSql = (opts: {
+  namePattern: string | null;
+  sort: CardSearchSort;
+  tableAlias?: 'c' | 'm';
+}): SQL => {
+  const nameCol = opts.tableAlias === 'm' ? sql`m.name` : sql`c.name`;
+  const rankCol = opts.tableAlias === 'm' ? sql`m.edhrec_rank` : sql`c.edhrec_rank`;
+  const idCol = opts.tableAlias === 'm' ? sql`m.id` : sql`c.id`;
+  const nameMatch = opts.namePattern
+    ? sql`(${nameCol} ILIKE ${opts.namePattern} ESCAPE '\\') DESC,`
+    : sql``;
+  const requested =
+    opts.sort === 'edhrecRank'
+      ? sql`${rankCol} ASC NULLS LAST, ${nameCol} ASC,`
+      : sql`${nameCol} ASC,`;
+  return sql`${nameMatch} ${requested} ${idCol} ASC`;
+};
+
+const parseNullableNumber = (value: string | number | null): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const toDownweight = (
+  kind: string | null,
+  note: string | null,
+): RecommendationDownweightFlag | null => {
+  const parsed = recommendationDownweightKindSchema.safeParse(kind);
+  if (!parsed.success) return null;
+  return { kind: parsed.data, note };
+};
+
 const matchSql = (pattern: string | null): SQL => sql`
     (
       ${pattern}::text IS NULL
@@ -394,6 +490,10 @@ const toCard = (row: SearchRow): CardSearchResult => ({
   oracleText: row.oracle_text,
   colorIdentity: row.color_identity,
   imageNormal: row.image_normal,
+  edhrecRank: row.edhrec_rank,
+  edhrecSaltiness: parseNullableNumber(row.edhrec_saltiness),
+  isGameChanger: row.is_game_changer,
+  downweight: toDownweight(row.downweight_kind, row.downweight_note),
 });
 
 const toPrinting = (row: PrintingDetailRow): CardPrintingSummary => ({
