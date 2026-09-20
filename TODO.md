@@ -4,7 +4,6 @@ Writing down ideas for the future
 
 ## Stuff to do
 
-- design punchup
 - release automation
 - version 0.1.0
 - refactor both web projects to use modules

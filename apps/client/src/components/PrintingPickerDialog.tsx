@@ -4,11 +4,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
-  DialogBackdrop,
   DialogClose,
+  DialogContent,
   DialogDescription,
-  DialogPortal,
-  DialogPopup,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { printingHasFoilTreatment } from 'schemas/cards';
@@ -81,89 +79,89 @@ export const PrintingPickerDialog = ({ open, onOpenChange, deckCard, onSelect }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPortal>
-        <DialogBackdrop />
-        <DialogPopup>
-          <div className="flex items-start justify-between gap-3 border-b px-4 py-3">
-            <div className="min-w-0 space-y-1">
-              <DialogTitle>
-                {deckCard ? `Printing · ${deckCard.name}` : 'Choose printing'}
-              </DialogTitle>
-              <DialogDescription>Pick which set version sits in this deck.</DialogDescription>
-            </div>
-            <DialogClose render={<Button type="button" variant="outline" size="sm" />}>
-              Close
-            </DialogClose>
+      <DialogContent
+        showCloseButton={false}
+        className="flex max-h-[min(90vh,40rem)] w-[min(calc(100%-2rem),36rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[36rem]"
+      >
+        <div className="flex items-start justify-between gap-3 border-b px-4 py-3">
+          <div className="min-w-0 space-y-1">
+            <DialogTitle>
+              {deckCard ? `Printing · ${deckCard.name}` : 'Choose printing'}
+            </DialogTitle>
+            <DialogDescription>Pick which set version sits in this deck.</DialogDescription>
           </div>
+          <DialogClose render={<Button type="button" variant="outline" size="sm" />}>
+            Close
+          </DialogClose>
+        </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-            {loading ? <p className="text-sm text-muted-foreground">Loading printings…</p> : null}
-            {error ? (
-              <Alert variant="destructive" className="mb-3">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : null}
-            {!loading && printings.length === 0 && !error ? (
-              <p className="text-sm text-muted-foreground">No printings found.</p>
-            ) : null}
-            {printings.length > 0 ? (
-              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {printings.map((printing) => {
-                  const active = printing.id === deckCard?.printingId;
-                  return (
-                    <li key={printing.id}>
-                      <button
-                        type="button"
-                        disabled={savingId !== null}
-                        onClick={() => void handleSelect(printing)}
-                        className={`flex w-full flex-col gap-2 rounded-lg border p-2 text-left transition-colors hover:bg-muted/60 disabled:opacity-50 ${
-                          active ? 'border-primary bg-muted/40' : ''
-                        }`}
-                      >
-                        <div className="relative isolate aspect-5/7 overflow-hidden rounded-md bg-muted">
-                          {printing.imageNormal ? (
-                            <img
-                              src={printing.imageNormal}
-                              alt=""
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : null}
-                          {printingHasFoilTreatment(printing.finishes) ? (
-                            <div
-                              className="foil-sheen pointer-events-none absolute inset-0"
-                              aria-hidden
-                            />
-                          ) : null}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">
-                            {printing.setCode.toUpperCase()}
-                          </p>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+          {loading ? <p className="text-sm text-muted-foreground">Loading printings…</p> : null}
+          {error ? (
+            <Alert variant="destructive" className="mb-3">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+          {!loading && printings.length === 0 && !error ? (
+            <p className="text-sm text-muted-foreground">No printings found.</p>
+          ) : null}
+          {printings.length > 0 ? (
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {printings.map((printing) => {
+                const active = printing.id === deckCard?.printingId;
+                return (
+                  <li key={printing.id}>
+                    <button
+                      type="button"
+                      disabled={savingId !== null}
+                      onClick={() => void handleSelect(printing)}
+                      className={`flex w-full flex-col gap-2 rounded-lg border p-2 text-left transition-colors hover:bg-muted/60 disabled:opacity-50 ${
+                        active ? 'border-primary bg-muted/40' : ''
+                      }`}
+                    >
+                      <div className="relative isolate aspect-5/7 overflow-hidden rounded-md bg-muted">
+                        {printing.imageNormal ? (
+                          <img
+                            src={printing.imageNormal}
+                            alt=""
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : null}
+                        {printingHasFoilTreatment(printing.finishes) ? (
+                          <div
+                            className="foil-sheen pointer-events-none absolute inset-0"
+                            aria-hidden
+                          />
+                        ) : null}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">
+                          {printing.setCode.toUpperCase()}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          #{printing.collectorNumber}
+                          {printing.rarity ? ` · ${printing.rarity}` : ''}
+                        </p>
+                        {printing.finishes.length > 0 ? (
                           <p className="truncate text-xs text-muted-foreground">
-                            #{printing.collectorNumber}
-                            {printing.rarity ? ` · ${printing.rarity}` : ''}
+                            <PrintingFinishes finishes={printing.finishes} />
                           </p>
-                          {printing.finishes.length > 0 ? (
-                            <p className="truncate text-xs text-muted-foreground">
-                              <PrintingFinishes finishes={printing.finishes} />
-                            </p>
-                          ) : null}
-                          {savingId === printing.id ? (
-                            <p className="text-xs text-muted-foreground">Saving…</p>
-                          ) : active ? (
-                            <p className="text-xs text-muted-foreground">Current</p>
-                          ) : null}
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
-          </div>
-        </DialogPopup>
-      </DialogPortal>
+                        ) : null}
+                        {savingId === printing.id ? (
+                          <p className="text-xs text-muted-foreground">Saving…</p>
+                        ) : active ? (
+                          <p className="text-xs text-muted-foreground">Current</p>
+                        ) : null}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </div>
+      </DialogContent>
     </Dialog>
   );
 };
