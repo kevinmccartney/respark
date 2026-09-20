@@ -5,8 +5,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SiteHeader } from '../components/SiteHeader.tsx';
-import { ApiError } from '../lib/api.ts';
+import { ApiError, isAbortError } from '../lib/api.ts';
 import { searchCards, type CardSearchResult } from '../lib/cards.ts';
 
 const PAGE_SIZE_OPTIONS = [24, 60, 100] as const;
@@ -67,11 +66,15 @@ export const SearchPage = () => {
       setLoading(true);
       setError(null);
       try {
-        const result = await searchCards(getToken, {
-          q: qParam,
-          limit: pageSize,
-          page: pageParam,
-        });
+        const result = await searchCards(
+          getToken,
+          {
+            q: qParam,
+            limit: pageSize,
+            page: pageParam,
+          },
+          { signal: controller.signal },
+        );
         if (controller.signal.aborted) return;
         setCards(result.cards);
         setTotal(result.total);
@@ -85,7 +88,7 @@ export const SearchPage = () => {
           setSearchParams(next, { replace: true });
         }
       } catch (err) {
-        if (controller.signal.aborted) return;
+        if (isAbortError(err) || controller.signal.aborted) return;
         setError(err instanceof ApiError ? err.message : 'Could not search cards');
         setCards([]);
         setTotal(0);
@@ -127,124 +130,121 @@ export const SearchPage = () => {
   const rangeEnd = Math.min(page * pageSize, total);
 
   return (
-    <>
-      <SiteHeader />
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-8">
-        <header className="space-y-3 text-left">
-          <h1 className="font-heading text-3xl tracking-tight">Card search</h1>
-          <p className="max-w-2xl text-muted-foreground">
-            Keyword search across names, type lines, oracle text, and keywords.
-          </p>
-          <div className="flex max-w-xl flex-wrap items-end gap-3">
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Label htmlFor="card-search">Search</Label>
-              <Input
-                id="card-search"
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                placeholder="Search cards (e.g. urza)"
-                aria-label="Search cards"
-                autoFocus
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="page-size">Page size</Label>
-              <select
-                id="page-size"
-                value={pageSize}
-                onChange={(event) => setPageSize(Number(event.target.value) as PageSize)}
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              >
-                {PAGE_SIZE_OPTIONS.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-            </div>
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-8">
+      <header className="space-y-3 text-left">
+        <h1 className="font-heading text-3xl tracking-tight">Card search</h1>
+        <p className="max-w-2xl text-muted-foreground">
+          Keyword search across names, type lines, oracle text, and keywords.
+        </p>
+        <div className="flex max-w-xl flex-wrap items-end gap-3">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <Label htmlFor="card-search">Search</Label>
+            <Input
+              id="card-search"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder="Search cards (e.g. urza)"
+              aria-label="Search cards"
+              autoFocus
+            />
           </div>
-        </header>
-
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
-
-        {loading ? (
-          <p className="text-muted-foreground" aria-live="polite">
-            Searching…
-          </p>
-        ) : null}
-
-        {!loading && !error && cards.length === 0 ? (
-          <p className="text-muted-foreground">
-            {qParam.trim() ? `No cards match “${qParam.trim()}”.` : 'No cards in the catalog yet.'}
-          </p>
-        ) : null}
-
-        {!loading && cards.length > 0 ? (
-          <>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground" aria-live="polite">
-                Showing {rangeStart}–{rangeEnd} of {total} card
-                {total === 1 ? '' : 's'}
-                {qParam.trim() ? ` for “${qParam.trim()}”` : ''}.
-              </p>
-              <PaginationControls
-                page={page}
-                totalPages={totalPages}
-                onFirst={() => goToPage(1)}
-                onPrev={() => goToPage(page - 1)}
-                onNext={() => goToPage(page + 1)}
-                onLast={() => goToPage(totalPages)}
-              />
-            </div>
-            <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {cards.map((card) => (
-                <li key={card.id}>
-                  <Link
-                    to={`/cards/${card.id}`}
-                    className="flex flex-col gap-2 text-left transition-opacity hover:opacity-90"
-                  >
-                    <div className="aspect-5/7 overflow-hidden rounded-md bg-muted">
-                      {card.imageNormal ? (
-                        <img
-                          src={card.imageNormal}
-                          alt={card.name}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center p-3 text-center text-sm text-muted-foreground">
-                          No image
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium leading-tight">{card.name}</p>
-                      {card.typeLine ? (
-                        <p className="truncate text-sm text-muted-foreground">{card.typeLine}</p>
-                      ) : null}
-                    </div>
-                  </Link>
-                </li>
+          <div className="space-y-1.5">
+            <Label htmlFor="page-size">Page size</Label>
+            <select
+              id="page-size"
+              value={pageSize}
+              onChange={(event) => setPageSize(Number(event.target.value) as PageSize)}
+              className="border-input bg-background h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
               ))}
-            </ul>
-            <div className="flex justify-center py-2">
-              <PaginationControls
-                page={page}
-                totalPages={totalPages}
-                onFirst={() => goToPage(1)}
-                onPrev={() => goToPage(page - 1)}
-                onNext={() => goToPage(page + 1)}
-                onLast={() => goToPage(totalPages)}
-              />
-            </div>
-          </>
-        ) : null}
-      </main>
-    </>
+            </select>
+          </div>
+        </div>
+      </header>
+
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {loading ? (
+        <p className="text-muted-foreground" aria-live="polite">
+          Searching…
+        </p>
+      ) : null}
+
+      {!loading && !error && cards.length === 0 ? (
+        <p className="text-muted-foreground">
+          {qParam.trim() ? `No cards match “${qParam.trim()}”.` : 'No cards in the catalog yet.'}
+        </p>
+      ) : null}
+
+      {!loading && cards.length > 0 ? (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              Showing {rangeStart}-{rangeEnd} of {total} card
+              {total === 1 ? '' : 's'}
+              {qParam.trim() ? ` for "${qParam.trim()}"` : ''}.
+            </p>
+            <PaginationControls
+              page={page}
+              totalPages={totalPages}
+              onFirst={() => goToPage(1)}
+              onPrev={() => goToPage(page - 1)}
+              onNext={() => goToPage(page + 1)}
+              onLast={() => goToPage(totalPages)}
+            />
+          </div>
+          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {cards.map((card) => (
+              <li key={card.id}>
+                <Link
+                  to={`/cards/${card.id}`}
+                  className="flex flex-col gap-2 text-left transition-opacity hover:opacity-90"
+                >
+                  <div className="aspect-5/7 overflow-hidden rounded-md bg-muted">
+                    {card.imageNormal ? (
+                      <img
+                        src={card.imageNormal}
+                        alt={card.name}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center p-3 text-center text-sm text-muted-foreground">
+                        No image
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium leading-tight">{card.name}</p>
+                    {card.typeLine ? (
+                      <p className="truncate text-sm text-muted-foreground">{card.typeLine}</p>
+                    ) : null}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div className="flex justify-center py-2">
+            <PaginationControls
+              page={page}
+              totalPages={totalPages}
+              onFirst={() => goToPage(1)}
+              onPrev={() => goToPage(page - 1)}
+              onNext={() => goToPage(page + 1)}
+              onLast={() => goToPage(totalPages)}
+            />
+          </div>
+        </>
+      ) : null}
+    </main>
   );
 };
 

@@ -11,7 +11,7 @@ import {
   DialogPopup,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ApiError } from '../lib/api.ts';
+import { ApiError, isAbortError } from '../lib/api.ts';
 import { fetchCard, type CardPrintingSummary } from '../lib/cards.ts';
 import type { DeckCard } from '../lib/decks.ts';
 
@@ -41,14 +41,14 @@ export const PrintingPickerDialog = ({ open, onOpenChange, deckCard, onSelect }:
     setLoading(true);
     setError(null);
 
-    void fetchCard(getToken, deckCard.cardId)
+    void fetchCard(getToken, deckCard.cardId, { signal: controller.signal })
       .then((detail) => {
         if (!controller.signal.aborted) {
           setPrintings(detail.printings);
         }
       })
       .catch((err) => {
-        if (controller.signal.aborted) return;
+        if (isAbortError(err) || controller.signal.aborted) return;
         setError(err instanceof ApiError ? err.message : 'Could not load printings');
         setPrintings([]);
       })

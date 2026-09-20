@@ -9,6 +9,7 @@ import {
   deckResponseSchema,
   decksResponseSchema,
   okResponseSchema,
+  patchDeckCardBodySchema,
   type ColorIdentityPip,
   type CreateDeckInput,
   type Deck,
@@ -17,9 +18,10 @@ import {
   type DeckFormat,
   type DeckImportResult,
   type DeckImportUnmatched,
+  type PatchDeckCardBody,
   type UpdateDeckInput,
 } from 'schemas/decks';
-import { apiFetchJson } from './api.ts';
+import { apiFetchJson, type GetToken } from './api.ts';
 
 export { COLOR_IDENTITY_PIPS, DECK_FORMATS };
 export type {
@@ -39,10 +41,8 @@ export const DECK_FORMAT_LABELS: Record<DeckFormat, string> = {
   modern: 'Modern',
 };
 
-type GetToken = () => Promise<string | null>;
-
-export const fetchDecks = (getToken: GetToken): Promise<Deck[]> =>
-  apiFetchJson('/decks', getToken, decksResponseSchema).then((body) => body.decks);
+export const fetchDecks = (getToken: GetToken, init?: RequestInit): Promise<Deck[]> =>
+  apiFetchJson('/decks', getToken, decksResponseSchema, init).then((body) => body.decks);
 
 export const createDeck = (getToken: GetToken, input: CreateDeckInput): Promise<Deck> =>
   apiFetchJson('/decks', getToken, deckResponseSchema, {
@@ -51,8 +51,11 @@ export const createDeck = (getToken: GetToken, input: CreateDeckInput): Promise<
     body: JSON.stringify(createDeckBodySchema.parse(input)),
   }).then((body) => body.deck);
 
-export const fetchDeck = (getToken: GetToken, id: string): Promise<DeckDetail> =>
-  apiFetchJson(`/decks/${id}`, getToken, deckDetailSchema);
+export const fetchDeck = (
+  getToken: GetToken,
+  id: string,
+  init?: RequestInit,
+): Promise<DeckDetail> => apiFetchJson(`/decks/${id}`, getToken, deckDetailSchema, init);
 
 export const updateDeck = (getToken: GetToken, id: string, input: UpdateDeckInput): Promise<Deck> =>
   apiFetchJson(`/decks/${id}`, getToken, deckResponseSchema, {
@@ -77,6 +80,11 @@ export const importDeckList = (
     body: JSON.stringify({ text }),
   });
 
+const requireDeckCard = (card: DeckCard | null): DeckCard => {
+  if (!card) throw new Error('Missing card in response');
+  return card;
+};
+
 export const addCardToDeck = (
   getToken: GetToken,
   deckId: string,
@@ -86,22 +94,26 @@ export const addCardToDeck = (
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(addDeckCardBodySchema.parse({ cardId })),
-  }).then((body) => {
-    if (!body.card) throw new Error('Missing card in response');
-    return body.card;
-  });
+  }).then((body) => requireDeckCard(body.card));
+
+const patchDeckCard = (
+  getToken: GetToken,
+  deckId: string,
+  deckCardId: string,
+  body: PatchDeckCardBody,
+): Promise<DeckCard | null> =>
+  apiFetchJson(`/decks/${deckId}/cards/${deckCardId}`, getToken, deckCardResponseSchema, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patchDeckCardBodySchema.parse(body)),
+  }).then((res) => res.card);
 
 export const setDeckCardQuantity = (
   getToken: GetToken,
   deckId: string,
   deckCardId: string,
   quantity: number,
-): Promise<DeckCard | null> =>
-  apiFetchJson(`/decks/${deckId}/cards/${deckCardId}`, getToken, deckCardResponseSchema, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ quantity }),
-  }).then((body) => body.card);
+): Promise<DeckCard | null> => patchDeckCard(getToken, deckId, deckCardId, { quantity });
 
 export const setDeckCardPrinting = (
   getToken: GetToken,
@@ -109,29 +121,14 @@ export const setDeckCardPrinting = (
   deckCardId: string,
   printingId: string,
 ): Promise<DeckCard> =>
-  apiFetchJson(`/decks/${deckId}/cards/${deckCardId}`, getToken, deckCardResponseSchema, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ printingId }),
-  }).then((body) => {
-    if (!body.card) throw new Error('Missing card in response');
-    return body.card;
-  });
+  patchDeckCard(getToken, deckId, deckCardId, { printingId }).then(requireDeckCard);
 
 export const setDeckCardFoil = (
   getToken: GetToken,
   deckId: string,
   deckCardId: string,
   foil: boolean,
-): Promise<DeckCard> =>
-  apiFetchJson(`/decks/${deckId}/cards/${deckCardId}`, getToken, deckCardResponseSchema, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ foil }),
-  }).then((body) => {
-    if (!body.card) throw new Error('Missing card in response');
-    return body.card;
-  });
+): Promise<DeckCard> => patchDeckCard(getToken, deckId, deckCardId, { foil }).then(requireDeckCard);
 
 export const setDeckCardSideboard = (
   getToken: GetToken,
@@ -139,14 +136,7 @@ export const setDeckCardSideboard = (
   deckCardId: string,
   sideboard: boolean,
 ): Promise<DeckCard> =>
-  apiFetchJson(`/decks/${deckId}/cards/${deckCardId}`, getToken, deckCardResponseSchema, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sideboard }),
-  }).then((body) => {
-    if (!body.card) throw new Error('Missing card in response');
-    return body.card;
-  });
+  patchDeckCard(getToken, deckId, deckCardId, { sideboard }).then(requireDeckCard);
 
 export const removeDeckCard = (
   getToken: GetToken,
@@ -156,3 +146,20 @@ export const removeDeckCard = (
   apiFetchJson(`/decks/${deckId}/cards/${deckCardId}`, getToken, okResponseSchema, {
     method: 'DELETE',
   }).then(() => undefined);
+
+export const upsertDeckCard = (
+  detail: DeckDetail,
+  previousId: string,
+  next: DeckCard,
+): DeckDetail => {
+  const without = detail.cards.filter((card) => card.id !== previousId && card.id !== next.id);
+  const cards = [...without, next].sort((a, b) => {
+    const byName = a.name.localeCompare(b.name);
+    if (byName !== 0) return byName;
+    return a.setCode.localeCompare(b.setCode);
+  });
+  return {
+    deck: { ...detail.deck, updatedAt: new Date().toISOString() },
+    cards,
+  };
+};

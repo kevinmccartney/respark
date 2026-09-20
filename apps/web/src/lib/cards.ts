@@ -8,7 +8,7 @@ import {
   type CardSearchPage,
   type CardSearchResult,
 } from 'schemas/cards';
-import { apiFetchJson } from './api.ts';
+import { apiFetchJson, type GetToken } from './api.ts';
 
 export type {
   CardDetail,
@@ -18,30 +18,36 @@ export type {
   CardSearchResult,
 };
 
-type GetToken = () => Promise<string | null>;
-
 export const searchCards = (
   getToken: GetToken,
   opts: { q?: string; limit?: number; page?: number },
+  init?: RequestInit,
 ): Promise<CardSearchPage> => {
   const params = new URLSearchParams();
   if (opts.q) params.set('q', opts.q);
   if (opts.limit !== undefined) params.set('limit', String(opts.limit));
   if (opts.page !== undefined && opts.page > 1) params.set('page', String(opts.page));
   const qs = params.toString();
-  return apiFetchJson(`/cards${qs ? `?${qs}` : ''}`, getToken, cardSearchPageSchema);
+  return apiFetchJson(`/cards${qs ? `?${qs}` : ''}`, getToken, cardSearchPageSchema, init);
 };
 
-export const fetchCard = (getToken: GetToken, id: string): Promise<CardDetail> =>
-  apiFetchJson(`/cards/${id}`, getToken, cardDetailSchema);
+export const fetchCard = (
+  getToken: GetToken,
+  id: string,
+  init?: RequestInit,
+): Promise<CardDetail> => apiFetchJson(`/cards/${id}`, getToken, cardDetailSchema, init);
 
 export const suggestCardNames = (
   getToken: GetToken,
   q: string,
+  init?: RequestInit,
   limit = 15,
 ): Promise<CardNameSuggestion[]> => {
   const params = new URLSearchParams({ q, limit: String(limit) });
-  return apiFetchJson(`/cards/suggestions?${params}`, getToken, cardSuggestionsResponseSchema).then(
-    (body) => body.suggestions,
-  );
+  return apiFetchJson(
+    `/cards/suggestions?${params}`,
+    getToken,
+    cardSuggestionsResponseSchema,
+    init,
+  ).then((body) => body.suggestions);
 };

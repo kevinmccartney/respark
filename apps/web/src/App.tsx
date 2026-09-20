@@ -1,7 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell.tsx';
 import { GuestOnly, RequireAuth } from './components/AuthGate.tsx';
-import { SiteHeader } from './components/SiteHeader.tsx';
 import { CardDetailPage } from './pages/CardDetailPage.tsx';
 import { DeckDetailPage } from './pages/DeckDetailPage.tsx';
 import { HomePage } from './pages/HomePage.tsx';
@@ -18,7 +17,6 @@ export default function App() {
           path="/"
           element={
             <GuestOnly>
-              <SiteHeader />
               <WelcomePage />
             </GuestOnly>
           }

@@ -27,7 +27,10 @@ export class ApiError extends Error {
 
 export const isNotFound = (err: unknown): boolean => err instanceof ApiError && err.status === 404;
 
-type GetToken = () => Promise<string | null>;
+export const isAbortError = (err: unknown): boolean =>
+  (err instanceof DOMException || err instanceof Error) && err.name === 'AbortError';
+
+export type GetToken = () => Promise<string | null>;
 
 export const apiFetch = async (
   path: string,
@@ -63,7 +66,8 @@ export const apiFetchJson = async <S extends z.ZodType>(
   let json: unknown;
   try {
     json = await response.json();
-  } catch {
+  } catch (err) {
+    if (isAbortError(err)) throw err;
     throw new ApiError('API returned a non-JSON body', response.status);
   }
 

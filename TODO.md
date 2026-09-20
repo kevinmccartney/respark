@@ -4,7 +4,6 @@ Writing down ideas for the future
 
 ## Stuff to do
 
-- (web) Tech debt analysis
 - (etl) tech debt analysis
 - (web) chatbot 👀
 - (arch) rename web/ui to client
