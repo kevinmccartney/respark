@@ -31,7 +31,6 @@ export const SearchPage = () => {
   const qParam = searchParams.get('q') ?? '';
   const pageSize = parsePageSize(searchParams.get('pageSize'));
   const pageParam = parsePage(searchParams.get('page'));
-  const searchReturnTo = searchParams.toString() ? `/search?${searchParams.toString()}` : '/search';
 
   const [input, setInput] = useState(qParam);
   const [cards, setCards] = useState<CardSearchResult[]>([]);
@@ -206,7 +205,6 @@ export const SearchPage = () => {
                 <li key={card.id}>
                   <Link
                     to={`/cards/${card.id}`}
-                    state={{ fromSearch: searchReturnTo }}
                     className="flex flex-col gap-2 text-left transition-opacity hover:opacity-90"
                   >
                     <div className="aspect-5/7 overflow-hidden rounded-md bg-muted">

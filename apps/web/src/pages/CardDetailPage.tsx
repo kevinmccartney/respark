@@ -1,6 +1,6 @@
 import { useAuth } from '@clerk/react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,27 +11,9 @@ import { ApiError, isNotFound } from '../lib/api.ts';
 import { fetchCard, type CardDetail, type CardPrintingSummary } from '../lib/cards.ts';
 import { NotFoundPage } from './NotFoundPage.tsx';
 
-type CardDetailLocationState = {
-  fromSearch?: string;
-};
-
-const searchBackPath = (state: unknown): string => {
-  if (
-    state &&
-    typeof state === 'object' &&
-    'fromSearch' in state &&
-    typeof (state as CardDetailLocationState).fromSearch === 'string' &&
-    (state as CardDetailLocationState).fromSearch!.startsWith('/search')
-  ) {
-    return (state as CardDetailLocationState).fromSearch!;
-  }
-  return '/search';
-};
-
 export const CardDetailPage = () => {
   const { id = '' } = useParams<{ id: string }>();
-  const location = useLocation();
-  const backToSearch = searchBackPath(location.state);
+  const navigate = useNavigate();
   const { getToken } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const printingParam = searchParams.get('printing');
@@ -103,8 +85,20 @@ export const CardDetailPage = () => {
       <SiteHeader />
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-8 text-left">
         <div>
-          <Button variant="outline" size="sm" render={<Link to={backToSearch} />}>
-            Back to search
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const idx = window.history.state?.idx;
+              if (typeof idx === 'number' && idx > 0) {
+                navigate(-1);
+                return;
+              }
+              navigate('/');
+            }}
+          >
+            Back
           </Button>
         </div>
 
