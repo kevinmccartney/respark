@@ -31,7 +31,7 @@ A sync may run catalog only, enrichment only, or both. Enrichment-only is allowe
 
 Enrichment **never creates** `catalog.printing` rows. Unmatched MTGJSON cards are recorded for review; they do not become catalog entities.
 
-The catalog job skips Scryfall objects whose `type_line` has a bare `Card` face (art cards, theme cards, token/emblem backs such as `Emblem // Card`). They are not written to `catalog` or `raw`. The identifiers job skips the same extras (MTGJSON `type` is usually just `Card`) so they do not show up as unmatched.
+The catalog job skips Scryfall extras: `layout` art_series / token / double_faced_token / emblem / front_card / planar / scheme / vanguard, `set_type` token / memorabilia / minigame, and a bare `Card` face on the type line. They are not written to `catalog` or `raw`. Do not use empty or all-`not_legal` legalities for this (Un-sets and banned cards look the same). The identifiers job skips the same extras via MTGJSON `layout` and `type` so they do not show up as unmatched.
 
 ## Architecture
 

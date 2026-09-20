@@ -5,7 +5,7 @@ import { payloadHash } from '../../core/hashing';
 import type { Logger } from '../../core/logger';
 import { ProgressBar, tapByteStream } from '../../core/progress';
 import { emitSyncEvent } from '../../core/stream-events';
-import { isNonPlayableTypeLine } from '../../core/typeLine';
+import { isCatalogExtra } from '../../core/catalogSkip';
 import type { GlobalFlags, JobContext } from '../../core/types';
 import { upsertCatalogRecords } from '../../repositories/catalog';
 import { finishJobRun, insertIngestionError, startJobRun } from '../../repositories/ingestionRuns';
@@ -238,7 +238,13 @@ export const runScryfallImport = async (
       }
 
       const card = parsed.data;
-      if (isNonPlayableTypeLine(card.type_line)) {
+      if (
+        isCatalogExtra({
+          layout: card.layout,
+          typeLine: card.type_line,
+          setType: card.set_type,
+        })
+      ) {
         recordsSkipped += 1;
         continue;
       }

@@ -23,6 +23,7 @@ export const mtgjsonCardSchema = z.looseObject({
   number: z.string().optional(),
   language: z.string().optional(),
   type: z.string().optional(),
+  layout: z.string().optional(),
   identifiers: mtgjsonIdentifiersSchema.optional(),
   leadershipSkills: mtgjsonLeadershipSkillsSchema.optional(),
 });

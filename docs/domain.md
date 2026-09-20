@@ -64,7 +64,7 @@ Scryfall is the source of truth for identity, printings, sets, images, and forma
 
 ### Card (`catalog.card`)
 
-The conceptual / oracle card (`oracle_id` from Scryfall). Shared rules text, colors, type line, format `legalities` (Scryfall map), and `leadership_skills` (MTGJSON `leadershipSkills`, including `commander` / `brawl` / `oathbreaker`). Search and autocomplete query this table; the deck builder then picks a printing. Adds and imports reject cards that are not `legal` in the deck’s format once legalities have been synced. Commander search and commander assignment require `leadershipSkills.commander`. Art cards, theme cards, and extras with a bare `Card` face on the type line are not imported. The identifiers job skips the same extras.
+The conceptual / oracle card (`oracle_id` from Scryfall). Shared rules text, colors, type line, format `legalities` (Scryfall map), and `leadership_skills` (MTGJSON `leadershipSkills`, including `commander` / `brawl` / `oathbreaker`). Search and autocomplete query this table; the deck builder then picks a printing. Adds and imports reject cards that are not `legal` in the deck’s format once legalities have been synced. Commander search and commander assignment require `leadershipSkills.commander`. Tokens, emblems, art series, minigames, planes, schemes, vanguards, and other Scryfall extras are not imported (`layout` / `set_type`, not legalities). The identifiers job skips the same extras.
 
 ### Set (`catalog.set`)
 

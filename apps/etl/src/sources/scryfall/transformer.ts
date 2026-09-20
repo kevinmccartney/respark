@@ -3,7 +3,7 @@
  * Scryfall owns oracle/printing fields — MTGJSON must not overwrite these later.
  */
 
-import { isNonPlayableTypeLine } from '../../core/typeLine';
+import { isCatalogExtra } from '../../core/catalogSkip';
 import type { ScryfallCard } from './schema';
 
 export type CanonicalSet = {
@@ -110,10 +110,16 @@ const pushProviderId = (
 
 /**
  * Returns null when the object should not become a catalog.card: missing oracle
- * identity, or a non-playable extra (a `Card` face on the type line).
+ * identity, or a Scryfall extra (token, art series, plane, …).
  */
 export const transformScryfallCard = (card: ScryfallCard): CanonicalRecord | null => {
-  if (isNonPlayableTypeLine(card.type_line)) {
+  if (
+    isCatalogExtra({
+      layout: card.layout,
+      typeLine: card.type_line,
+      setType: card.set_type,
+    })
+  ) {
     return null;
   }
 

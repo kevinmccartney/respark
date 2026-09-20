@@ -5,7 +5,7 @@ import { payloadHash } from '../../core/hashing';
 import type { Logger } from '../../core/logger';
 import { ProgressBar, tapByteStream } from '../../core/progress';
 import { emitSyncEvent } from '../../core/stream-events';
-import { isNonPlayableTypeLine } from '../../core/typeLine';
+import { isCatalogExtra } from '../../core/catalogSkip';
 import type { GlobalFlags, JobContext } from '../../core/types';
 import { finishJobRun, insertIngestionError, startJobRun } from '../../repositories/ingestionRuns';
 import {
@@ -367,7 +367,7 @@ export const runMtgjsonImport = async (
           (card as { uuid: string }).uuid = key;
         }
 
-        if (isNonPlayableTypeLine(card.type)) {
+        if (isCatalogExtra({ layout: card.layout, typeLine: card.type })) {
           continue;
         }
 

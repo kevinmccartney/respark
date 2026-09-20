@@ -17,7 +17,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/cli.js",
     "dev": "tsx src/cli.ts",
-    "test": "tsx --test src/sources/mtgjson/transformer.test.ts"
+    "test": "tsx --test src/core/catalogSkip.test.ts src/sources/mtgjson/transformer.test.ts"
   },
   "dependencies": {
     "commander": "^14.0.0",

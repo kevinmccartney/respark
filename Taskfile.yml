@@ -234,7 +234,7 @@ tasks:
           --output text
 
   db:purge-non-playable:
-    desc: Delete catalog/raw extras whose type line has a Card face ({{.ENV}} via tunnel; dry-run unless -- apply)
+    desc: Delete catalog/raw extras (tokens, art, planes, …) ({{.ENV}} via tunnel; dry-run unless -- apply)
     env:
       AWS_REGION: '{{.AWS_REGION}}'
       ENV: '{{.ENV}}'

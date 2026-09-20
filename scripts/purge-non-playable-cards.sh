@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Delete catalog/raw extras whose type line has a bare "Card" face.
+# Delete catalog/raw extras (layout/set_type skip + bare Card type line).
 # Default: develop RDS through the SSM tunnel (task db:tunnel). Dry-run unless apply.
 set -euo pipefail
 
