@@ -13,10 +13,10 @@ WebSocket (Clerk token) → ChatGateway → orchestrator (tool loop) → domain 
 ```
 
 - One Nest module [`apps/api/src/chat/`](../apps/api/src/chat/), not a new package.
-- One model, five tools: `listDecks`, `getDeck`, `searchCards`, `getCard`, plus server-side `presentRecommendations` (allowlisted card parts). Optional compact **stats** ride on `getDeck` (no `getDeckStats` tool).
+- One model, five tools: `listDecks`, `getDeck`, `searchCards`, `getCard`, plus server-side `presentRecommendations` for grounding (not UI). Optional compact **stats** ride on `getDeck` (no `getDeckStats` tool).
 - Tools call [`DecksService`](../apps/api/src/decks/decks.service.ts) / [`CardsService`](../apps/api/src/cards/cards.service.ts). **No SQL in the AI layer.**
 - Provider is an interface; Bedrock is the production implementation. Tools never import the AWS SDK.
-- Player UI: header chat toggle (left of theme), AppShell right drawer, WebSocket events, **card parts** rendered with existing image/name components.
+- Player UI: header chat toggle (left of theme), AppShell right drawer, WebSocket events, **prose card links** from this conversation’s catalog tool results. Recommendation thumbs are not shown.
 
 ![Chat architecture](diagrams/ai-chat.svg)
 
@@ -102,7 +102,7 @@ type ToolContext = {
 
 **`getCard`** — `{ cardId }`. Reuse `getById`; include legalities and color identity; omit bulky printing lists (the client hydrates by id). A successful load persists sticky `card_id` the same way `getDeck` persists `deck_id`.
 
-**`presentRecommendations`** — `{ cardIds, notes? }`. Cap 25 ids. If the player asked for a count, present that many (capped). Otherwise present the strong fits from this turn’s catalog results — no default of 3. Ids must be in **this turn’s** `searchCards` / `getCard` results. Drop unknown ids; log `chat.ungrounded_id`. This is how card parts attach — the model must not emit HTML or invent ids.
+**`presentRecommendations`** — `{ cardIds, notes? }`. Cap 25 ids. If the player asked for a count, present that many (capped). Otherwise present the strong fits from this turn’s catalog results — no default of 3. Ids must be in **this turn’s** `searchCards` / `getCard` results. Drop unknown ids; log `chat.ungrounded_id`. This tool **grounds** the turn for the model and evals; it does **not** attach card images. The model must not emit HTML or invent ids. Prose may use `[Name](/cards/<id>)` the first time a card appears, or when citing a ruling or other specific detail; later casual mentions stay plain text. Before persist, the server allowlists those hrefs against this **conversation’s** `searchCards` / `getCard` / `getDeck` tool results (reconstructed from persisted tool messages, plus this turn) and does **not** auto-link remaining names. `getDeck` ids are **not** added to the `presentRecommendations` allowlist.
 
 **Errors:** tools return `{ ok: false, code, message }` JSON, not thrown provider exceptions. HTTP 404 from `requireOwnedDeck` becomes `code: 'not_found'`.
 
@@ -139,15 +139,16 @@ type ChatPart =
   | { type: 'card-list'; cardIds: string[] };
 ```
 
-Stream prose as `text` deltas; emit `part` after validation. Persist the merged `parts` array.
+Stream prose as `text` deltas. Do **not** emit `part` for recommendation thumbs. `card` / `card-list` remain in the schema so stored history still parses; the client ignores them. Before persist, rewrite prose to keep allowlisted `/cards/<uuid>` markdown; do not auto-link remaining names. The system appendix lists a capped name+id slice (`CHAT_GROUNDED_CARD_PROMPT_CAP`, newest last) so follow-ups can cite earlier retrievals after tool payloads drop from the model window. The client renders those hrefs as in-app links. Persist text `parts` only.
 
 System prompt (versioned in [`prompts.ts`](../apps/api/src/chat/prompts.ts), not secret):
 
 - Sticky deck/card is discussion context. App view is the open page; it does not attach or clear sticky ids.
 - If they ask about what is on screen, use viewingDeckId / viewingCardId with getDeck / getCard.
-- Use tools; do not invent card names or oracle text.
+- Never name a card unless it is in this conversation’s tool results. If you need another card, call searchCards or getCard first. Do not use training-data names.
 - Do not claim a card is in a deck unless `getDeck` listed it.
-- Recommend only via `presentRecommendations` / retrieved ids.
+- presentRecommendations commits this-turn search/getCard ids for prose; the UI does not attach images.
+- Link a retrieved card as `[Name](/cards/<id>)` only the first time it appears, or when citing a ruling or specific detail; later mentions stay plain text. Do not invent ids.
 - If tools fail, say so; do not fill from model memory.
 - Application data wins over model knowledge.
 
@@ -158,7 +159,7 @@ Tables in **`app`** (same product surface as decks):
 - `chat_conversation`: id, user_id, deck_id / card_id (nullable sticky last-picked deck and catalog card, both `ON DELETE SET NULL`), created_at, updated_at. `view` is not a column.
 - `chat_message`: id, conversation_id, role (`user` | `assistant` | `tool`), parts jsonb, tool_name / tool_call_id nullable, created_at
 
-Persist user + assistant messages every turn. Persist **tool messages** (name, args, compact result) for debugging; they are **not** all replayed unbounded into the next model call.
+Persist user + assistant messages every turn. Persist **tool messages** (name, args, compact result) for debugging and to rebuild the conversation’s linkable catalog cache. They are **not** all replayed unbounded into the next model call (`selectHistoryMessages` drops tools). `ChatService.loadLinkableCards` reads those rows and feeds linking plus a capped grounded name list in the system prompt.
 
 MVP history window: last **12** user/assistant messages + **this turn's** tool results. No summarization.
 
@@ -223,7 +224,7 @@ Vitest in `apps/api`. CI runs fixture evals **without Bedrock**:
 1. Unit: Zod schemas, compact mappers, allowlist, history window.
 2. Tool tests: mocked services — ownership 404, search limit, injected filters.
 3. Orchestrator: scripted provider — "good add" must call `getDeck` then `searchCards`.
-4. Offline fixtures under `apps/api/src/chat/evals/` — score tools and constraints, not prose.
+4. Offline fixtures under `apps/api/src/chat/evals/` — score tools and allowlisted `presentRecommendations` ids against that turn’s `searchCards` / `getCard` hits, not thumbs.
 5. Live Bedrock eval: optional, gated by env, not CI.
 
 ## Out of MVP

@@ -3,6 +3,7 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import type { ChatPart, ChatServerEvent, ChatStatusCode, ChatView, ToolResult } from 'schemas/chat';
 import { CardsService } from '../cards/cards.service';
 import { DecksService } from '../decks/decks.service';
+import { collectLinkableCards, rewriteCardLinks } from './card-links';
 import {
   CHAT_MAX_ROUNDS,
   CHAT_MAX_TOOL_CALLS,
@@ -10,6 +11,7 @@ import {
   CHAT_ROUND_TIMEOUT_MS,
   type ChatTurnStopReason,
 } from './chat.constants';
+import { ChatService } from './chat.service';
 import { textFromParts } from './history';
 import { toToolJsonSchema } from './json-schema';
 import type {
@@ -19,11 +21,10 @@ import type {
   ProviderToolDef,
 } from './provider/chat-provider';
 import { estimateUsd } from './provider/model-prices';
-import { ChatService } from './chat.service';
-import { formatTurnContext } from './turn-context';
 import { buildChatTools } from './tools/build-tools';
 import { executeChatTool } from './tools/registry';
 import type { ChatTool, ToolContext } from './tools/types';
+import { formatTurnContext } from './turn-context';
 
 const STATUS_CODES = new Set<ChatStatusCode>([
   'thinking',
@@ -79,6 +80,7 @@ export class ChatOrchestrator {
     }));
 
     const retrievedCardIds = new Set<string>();
+    const linkableCards = await this.chat.loadLinkableCards(opts.conversationId);
     const ctx: ToolContext = {
       clerkUserId: opts.clerkUserId,
       deckId: opts.deckId ?? null,
@@ -93,7 +95,6 @@ export class ChatOrchestrator {
     };
 
     let textAccum = '';
-    const cardParts: ChatPart[] = [];
     const toolMetrics: ToolMetric[] = [];
     let inputTokens = 0;
     let outputTokens = 0;
@@ -111,6 +112,7 @@ export class ChatOrchestrator {
           stickyDeckId: ctx.deckId,
           stickyCardId: ctx.cardId,
           view: opts.view,
+          groundedCards: linkableCards,
         });
         opts.emit({ type: 'status', code: 'thinking' });
         const pending: PendingCall[] = [];
@@ -210,7 +212,10 @@ export class ChatOrchestrator {
           toolMetrics.push(metric);
           this.logTool(opts.conversationId, round, latencyMs, call, result);
 
-          if (result.ok) recordRetrievedIds(call.name, result.data, retrievedCardIds);
+          if (result.ok) {
+            recordRetrievedIds(call.name, result.data, retrievedCardIds);
+            collectLinkableCards(call.name, result.data, linkableCards);
+          }
           if (result.ok && call.name === 'getCard') {
             const id = entityIdFromResult(result.data);
             if (id) {
@@ -223,13 +228,6 @@ export class ChatOrchestrator {
             if (id) {
               ctx.deckId = id;
               await this.chat.setStickyDeck(opts.conversationId, id);
-            }
-          }
-          if (result.ok && call.name === PRESENT_TOOL) {
-            const part = recommendationPart(result.data);
-            if (part) {
-              cardParts.push(part);
-              opts.emit({ type: 'part', part });
             }
           }
 
@@ -297,8 +295,8 @@ export class ChatOrchestrator {
     }
 
     const parts: ChatPart[] = [];
-    if (textAccum.trim()) parts.push({ type: 'text', text: textAccum });
-    parts.push(...cardParts);
+    const linkedText = rewriteCardLinks(textAccum, linkableCards, ctx.onUngrounded);
+    if (linkedText.trim()) parts.push({ type: 'text', text: linkedText });
     const saved = await this.chat.appendAssistantMessage(
       opts.conversationId,
       parts.length > 0 ? parts : [{ type: 'text', text: error ?? '' }],
@@ -466,12 +464,4 @@ const entityIdFromResult = (data: unknown): string | null => {
   if (!data || typeof data !== 'object' || !('id' in data)) return null;
   const id = (data as { id?: string }).id;
   return id ?? null;
-};
-
-const recommendationPart = (data: unknown): ChatPart | null => {
-  if (!data || typeof data !== 'object' || !('cardIds' in data)) return null;
-  const cardIds = (data as { cardIds?: string[] }).cardIds ?? [];
-  if (cardIds.length === 1 && cardIds[0]) return { type: 'card', cardId: cardIds[0] };
-  if (cardIds.length > 1) return { type: 'card-list', cardIds };
-  return null;
 };

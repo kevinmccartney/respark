@@ -11,7 +11,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ChatCardPart } from './ChatCardPart.tsx';
 import { ChatMarkdown } from './ChatMarkdown.tsx';
 import { fetchChatConversation, fetchLatestChatConversation } from '../lib/chat.ts';
 import { useChatSession } from '../lib/chat-session.tsx';
@@ -262,13 +261,8 @@ const ChatBubble = ({ message }: { message: LocalMessage }) => (
 );
 
 const ChatPartView = ({ part }: { part: ChatPart }) => {
-  if (part.type === 'text') {
-    return <ChatMarkdown text={part.text} />;
-  }
-  if (part.type === 'card') {
-    return <ChatCardPart cardIds={[part.cardId]} />;
-  }
-  return <ChatCardPart cardIds={part.cardIds} />;
+  if (part.type !== 'text') return null;
+  return <ChatMarkdown text={part.text} />;
 };
 
 const handleEvent = (
@@ -298,6 +292,7 @@ const handleEvent = (
     return;
   }
   if (event.type === 'part') {
+    if (event.part.type === 'card' || event.part.type === 'card-list') return;
     setStreamingParts((current) => [...current, event.part]);
     return;
   }

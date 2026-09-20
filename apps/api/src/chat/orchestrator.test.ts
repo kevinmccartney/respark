@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { PinoLogger } from 'nestjs-pino';
-import type { ChatPart, ChatServerEvent } from 'schemas/chat';
 import type { CardSearchPage } from 'schemas/cards';
+import type { ChatPart, ChatServerEvent } from 'schemas/chat';
+import type { DeckCard, DeckDetail } from 'schemas/decks';
 import type { CardsService } from '../cards/cards.service';
 import type { DecksService } from '../decks/decks.service';
 import { CHAT_MAX_TOOL_CALLS } from './chat.constants';
@@ -11,6 +12,9 @@ import type { ChatService } from './chat.service';
 
 const CARD_ID = '00000000-0000-4000-8000-000000000005';
 const CONV_ID = '00000000-0000-4000-8000-0000000000bb';
+const DECK_ID = '00000000-0000-4000-8000-0000000000de';
+const DECK_CARD_ID = '00000000-0000-4000-8000-0000000000d1';
+const DECK_PRINTING_ID = '00000000-0000-4000-8000-0000000000d2';
 
 type LogLine = { level: string; obj: Record<string, unknown>; msg?: string };
 
@@ -58,6 +62,46 @@ const stubDecks = (): DecksService =>
     listForUser: async () => [],
   }) as unknown as DecksService;
 
+const braidsLine = (): DeckCard => ({
+  id: 'line-braids',
+  cardId: DECK_CARD_ID,
+  printingId: DECK_PRINTING_ID,
+  name: 'Braids, Conjurer Adept',
+  manaCost: '{3}{U}',
+  manaValue: '4',
+  typeLine: 'Legendary Creature — Human Wizard',
+  oracleText: null,
+  colorIdentity: ['U'],
+  foil: false,
+  hasFoil: false,
+  sideboard: false,
+  quantity: 1,
+  setCode: 'cmm',
+  setName: 'Commander Masters',
+  collectorNumber: '481',
+  imageNormal: null,
+  faces: [],
+});
+
+const braidsDeck = (): DeckDetail => ({
+  deck: {
+    id: DECK_ID,
+    name: 'Braids',
+    description: null,
+    format: 'commander',
+    commanderPrintingId: DECK_PRINTING_ID,
+    colorIdentity: ['U'],
+    updatedAt: new Date().toISOString(),
+  },
+  cards: [braidsLine()],
+});
+
+const stubOwnedDecks = (): DecksService =>
+  ({
+    getForUser: async () => braidsDeck(),
+    listForUser: async () => [],
+  }) as unknown as DecksService;
+
 const stubChat = (): ChatService =>
   ({
     loadHistory: async () => [
@@ -72,16 +116,27 @@ const stubChat = (): ChatService =>
       parts,
       createdAt: new Date(),
     }),
+    loadLinkableCards: async () => [],
     setStickyDeck: async () => undefined,
     setStickyCard: async () => undefined,
   }) as unknown as ChatService;
 
-const runTurn = async (provider: ScriptedChatProvider, logger: PinoLogger) => {
+const runTurn = async (
+  provider: ScriptedChatProvider,
+  logger: PinoLogger,
+  opts?: { decks?: DecksService; deckId?: string | null; chat?: ChatService },
+) => {
   const events: ChatServerEvent[] = [];
-  const orchestrator = new ChatOrchestrator(provider, stubDecks(), stubCards(), stubChat(), logger);
+  const orchestrator = new ChatOrchestrator(
+    provider,
+    opts?.decks ?? stubDecks(),
+    stubCards(),
+    opts?.chat ?? stubChat(),
+    logger,
+  );
   const result = await orchestrator.runTurn({
     clerkUserId: 'user_1',
-    deckId: null,
+    deckId: opts?.deckId ?? null,
     conversationId: CONV_ID,
     emit: (event) => events.push(event),
   });
@@ -131,7 +186,17 @@ describe('ChatOrchestrator stop logging', () => {
     expect(turnLog(lines)?.obj.stopReason).toBe('completed');
     expect(turnLog(lines)?.obj.error).toBeNull();
     expect(events.some((event) => event.type === 'error')).toBe(false);
-    expect(result.parts.some((part) => part.type === 'card' && part.cardId === CARD_ID)).toBe(true);
+    expect(result.parts.some((part) => part.type === 'card' || part.type === 'card-list')).toBe(
+      false,
+    );
+    expect(result.parts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'text',
+          text: 'Growth Spiral is a solid add.',
+        }),
+      ]),
+    );
   });
 
   it('warns with the tool code when arguments fail Zod', async () => {
@@ -151,6 +216,56 @@ describe('ChatOrchestrator stop logging', () => {
     expect(turnLog(lines)?.obj.tools).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ name: 'searchCards', ok: false, code: 'invalid_args' }),
+      ]),
+    );
+  });
+});
+
+describe('ChatOrchestrator prose card links', () => {
+  it('leaves getDeck names in prose unlinked and does not present those ids as thumbs', async () => {
+    const lines: LogLine[] = [];
+    const { result } = await runTurn(
+      new ScriptedChatProvider([
+        { toolCalls: [{ name: 'getDeck', input: {} }] },
+        { toolCalls: [{ name: 'presentRecommendations', input: { cardIds: [DECK_CARD_ID] } }] },
+        { text: 'Braids, Conjurer Adept is your commander.' },
+      ]),
+      capturingLogger(lines),
+      { decks: stubOwnedDecks(), deckId: DECK_ID },
+    );
+
+    expect(result.parts.some((part) => part.type === 'card' || part.type === 'card-list')).toBe(
+      false,
+    );
+    expect(result.parts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'text',
+          text: 'Braids, Conjurer Adept is your commander.',
+        }),
+      ]),
+    );
+    expect(lines.some((line) => line.obj.event === 'chat.ungrounded_id')).toBe(true);
+  });
+
+  it('allowlists a follow-up markdown link from the conversation cache without calling getDeck again', async () => {
+    const chat = {
+      ...stubChat(),
+      loadLinkableCards: async () => [{ id: DECK_CARD_ID, name: 'Braids, Conjurer Adept' }],
+    } as ChatService;
+    const { result } = await runTurn(
+      new ScriptedChatProvider([
+        { text: `[Braids, Conjurer Adept](/cards/${DECK_CARD_ID}) is still the commander.` },
+      ]),
+      capturingLogger([]),
+      { chat },
+    );
+    expect(result.parts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'text',
+          text: `[Braids, Conjurer Adept](/cards/${DECK_CARD_ID}) is still the commander.`,
+        }),
       ]),
     );
   });

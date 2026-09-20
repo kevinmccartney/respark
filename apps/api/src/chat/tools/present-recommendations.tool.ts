@@ -16,7 +16,7 @@ export const presentRecommendationsTool = (): ChatTool<
   PresentRecommendationsResult
 > => ({
   name: 'presentRecommendations',
-  description: `Attach 1–${PRESENT_RECOMMENDATIONS_MAX} catalog card ids from this turn’s searchCards/getCard results. Honor the player’s requested count when they give one. Never invent ids.`,
+  description: `Commit 1–${PRESENT_RECOMMENDATIONS_MAX} catalog card ids from this turn’s searchCards/getCard results for your prose. Honor the player’s requested count when they give one. The UI does not attach images. Never invent ids.`,
   inputSchema: presentRecommendationsInputSchema,
   execute: async (input, ctx) => {
     const kept = allowlistCardIds(input.cardIds, ctx.retrievedCardIds, ctx.onUngrounded);

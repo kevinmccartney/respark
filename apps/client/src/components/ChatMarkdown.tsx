@@ -1,5 +1,8 @@
 import Markdown, { type Components } from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
+import { ChatCardLink } from './ChatCardLink.tsx';
+
+const CARD_PATH = /^\/cards\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i;
 
 const chatMarkdownComponents: Components = {
   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
@@ -25,6 +28,10 @@ const chatMarkdownComponents: Components = {
     </pre>
   ),
   a: ({ href, children }) => {
+    const cardMatch = href?.match(CARD_PATH);
+    if (cardMatch?.[1]) {
+      return <ChatCardLink cardId={cardMatch[1]}>{children}</ChatCardLink>;
+    }
     if (!href || !/^https?:\/\//i.test(href)) return <span>{children}</span>;
     return (
       <a href={href} target="_blank" rel="noreferrer" className="underline underline-offset-2">

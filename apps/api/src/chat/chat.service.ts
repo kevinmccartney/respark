@@ -12,6 +12,7 @@ import { DATABASE, type Database } from '../db/database.module';
 import { chatConversations, chatMessages } from '../db/schema';
 import { DecksService } from '../decks/decks.service';
 import { UsersService } from '../users/users.service';
+import { collectLinkableFromToolMessage, type LinkableCard } from './card-links';
 import { selectHistoryMessages } from './history';
 import { stickyUnchanged } from './sticky-context';
 
@@ -121,6 +122,22 @@ export class ChatService {
       .where(eq(chatMessages.conversationId, conversationId))
       .orderBy(chatMessages.createdAt);
     return selectHistoryMessages(rows);
+  }
+
+  async loadLinkableCards(conversationId: string): Promise<LinkableCard[]> {
+    const rows = await this.db
+      .select({
+        toolName: chatMessages.toolName,
+        parts: chatMessages.parts,
+      })
+      .from(chatMessages)
+      .where(and(eq(chatMessages.conversationId, conversationId), eq(chatMessages.role, 'tool')))
+      .orderBy(chatMessages.createdAt);
+    const into: LinkableCard[] = [];
+    for (const row of rows) {
+      collectLinkableFromToolMessage(row.toolName, parseParts(row.parts), into);
+    }
+    return into;
   }
 
   async appendUserMessage(conversationId: string, text: string) {

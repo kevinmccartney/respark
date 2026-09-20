@@ -8,9 +8,10 @@ import type { DeckCard, DeckDetail } from 'schemas/decks';
 import type { CardSearchPage } from 'schemas/cards';
 import type { CardsService } from '../../cards/cards.service';
 import type { DecksService } from '../../decks/decks.service';
+import { allowlistCardIds } from '../allowlist';
+import type { ChatService } from '../chat.service';
 import { ChatOrchestrator } from '../orchestrator';
 import { ScriptedChatProvider, type ScriptedRound } from '../provider/scripted.provider';
-import type { ChatService } from '../chat.service';
 import { cardMatchesSearchFilters, FIXTURE_CARDS, IDS, type FixtureCard } from './fixtures';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -141,14 +142,20 @@ const loadCases = (): EvalCase[] => {
 describe('chat fixture evals', () => {
   it.each(loadCases())('$id', async (fixture) => {
     const toolsCalled: string[] = [];
-    const searchHits: string[] = [];
+    const retrievedIds: string[] = [];
     const cards = stubCards();
     const originalSearch = cards.search.bind(cards);
     cards.search = (async (opts) => {
       const page = await originalSearch(opts);
-      searchHits.push(...page.cards.map((card) => card.id));
+      retrievedIds.push(...page.cards.map((card) => card.id));
       return page;
     }) as CardsService['search'];
+    const originalGetById = cards.getById.bind(cards);
+    cards.getById = (async (id: string) => {
+      const card = await originalGetById(id);
+      retrievedIds.push(card.id);
+      return card;
+    }) as CardsService['getById'];
 
     const chat = {
       loadHistory: async () => [
@@ -167,6 +174,7 @@ describe('chat fixture evals', () => {
       }),
       setStickyDeck: async () => undefined,
       setStickyCard: async () => undefined,
+      loadLinkableCards: async () => [],
     };
 
     const deckId = fixture.deckId === null ? null : (fixture.deckId ?? IDS.deck);
@@ -195,14 +203,17 @@ describe('chat fixture evals', () => {
 
     expect(toolsCalled).toEqual(fixture.expect.tools);
 
-    const recommended = result.parts.flatMap((part) => {
-      if (part.type === 'card') return [part.cardId];
-      if (part.type === 'card-list') return part.cardIds;
-      return [];
-    });
+    const recommended = allowlistCardIds(
+      presentIdsFromRounds(fixture.rounds),
+      new Set(retrievedIds),
+    );
+    expect(result.parts.some((part) => part.type === 'card' || part.type === 'card-list')).toBe(
+      false,
+    );
 
     if (fixture.expect.noCardParts) {
       expect(recommended).toEqual([]);
+      expect(events.some((event) => event.type === 'done')).toBe(true);
       return;
     }
 
@@ -210,7 +221,7 @@ describe('chat fixture evals', () => {
     if (fixture.expect.recommendationIds) {
       expect(recommended).toEqual(fixture.expect.recommendationIds);
     }
-    expect(recommended.every((id) => searchHits.includes(id))).toBe(true);
+    expect(recommended.every((id) => retrievedIds.includes(id))).toBe(true);
 
     if (deckId || fixture.expect.tools.includes('getDeck')) {
       const inDeck = new Set(deckDetail().cards.map((card) => card.cardId));
@@ -227,3 +238,19 @@ describe('chat fixture evals', () => {
     expect(events.some((event) => event.type === 'done')).toBe(true);
   });
 });
+
+const presentIdsFromRounds = (rounds: ScriptedRound[]): string[] => {
+  const ids: string[] = [];
+  for (const round of rounds) {
+    for (const call of round.toolCalls ?? []) {
+      if (call.name !== 'presentRecommendations') continue;
+      if (!call.input || typeof call.input !== 'object' || !('cardIds' in call.input)) continue;
+      const cardIds = (call.input as { cardIds?: unknown }).cardIds;
+      if (!Array.isArray(cardIds)) continue;
+      for (const id of cardIds) {
+        if (typeof id === 'string') ids.push(id);
+      }
+    }
+  }
+  return ids;
+};
