@@ -26,7 +26,7 @@ export const CardPreview = ({ card }: { card: DeckCard | null }) => {
   return (
     <aside className="w-full max-w-65 shrink-0 lg:sticky lg:top-4">
       <div className="space-y-3">
-        <div className="overflow-hidden rounded-md bg-muted">
+        <div className="relative isolate overflow-hidden rounded-md bg-muted">
           {card.imageNormal ? (
             <img src={card.imageNormal} alt={card.name} className="h-auto w-full" />
           ) : (
@@ -34,6 +34,9 @@ export const CardPreview = ({ card }: { card: DeckCard | null }) => {
               No image
             </div>
           )}
+          {card.foil ? (
+            <div className="foil-sheen pointer-events-none absolute inset-0" aria-hidden />
+          ) : null}
         </div>
         <div className="space-y-1">
           <div className="flex flex-wrap items-start justify-between gap-2">

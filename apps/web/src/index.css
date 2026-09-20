@@ -132,3 +132,33 @@
     color-scheme: dark;
   }
 }
+
+@keyframes foil-sheen {
+  0% {
+    background-position: 0% 40%;
+  }
+  100% {
+    background-position: 100% 60%;
+  }
+}
+
+.foil-sheen {
+  background-image: linear-gradient(
+    115deg,
+    transparent 18%,
+    oklch(0.86 0.16 200 / 0.38) 36%,
+    oklch(0.9 0.2 330 / 0.42) 48%,
+    oklch(0.88 0.16 90 / 0.36) 60%,
+    transparent 78%
+  );
+  background-size: 240% 240%;
+  mix-blend-mode: overlay;
+  animation: foil-sheen 4.5s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foil-sheen {
+    animation: none;
+    background-position: 42% 50%;
+  }
+}
