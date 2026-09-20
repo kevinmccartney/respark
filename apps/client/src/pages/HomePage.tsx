@@ -14,7 +14,8 @@ import {
 } from '@/components/ui/table';
 import { ColorIdentity } from '../components/ColorIdentity.tsx';
 import { ApiError, isAbortError } from '../lib/api.ts';
-import { DECK_FORMAT_LABELS, fetchDecks, type Deck } from '../lib/decks.ts';
+import { useChatSession } from '../lib/chat-session.tsx';
+import { DECK_FORMAT_LABELS, deleteDeck, fetchDecks, type Deck } from '../lib/decks.ts';
 import { formatRelativeTime } from '../lib/format.ts';
 
 type SortKey = 'name' | 'colors' | 'format' | 'updatedAt';
@@ -67,13 +68,16 @@ const SortHeader = ({
 export const HomePage = () => {
   const { getToken } = useAuth();
   const navigate = useNavigate();
+  const { deckId: stickyDeckId, setDeck } = useChatSession();
 
   const [decks, setDecks] = useState<Deck[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('updatedAt');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -103,6 +107,23 @@ export const HomePage = () => {
     }
     setSortKey(key);
     setSortDir(key === 'updatedAt' ? 'desc' : 'asc');
+  };
+
+  const removeDeck = async (deck: Deck) => {
+    if (deletingId) return;
+    const confirmed = window.confirm(`Delete "${deck.name}"? This cannot be undone.`);
+    if (!confirmed) return;
+    setDeletingId(deck.id);
+    setActionError(null);
+    try {
+      await deleteDeck(getToken, deck.id);
+      setDecks((current) => current.filter((row) => row.id !== deck.id));
+      if (stickyDeckId === deck.id) setDeck(null);
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Could not delete deck');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const filtered = useMemo(() => {
@@ -138,6 +159,12 @@ export const HomePage = () => {
       {error ? (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {actionError ? (
+        <Alert variant="destructive">
+          <AlertDescription>{actionError}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -182,6 +209,9 @@ export const HomePage = () => {
                   sortDir={sortDir}
                   onSort={onSort}
                 />
+                <TableHead>
+                  <span className="sr-only">Actions</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -212,6 +242,22 @@ export const HomePage = () => {
                     <time className="text-muted-foreground" dateTime={deck.updatedAt}>
                       {formatRelativeTime(deck.updatedAt)}
                     </time>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      disabled={deletingId !== null}
+                      aria-label={`Delete ${deck.name}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void removeDeck(deck);
+                      }}
+                      onKeyDown={(event) => event.stopPropagation()}
+                    >
+                      {deletingId === deck.id ? 'Deleting…' : 'Delete'}
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

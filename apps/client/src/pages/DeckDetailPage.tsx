@@ -15,6 +15,7 @@ import {
   type DeckSortMode,
   type DeckViewMode,
 } from '../lib/deck-grouping.ts';
+import { useChatSession } from '../lib/chat-session.tsx';
 import type { DeckCard } from '../lib/decks.ts';
 import { useDeckDetail } from '../lib/useDeckDetail.ts';
 import { NotFoundPage } from './NotFoundPage.tsx';
@@ -22,6 +23,7 @@ import { NotFoundPage } from './NotFoundPage.tsx';
 export const DeckDetailPage = () => {
   const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { deckId: stickyDeckId, setDeck } = useChatSession();
   const {
     detail,
     setDetail,
@@ -163,7 +165,10 @@ export const DeckDetailPage = () => {
             onBeginEdit={clearActionError}
             onDelete={async () => {
               const ok = await remove();
-              if (ok) navigate('/home');
+              if (ok) {
+                if (stickyDeckId === id) setDeck(null);
+                navigate('/home');
+              }
               return ok;
             }}
           />
