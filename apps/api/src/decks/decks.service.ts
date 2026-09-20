@@ -26,7 +26,7 @@ import {
 import { DATABASE, type Database } from '../db/database.module';
 import { cards, deckCards, decks, printings } from '../db/schema';
 import { UsersService } from '../users/users.service';
-import { parseMoxfieldExport } from './moxfield-import';
+import { isIgnoredCommanderImport, parseMoxfieldExport } from './moxfield-import';
 
 type DeckRow = {
   id: string;
@@ -38,6 +38,7 @@ type DeckRow = {
 };
 
 type PrintingCatalog = {
+  cardId: string;
   name: string;
   legalities: Record<string, string> | null;
   colorIdentity: string[] | null;
@@ -356,33 +357,21 @@ export class DecksService {
     }));
 
     const printingIds = await resolveMoxfieldPrintings(this.db, lines);
-    const finishesByPrinting = await this.finishesByPrintingId(
-      printingIds.filter((id): id is string => Boolean(id)),
-    );
-    const catalogByPrinting = await this.catalogByPrintingId(
-      printingIds.filter((id): id is string => Boolean(id)),
-    );
+    const resolvedPrintingIds = printingIds.filter((id): id is string => Boolean(id));
+    const catalogLookupIds = deck.commanderPrintingId
+      ? [...resolvedPrintingIds, deck.commanderPrintingId]
+      : resolvedPrintingIds;
+    const finishesByPrinting = await this.finishesByPrintingId(resolvedPrintingIds);
+    const catalogByPrinting = await this.catalogByPrintingId(catalogLookupIds);
 
-    let nextCommander = deck.commanderPrintingId;
-    if (deck.format === 'commander') {
-      const commanderIndex = lines.findIndex((line, index) => line.commander && printingIds[index]);
-      if (commanderIndex >= 0) {
-        nextCommander = printingIds[commanderIndex];
-      }
-      if (!nextCommander) {
-        throw new BadRequestException('Commander is required for commander format');
-      }
-    } else {
-      nextCommander = null;
+    if (deck.format === 'commander' && !deck.commanderPrintingId) {
+      throw new BadRequestException('Commander is required for commander format');
     }
-
-    const commanderCatalog = nextCommander
-      ? (catalogByPrinting.get(nextCommander) ?? (await this.requirePrintingCatalog(nextCommander)))
+    const commanderCatalog = deck.commanderPrintingId
+      ? (catalogByPrinting.get(deck.commanderPrintingId) ??
+        (await this.requirePrintingCatalog(deck.commanderPrintingId)))
       : null;
-    if (nextCommander && commanderCatalog) {
-      this.assertLegalInFormat('commander', commanderCatalog.legalities, commanderCatalog.name);
-      this.assertEligibleCommander(commanderCatalog);
-    }
+    const commanderCardId = commanderCatalog?.cardId ?? null;
     const allowedIdentity = commanderCatalog
       ? parseColorIdentity(commanderCatalog.colorIdentity)
       : [];
@@ -395,6 +384,7 @@ export class DecksService {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+      if (line.commander) continue;
       const printingId = printingIds[i];
       if (!printingId) {
         unmatched.push({
@@ -407,6 +397,7 @@ export class DecksService {
       if (!catalog) {
         throw new BadRequestException(`No catalog card for ${line.name}`);
       }
+      if (isIgnoredCommanderImport(line, catalog.cardId, commanderCardId)) continue;
       this.assertLegalInFormat(deck.format, catalog.legalities, catalog.name);
       if (deck.format === 'commander' && !line.sideboard) {
         this.assertColorIdentity(catalog.colorIdentity, allowedIdentity, catalog.name);
@@ -427,46 +418,21 @@ export class DecksService {
       }
     }
 
-    if (deck.format === 'commander' && nextCommander) {
-      const exceptPrintingIds =
-        nextCommander !== deck.commanderPrintingId && deck.commanderPrintingId
-          ? [deck.commanderPrintingId]
-          : [];
-      await this.assertMainboardFitsCommander(this.db, deckId, nextCommander, exceptPrintingIds);
+    if (deck.format === 'commander' && deck.commanderPrintingId) {
+      await this.assertMainboardFitsCommander(this.db, deckId, deck.commanderPrintingId, []);
     }
 
-    const imported = await this.db.transaction(async (tx) => {
-      if (nextCommander !== deck.commanderPrintingId) {
-        if (deck.commanderPrintingId) {
-          await tx
-            .delete(deckCards)
-            .where(
-              and(
-                eq(deckCards.deckId, deckId),
-                eq(deckCards.printingId, deck.commanderPrintingId),
-                eq(deckCards.sideboard, false),
-              ),
-            );
-        }
-        await tx
-          .update(decks)
-          .set({ commanderPrintingId: nextCommander, updatedAt: new Date() })
-          .where(eq(decks.id, deckId));
-      }
-
-      let count = 0;
-      for (const entry of quantities.values()) {
-        await this.upsertPrintingLine(
-          deckId,
-          entry.printingId,
-          entry.quantity,
-          entry.foil,
-          entry.sideboard,
-        );
-        count += 1;
-      }
-      return count;
-    });
+    let imported = 0;
+    for (const entry of quantities.values()) {
+      await this.upsertPrintingLine(
+        deckId,
+        entry.printingId,
+        entry.quantity,
+        entry.foil,
+        entry.sideboard,
+      );
+      imported += 1;
+    }
 
     if (imported > 0) {
       await this.touchDeck(deckId);
@@ -927,6 +893,7 @@ export class DecksService {
     const rows = await this.db
       .select({
         printingId: printings.id,
+        cardId: cards.id,
         name: cards.name,
         legalities: cards.legalities,
         colorIdentity: cards.colorIdentity,
@@ -938,6 +905,7 @@ export class DecksService {
 
     for (const row of rows) {
       byPrinting.set(row.printingId, {
+        cardId: row.cardId,
         name: row.name,
         legalities: row.legalities,
         colorIdentity: row.colorIdentity,

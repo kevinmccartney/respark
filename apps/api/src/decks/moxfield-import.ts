@@ -94,6 +94,13 @@ const parseSectionHeader = (raw: string): BoardSection | null => {
   return null;
 };
 
+/** COMMANDER: section lines, or the same oracle card as the deck’s commander. */
+export const isIgnoredCommanderImport = (
+  line: Pick<MoxfieldLine, 'commander'>,
+  importedCardId: string | undefined,
+  commanderCardId: string | null,
+): boolean => line.commander || Boolean(commanderCardId && importedCardId === commanderCardId);
+
 /** Normalize DFC slash variants and casing for comparison. */
 export const normalizeCardName = (name: string): string =>
   name

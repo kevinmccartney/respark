@@ -78,8 +78,10 @@ export const DeckImportDialog = ({ open, onOpenChange, deckId, onImported }: Pro
                 Paste a Moxfield export (
                 <span className="font-mono text-xs">1 Card Name (SET) 123 *F*</span>
                 ). Use a <span className="font-mono text-xs">SIDEBOARD:</span> section (or{' '}
-                <span className="font-mono text-xs">SB:</span> lines) for sideboard cards;{' '}
-                <span className="font-mono text-xs">*F*</span> marks foil.
+                <span className="font-mono text-xs">SB:</span> lines) for sideboard cards.{' '}
+                <span className="font-mono text-xs">COMMANDER:</span> lines (and copies of this
+                deck’s commander) are ignored. <span className="font-mono text-xs">*F*</span> marks
+                foil.
               </DialogDescription>
             </div>
             <DialogClose render={<Button type="button" variant="outline" size="sm" />}>
