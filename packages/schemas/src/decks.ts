@@ -7,6 +7,14 @@ export const deckFormatSchema = z.enum(DECK_FORMATS);
 
 export type DeckFormat = z.infer<typeof deckFormatSchema>;
 
+export const COLOR_IDENTITY_PIPS = ['W', 'U', 'B', 'R', 'G'] as const;
+
+export const colorIdentityPipSchema = z.enum(COLOR_IDENTITY_PIPS);
+
+export type ColorIdentityPip = z.infer<typeof colorIdentityPipSchema>;
+
+export const colorIdentitySchema = z.array(colorIdentityPipSchema);
+
 const deckNameSchema = z.string().trim().min(1).max(120);
 
 export const deckSchema = z.object({
@@ -14,6 +22,7 @@ export const deckSchema = z.object({
   name: z.string(),
   description: z.string().nullable(),
   format: deckFormatSchema,
+  colorIdentity: colorIdentitySchema,
   updatedAt: isoDateTimeSchema,
 });
 

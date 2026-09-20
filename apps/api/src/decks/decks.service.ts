@@ -1,8 +1,11 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import {
+  COLOR_IDENTITY_PIPS,
+  colorIdentityPipSchema,
   deckFormatSchema,
+  type ColorIdentityPip,
   type CreateDeckInput,
   type Deck,
   type DeckCard,
@@ -84,7 +87,41 @@ export class DecksService {
       'Listed decks for user',
     );
 
-    return rows.map((row) => toDeck(row, this.logger));
+    const colorByDeck = await this.colorIdentityByDeck(rows.map((row) => row.id));
+    return rows.map((row) => toDeck(row, this.logger, colorByDeck.get(row.id) ?? []));
+  }
+
+  private async colorIdentityByDeck(deckIds: string[]): Promise<Map<string, ColorIdentityPip[]>> {
+    const byDeck = new Map<string, ColorIdentityPip[]>();
+    if (deckIds.length === 0) return byDeck;
+
+    const rows = await this.db
+      .select({
+        deckId: deckCards.deckId,
+        colorIdentity: cards.colorIdentity,
+      })
+      .from(deckCards)
+      .innerJoin(printings, eq(deckCards.printingId, printings.id))
+      .innerJoin(cards, eq(printings.cardId, cards.id))
+      .where(and(inArray(deckCards.deckId, deckIds), eq(deckCards.sideboard, false)));
+
+    const seen = new Map<string, Set<ColorIdentityPip>>();
+    for (const row of rows) {
+      const set = seen.get(row.deckId) ?? new Set<ColorIdentityPip>();
+      for (const raw of row.colorIdentity ?? []) {
+        const pip = colorIdentityPipSchema.safeParse(raw);
+        if (pip.success) set.add(pip.data);
+      }
+      seen.set(row.deckId, set);
+    }
+
+    for (const [deckId, set] of seen) {
+      byDeck.set(
+        deckId,
+        COLOR_IDENTITY_PIPS.filter((pip) => set.has(pip)),
+      );
+    }
+    return byDeck;
   }
 
   async createForUser(clerkUserId: string, input: CreateDeckInput): Promise<Deck> {
@@ -618,7 +655,7 @@ export class DecksService {
   }
 }
 
-const toDeck = (row: DeckRow, logger: PinoLogger): Deck => {
+const toDeck = (row: DeckRow, logger: PinoLogger, colorIdentity: ColorIdentityPip[] = []): Deck => {
   const format = deckFormatSchema.safeParse(row.format);
   if (!format.success) {
     logger.warn(
@@ -633,6 +670,7 @@ const toDeck = (row: DeckRow, logger: PinoLogger): Deck => {
     name: row.name,
     description: row.description,
     format: format.data,
+    colorIdentity,
     updatedAt: row.updatedAt.toISOString(),
   };
 };

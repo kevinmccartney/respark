@@ -1,5 +1,6 @@
 import {
   addDeckCardBodySchema,
+  COLOR_IDENTITY_PIPS,
   createDeckBodySchema,
   DECK_FORMATS,
   deckCardResponseSchema,
@@ -8,6 +9,7 @@ import {
   deckResponseSchema,
   decksResponseSchema,
   okResponseSchema,
+  type ColorIdentityPip,
   type CreateDeckInput,
   type Deck,
   type DeckCard,
@@ -19,8 +21,9 @@ import {
 } from 'schemas/decks';
 import { apiFetchJson } from './api.ts';
 
-export { DECK_FORMATS };
+export { COLOR_IDENTITY_PIPS, DECK_FORMATS };
 export type {
+  ColorIdentityPip,
   CreateDeckInput,
   Deck,
   DeckCard,

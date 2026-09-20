@@ -1,22 +1,80 @@
-import { useAuth, useUser } from '@clerk/react';
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useAuth } from '@clerk/react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { ColorIdentity } from '../components/ColorIdentity.tsx';
 import { SiteHeader } from '../components/SiteHeader.tsx';
 import { ApiError } from '../lib/api.ts';
 import { DECK_FORMAT_LABELS, fetchDecks, type Deck } from '../lib/decks.ts';
+import { formatRelativeTime } from '../lib/format.ts';
+
+type SortKey = 'name' | 'colors' | 'format' | 'updatedAt';
+type SortDir = 'asc' | 'desc';
+
+const sortDecks = (decks: Deck[], key: SortKey, dir: SortDir): Deck[] => {
+  const sign = dir === 'asc' ? 1 : -1;
+  return [...decks].sort((a, b) => {
+    let cmp = 0;
+    if (key === 'name') cmp = a.name.localeCompare(b.name);
+    else if (key === 'colors') {
+      cmp = a.colorIdentity.join('').localeCompare(b.colorIdentity.join(''));
+    } else if (key === 'format') {
+      cmp = DECK_FORMAT_LABELS[a.format].localeCompare(DECK_FORMAT_LABELS[b.format]);
+    } else {
+      cmp = Date.parse(a.updatedAt) - Date.parse(b.updatedAt);
+    }
+    return sign * cmp;
+  });
+};
+
+const SortHeader = ({
+  label,
+  column,
+  sortKey,
+  sortDir,
+  onSort,
+}: {
+  label: string;
+  column: SortKey;
+  sortKey: SortKey;
+  sortDir: SortDir;
+  onSort: (key: SortKey) => void;
+}) => {
+  const active = sortKey === column;
+  return (
+    <TableHead aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 font-medium hover:text-foreground"
+        onClick={() => onSort(column)}
+      >
+        {label}
+        {active ? <span aria-hidden>{sortDir === 'asc' ? '↑' : '↓'}</span> : null}
+      </button>
+    </TableHead>
+  );
+};
 
 export const HomePage = () => {
   const { getToken } = useAuth();
-  const { user } = useUser();
-  const firstName = user?.firstName?.trim();
-  const greeting = firstName ? `Welcome back, ${firstName}` : 'Welcome back';
+  const navigate = useNavigate();
 
   const [decks, setDecks] = useState<Deck[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('updatedAt');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   useEffect(() => {
     const controller = new AbortController();
@@ -26,80 +84,144 @@ export const HomePage = () => {
       setError(null);
       try {
         const list = await fetchDecks(getToken);
-        if (!controller.signal.aborted) {
-          setDecks(list);
-        }
+        if (!controller.signal.aborted) setDecks(list);
       } catch (err) {
         if (controller.signal.aborted) return;
-        if (err instanceof ApiError) {
-          setError(err.message);
-        } else {
-          setError('Could not load decks');
-        }
+        setError(err instanceof ApiError ? err.message : 'Could not load decks');
       } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
     void loadDecks();
-
     return () => controller.abort();
   }, [getToken]);
+
+  const onSort = (key: SortKey) => {
+    if (key === sortKey) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    setSortKey(key);
+    setSortDir(key === 'updatedAt' ? 'desc' : 'asc');
+  };
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const matched = q ? decks.filter((deck) => deck.name.toLowerCase().includes(q)) : decks;
+    return sortDecks(matched, sortKey, sortDir);
+  }, [decks, query, sortKey, sortDir]);
 
   return (
     <>
       <SiteHeader />
-      <main className="flex flex-1 flex-col items-center gap-8 px-6 py-12 text-center">
-        <header className="max-w-lg">
-          <h1 className="font-heading text-3xl tracking-tight">{greeting}</h1>
-          <p className="mt-2 leading-relaxed text-muted-foreground">
-            Your decks sync from the API when you&apos;re signed in.
-          </p>
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-5 px-6 py-8 text-left">
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="font-heading text-3xl tracking-tight">Your decks</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {loading
+                ? 'Loading…'
+                : `Showing ${filtered.length} of ${decks.length} ${decks.length === 1 ? 'result' : 'results'}`}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button render={<Link to="/decks/new" />}>New deck</Button>
+            <Input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search decks…"
+              aria-label="Search decks"
+              className="w-56"
+            />
+          </div>
         </header>
 
-        <Card className="w-full max-w-md text-left" aria-labelledby="decks-heading">
-          <CardHeader>
-            <CardTitle id="decks-heading">Your decks</CardTitle>
-            <CardAction>
-              <Button render={<Link to="/decks/new" />}>New deck</Button>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {loading ? <p className="text-muted-foreground">Loading decks…</p> : null}
-            {error ? (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : null}
-            {!loading && !error && decks.length === 0 ? (
-              <p className="text-muted-foreground">No decks yet — create your first one.</p>
-            ) : null}
-            {!loading && !error && decks.length > 0 ? (
-              <ul className="divide-y">
-                {decks.map((deck) => (
-                  <li key={deck.id} className="flex justify-between gap-4 py-2">
-                    <div className="min-w-0">
-                      <Link to={`/decks/${deck.id}`} className="font-medium hover:underline">
-                        {deck.name}
-                      </Link>
-                      <p className="text-sm text-muted-foreground">
-                        {DECK_FORMAT_LABELS[deck.format]}
-                      </p>
-                    </div>
-                    <time
-                      className="shrink-0 text-sm text-muted-foreground"
-                      dateTime={deck.updatedAt}
-                    >
-                      {new Date(deck.updatedAt).toLocaleDateString()}
-                    </time>
-                  </li>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {!loading && !error && decks.length === 0 ? (
+          <p className="text-muted-foreground">No decks yet — create your first one.</p>
+        ) : null}
+
+        {!loading && !error && decks.length > 0 && filtered.length === 0 ? (
+          <p className="text-muted-foreground">No decks match that search.</p>
+        ) : null}
+
+        {!loading && !error && filtered.length > 0 ? (
+          <div className="rounded-xl bg-card ring-1 ring-foreground/10">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <SortHeader
+                    label="Name"
+                    column="name"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    label="Colors"
+                    column="colors"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    label="Format"
+                    column="format"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    label="Updated"
+                    column="updatedAt"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((deck) => (
+                  <TableRow
+                    key={deck.id}
+                    className="cursor-pointer"
+                    tabIndex={0}
+                    role="link"
+                    onClick={() => navigate(`/decks/${deck.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        navigate(`/decks/${deck.id}`);
+                      }
+                    }}
+                  >
+                    <TableCell>
+                      <span className="font-medium">{deck.name}</span>
+                    </TableCell>
+                    <TableCell>
+                      <ColorIdentity colors={deck.colorIdentity} />
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {DECK_FORMAT_LABELS[deck.format]}
+                    </TableCell>
+                    <TableCell>
+                      <time className="text-muted-foreground" dateTime={deck.updatedAt}>
+                        {formatRelativeTime(deck.updatedAt)}
+                      </time>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </ul>
-            ) : null}
-          </CardContent>
-        </Card>
+              </TableBody>
+            </Table>
+          </div>
+        ) : null}
       </main>
     </>
   );
