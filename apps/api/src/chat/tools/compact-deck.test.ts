@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DeckCard, DeckDetail } from 'schemas/decks';
 import { GET_DECK_LINE_CAP } from '../chat.constants';
-import { manaBucket, primaryType, toCompactDeck } from './compact-deck';
+import { keywordCounts, manaBucket, primaryType, toCompactDeck } from './compact-deck';
 
 const line = (
   overrides: Partial<DeckCard> & Pick<DeckCard, 'cardId' | 'printingId' | 'name'>,
@@ -11,6 +11,7 @@ const line = (
   manaValue: '1',
   typeLine: 'Instant',
   oracleText: null,
+  keywords: null,
   colorIdentity: ['U'],
   foil: false,
   hasFoil: true,
@@ -71,6 +72,9 @@ describe('toCompactDeck', () => {
           printingId: commanderPrintingId,
           name: 'Tatyova, Benthic Druid',
           typeLine: 'Legendary Creature — Merfolk Druid',
+          oracleText:
+            'Landfall — Whenever a land you control enters, you gain 1 life and draw a card.',
+          keywords: ['Landfall'],
           manaValue: '5',
           colorIdentity: ['G', 'U'],
           imageNormal: 'https://example.invalid/tatyova.jpg',
@@ -89,12 +93,45 @@ describe('toCompactDeck', () => {
       printingId: commanderPrintingId,
       cardId: commanderCardId,
       name: 'Tatyova, Benthic Druid',
+      typeLine: 'Legendary Creature — Merfolk Druid',
+      oracleText: 'Landfall — Whenever a land you control enters, you gain 1 life and draw a card.',
+      keywords: ['Landfall'],
     });
     expect(compact.colorIdentity).toEqual(['G', 'U']);
     expect(compact.lines[0]).not.toHaveProperty('imageNormal');
+    expect(compact.lines[0]?.keywords).toEqual(['Landfall']);
     expect(compact.stats.typeCounts.Creature).toBe(1);
     expect(compact.stats.typeCounts.Instant).toBeUndefined();
+    expect(compact.stats.keywordCounts).toEqual({ Landfall: 1 });
     expect(compact.truncated).toBe(false);
+  });
+
+  it('keeps the top keyword counts by quantity', () => {
+    expect(
+      keywordCounts([
+        line({
+          cardId: '00000000-0000-4000-8000-000000000021',
+          printingId: '00000000-0000-4000-8000-000000000022',
+          name: 'A',
+          keywords: ['Landfall', 'Flying'],
+          quantity: 2,
+        }),
+        line({
+          cardId: '00000000-0000-4000-8000-000000000023',
+          printingId: '00000000-0000-4000-8000-000000000024',
+          name: 'B',
+          keywords: ['Landfall'],
+          quantity: 1,
+        }),
+        line({
+          cardId: '00000000-0000-4000-8000-000000000025',
+          printingId: '00000000-0000-4000-8000-000000000026',
+          name: 'C',
+          keywords: ['Flash'],
+          sideboard: true,
+        }),
+      ]),
+    ).toEqual({ Landfall: 3, Flying: 2 });
   });
 
   it('truncates long lists', () => {

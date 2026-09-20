@@ -18,6 +18,7 @@ export type SearchCardsToolResult = {
     manaValue: string | null;
     typeLine: string | null;
     oracleText: string | null;
+    keywords: string[] | null;
     colorIdentity: string[] | null;
     edhrecRank: number | null;
     edhrecSaltiness: number | null;
@@ -33,7 +34,7 @@ export const searchCardsTool = (
 ): ChatTool<SearchCardsInput, SearchCardsToolResult> => ({
   name: 'searchCards',
   description:
-    'Search the catalog. When a sticky deck is attached, the server injects format legality, commander identity (commander format), and in-deck excludes. Otherwise pass legalIn or colorIdentity if the player specified them. sort defaults to edhrecRank (most played in Commander first); pass name for A–Z.',
+    'Search the catalog. When a sticky deck is attached, the server injects format legality, commander identity (commander format), and in-deck excludes. Otherwise pass legalIn or colorIdentity if the player specified them. After getDeck, pass q or typeContains that match the commander oracle or stats.keywordCounts — do not search with an empty q when the list has a theme. sort defaults to edhrecRank (most played in Commander first); pass name for A-Z.',
   inputSchema: searchCardsInputSchema,
   execute: async (input, ctx) => {
     const limit = Math.min(
@@ -76,6 +77,7 @@ export const searchCardsTool = (
           manaValue: card.manaValue,
           typeLine: card.typeLine,
           oracleText: card.oracleText,
+          keywords: card.keywords,
           colorIdentity: card.colorIdentity,
           edhrecRank: card.edhrecRank,
           edhrecSaltiness: card.edhrecSaltiness,

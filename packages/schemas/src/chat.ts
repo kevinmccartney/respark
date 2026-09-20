@@ -202,6 +202,9 @@ export const compactDeckCommanderSchema = z.object({
   printingId: uuidSchema,
   cardId: uuidSchema,
   name: z.string(),
+  typeLine: z.string().nullable(),
+  oracleText: z.string().nullable(),
+  keywords: z.array(z.string()).nullable(),
 });
 
 export const compactDeckLineSchema = z.object({
@@ -210,6 +213,7 @@ export const compactDeckLineSchema = z.object({
   typeLine: z.string().nullable(),
   manaValue: z.string().nullable(),
   colorIdentity: colorIdentitySchema,
+  keywords: z.array(z.string()).nullable(),
   quantity: z.number().int(),
   sideboard: z.boolean(),
 });
@@ -217,6 +221,7 @@ export const compactDeckLineSchema = z.object({
 export const compactDeckStatsSchema = z.object({
   typeCounts: z.record(z.string(), z.number()),
   manaCurve: z.record(z.string(), z.number()),
+  keywordCounts: z.record(z.string(), z.number()),
 });
 
 export const compactDeckSchema = z.object({

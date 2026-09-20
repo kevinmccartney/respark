@@ -29,6 +29,7 @@ const detail: DeckDetail = {
       manaValue: '1',
       typeLine: 'Artifact',
       oracleText: null,
+      keywords: null,
       colorIdentity: [],
       foil: false,
       hasFoil: true,

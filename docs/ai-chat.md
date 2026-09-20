@@ -96,7 +96,7 @@ type ToolContext = {
 
 **`listDecks`** — Compact `{ id, name, format, colorIdentity }` for the signed-in user (cap 50). Use this to pick an id for `getDeck` instead of guessing UUIDs.
 
-**`getDeck`** — Auth: `requireOwnedDeck`. Compact deck: id, name, description, format, **color identity** (commander identity on commander format; otherwise union of mainboard), `commander` `{ printingId, cardId, name }` or `null`, card count, lines `{ cardId, name, typeLine, manaValue, colorIdentity, quantity, sideboard }` **without image URLs**, plus `stats` (type counts, mana curve). Cap lines (400) with a truncated flag. Commander is never inferred.
+**`getDeck`** — Auth: `requireOwnedDeck`. Compact deck: id, name, description, format, **color identity** (commander identity on commander format; otherwise union of mainboard), `commander` `{ printingId, cardId, name, typeLine, oracleText, keywords }` or `null`, card count, lines `{ cardId, name, typeLine, manaValue, colorIdentity, keywords, quantity, sideboard }` **without image URLs or per-line oracle**, plus `stats` (type counts, mana curve, top-12 `keywordCounts`). Cap lines (400) with a truncated flag. Commander is never inferred. Use commander oracle + `keywordCounts` when choosing `searchCards` `q` / `typeContains`.
 
 **`searchCards`** — Same structured filters as HTTP `GET /cards` (`q`, `colorIdentity`, `legalIn`, `typeContains`, `maxManaValue`, `excludeCardIds`). Tool max **50** (default 25). When the conversation has a deck, the **tool layer** (not the model) always injects `legalIn` from deck format, `excludeCardIds` from the current list, and `colorIdentity` from the commander when `format === 'commander'`. Without a deck, the model may pass `legalIn` / `colorIdentity` if the player named a format or colors.
 
@@ -116,10 +116,10 @@ For "What would be a good add to this deck?" when a list is attached (or after `
 
 ```text
 getDeck (sticky or explicit owned id)
-  → format, commander, colorIdentity, in-deck cardIds, type/curve stats
+  → format, commander oracle/keywords, colorIdentity, in-deck cardIds, type/curve/keyword stats
 searchCards({
   colorIdentity / legalIn / excludeCardIds injected by the tool layer
-  q or typeContains from the user
+  q or typeContains from the commander / keywordCounts / player
   limit: 25
 })
   → presentRecommendations (player’s count, or the strong fits — not a default of 3)
@@ -128,7 +128,7 @@ searchCards({
 
 Without a sticky deck, skip `getDeck` unless the player named a list; do not inject format/identity/excludes.
 
-Do **not** send the catalog. Do **not** require pgvector. Keyword `q` is still weak for "interaction"; identity + legality + exclude + a 25-hit search is the MVP bet. `GET /cards` defaults to `sort=name`. Chat `searchCards` defaults to `sort=edhrecRank` (most played in Commander first); pass `sort=name` for A–Z. Name match still wins when `q` is set. Hits may include a `downweight` flag from the admin overperformers list — staples/tutors the model should skip unless the player asked for that class or the attached deck already plays that pattern. Per-commander inclusion (what people put in _this_ commander) is not ingested; see [commander-stats.md](commander-stats.md).
+Do **not** send the catalog. Do **not** require pgvector. Keyword `q` is still weak for "interaction"; identity + legality + exclude + a 25-hit search is the MVP bet. `GET /cards` defaults to `sort=name`. Chat `searchCards` defaults to `sort=edhrecRank` (most played in Commander first); pass `sort=name` for A–Z. Name match still wins when `q` is set. Hits include `keywords` and may include a `downweight` flag from the admin overperformers list — staples/tutors the model should skip unless the player asked for that class or the attached deck already plays that pattern. After `presentRecommendations`, if the slate is only downweights while the same search had other hits, the API logs `chat.recommend_policy` (soft warn; the player still sees the slate). Offline evals include a `staple-only-slate` scorer for that helper — they do not grade Haiku. Per-commander inclusion (what people put in _this_ commander) is not ingested; see [commander-stats.md](commander-stats.md).
 
 ## Structured parts
 
@@ -147,7 +147,7 @@ System prompt (versioned in [`prompts.ts`](../apps/api/src/chat/prompts.ts), not
 - If they ask about what is on screen, use viewingDeckId / viewingCardId with getDeck / getCard.
 - Never name a card unless it is in this conversation’s tool results. If you need another card, call searchCards or getCard first. Do not use training-data names.
 - Do not claim a card is in a deck unless `getDeck` listed it.
-- presentRecommendations commits this-turn search/getCard ids for prose; the UI does not attach images.
+- presentRecommendations commits this-turn search/getCard ids for prose; the UI does not attach images. Prefer commander / keywordCounts fits; do not present an all-downweight slate when the same search had other hits.
 - Link a retrieved card as `[Name](/cards/<id>)` only the first time it appears, or when citing a ruling or specific detail; later mentions stay plain text. Do not invent ids.
 - If tools fail, say so; do not fill from model memory.
 - Application data wins over model knowledge.
@@ -224,7 +224,7 @@ Vitest in `apps/api`. CI runs fixture evals **without Bedrock**:
 1. Unit: Zod schemas, compact mappers, allowlist, history window.
 2. Tool tests: mocked services — ownership 404, search limit, injected filters.
 3. Orchestrator: scripted provider — "good add" must call `getDeck` then `searchCards`.
-4. Offline fixtures under `apps/api/src/chat/evals/` — score tools and allowlisted `presentRecommendations` ids against that turn’s `searchCards` / `getCard` hits, not thumbs.
+4. Offline fixtures under `apps/api/src/chat/evals/` — score tools and allowlisted `presentRecommendations` ids against that turn’s `searchCards` / `getCard` hits, not thumbs. A `staple-only-slate` case asserts the `recommendPolicy` helper flags an all-downweight present when alternatives were retrieved.
 5. Live Bedrock eval: optional, gated by env, not CI.
 
 ## Out of MVP

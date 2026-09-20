@@ -17,8 +17,10 @@ export type FixtureCard = {
   manaValue: string | null;
   typeLine: string | null;
   oracleText: string | null;
+  keywords?: string[] | null;
   colorIdentity: string[];
   legalities: Record<string, string>;
+  downweight?: { kind: string; note: string | null } | null;
 };
 
 export const FIXTURE_CARDS: FixtureCard[] = [
@@ -61,6 +63,7 @@ export const FIXTURE_CARDS: FixtureCard[] = [
     oracleText: 'Draw whenever a spell is cast unless they pay {1}.',
     colorIdentity: ['U'],
     legalities: { commander: 'legal', standard: 'not_legal', modern: 'not_legal' },
+    downweight: { kind: 'staple', note: 'Format-wide extra-mana tax' },
   },
   {
     id: IDS.bolt,

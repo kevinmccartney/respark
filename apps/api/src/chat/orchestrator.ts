@@ -27,6 +27,7 @@ import { buildChatTools } from './tools/build-tools';
 import { executeChatTool } from './tools/registry';
 import type { ChatTool, ToolContext } from './tools/types';
 import { formatTurnContext } from './turn-context';
+import { hitsFromToolResult, recommendPolicy, type RecommendPolicyHit } from './recommend-policy';
 
 const STATUS_CODES = new Set<ChatStatusCode>([
   'thinking',
@@ -83,6 +84,9 @@ export class ChatOrchestrator {
     }));
 
     const retrievedCardIds = new Set<string>();
+    const retrievedHits: RecommendPolicyHit[] = [];
+    const userText =
+      textFromParts([...history].reverse().find((row) => row.role === 'user')?.parts ?? []) || '';
     const linkableCards = await this.chat.loadLinkableCards(opts.conversationId);
     const downweights = await this.recommendations.listForPrompt(CHAT_DOWNWEIGHT_PROMPT_CAP);
     const ctx: ToolContext = {
@@ -223,7 +227,26 @@ export class ChatOrchestrator {
 
           if (result.ok) {
             recordRetrievedIds(call.name, result.data, retrievedCardIds);
+            retrievedHits.push(...hitsFromToolResult(call.name, result.data));
             collectLinkableCards(call.name, result.data, linkableCards);
+            if (call.name === PRESENT_TOOL) {
+              const presentedIds = presentedIdsFromResult(result.data);
+              const violations = recommendPolicy({
+                userText,
+                presentedIds,
+                retrieved: retrievedHits,
+              });
+              if (violations.length > 0) {
+                this.logger.warn(
+                  {
+                    event: 'chat.recommend_policy',
+                    conversationId: opts.conversationId,
+                    violations,
+                  },
+                  'Recommendation slate is all downweights',
+                );
+              }
+            }
           }
           if (result.ok && call.name === 'getCard') {
             const id = entityIdFromResult(result.data);
@@ -467,6 +490,13 @@ const recordRetrievedIds = (name: string, data: unknown, retrieved: Set<string>)
     const id = (data as { id?: string }).id;
     if (id) retrieved.add(id);
   }
+};
+
+const presentedIdsFromResult = (data: unknown): string[] => {
+  if (!data || typeof data !== 'object' || !('cardIds' in data)) return [];
+  const cardIds = (data as { cardIds?: unknown }).cardIds;
+  if (!Array.isArray(cardIds)) return [];
+  return cardIds.filter((id): id is string => typeof id === 'string');
 };
 
 const entityIdFromResult = (data: unknown): string | null => {

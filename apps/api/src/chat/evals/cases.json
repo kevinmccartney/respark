@@ -231,5 +231,29 @@
       "tools": ["listDecks", "getDeck", "searchCards", "presentRecommendations"],
       "recommendationIds": ["00000000-0000-4000-8000-000000000005"]
     }
+  },
+  {
+    "id": "staple-only-slate",
+    "user": "What would be a good add to this deck?",
+    "rounds": [
+      { "toolCalls": [{ "name": "getDeck", "input": {} }] },
+      { "toolCalls": [{ "name": "searchCards", "input": { "limit": 15 } }] },
+      {
+        "toolCalls": [
+          {
+            "name": "presentRecommendations",
+            "input": {
+              "cardIds": ["00000000-0000-4000-8000-000000000007"]
+            }
+          }
+        ]
+      },
+      { "text": "Rhystic Study is a format staple; the scorer flags an all-downweight slate." }
+    ],
+    "expect": {
+      "tools": ["getDeck", "searchCards", "presentRecommendations"],
+      "recommendationIds": ["00000000-0000-4000-8000-000000000007"],
+      "policyViolations": ["all_downweight_slate"]
+    }
   }
 ]

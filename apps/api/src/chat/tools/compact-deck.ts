@@ -1,6 +1,6 @@
 import type { CompactDeck } from 'schemas/chat';
 import type { DeckCard, DeckDetail } from 'schemas/decks';
-import { GET_DECK_LINE_CAP } from '../chat.constants';
+import { GET_DECK_KEYWORD_COUNT_CAP, GET_DECK_LINE_CAP } from '../chat.constants';
 
 const PRIMARY_TYPES = [
   'Creature',
@@ -21,6 +21,7 @@ export const toCompactDeck = (detail: DeckDetail): CompactDeck => {
     typeLine: card.typeLine,
     manaValue: card.manaValue,
     colorIdentity: card.colorIdentity,
+    keywords: card.keywords,
     quantity: card.quantity,
     sideboard: card.sideboard,
   }));
@@ -41,6 +42,9 @@ export const toCompactDeck = (detail: DeckDetail): CompactDeck => {
             printingId: detail.deck.commanderPrintingId,
             cardId: commanderLine.cardId,
             name: commanderLine.name,
+            typeLine: commanderLine.typeLine,
+            oracleText: commanderLine.oracleText,
+            keywords: commanderLine.keywords,
           }
         : null,
     cardCount: detail.cards.reduce((sum, card) => sum + card.quantity, 0),
@@ -60,7 +64,27 @@ export const deckStats = (cards: DeckCard[]): CompactDeck['stats'] => {
     const bucket = manaBucket(card.manaValue);
     manaCurve[bucket] = (manaCurve[bucket] ?? 0) + card.quantity;
   }
-  return { typeCounts, manaCurve };
+  return { typeCounts, manaCurve, keywordCounts: keywordCounts(cards) };
+};
+
+export const keywordCounts = (
+  cards: DeckCard[],
+  cap = GET_DECK_KEYWORD_COUNT_CAP,
+): Record<string, number> => {
+  const counts: Record<string, number> = {};
+  for (const card of cards) {
+    if (card.sideboard) continue;
+    for (const keyword of card.keywords ?? []) {
+      const key = keyword.trim();
+      if (!key) continue;
+      counts[key] = (counts[key] ?? 0) + card.quantity;
+    }
+  }
+  return Object.fromEntries(
+    Object.entries(counts)
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .slice(0, cap),
+  );
 };
 
 export const primaryType = (typeLine: string | null): string => {

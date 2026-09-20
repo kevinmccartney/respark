@@ -31,6 +31,7 @@ type SearchRow = {
   mana_value: string | null;
   type_line: string | null;
   oracle_text: string | null;
+  keywords: string[] | null;
   color_identity: string[] | null;
   image_normal: string | null;
   edhrec_rank: number | null;
@@ -150,6 +151,7 @@ export class CardsService {
           c.mana_value::text AS mana_value,
           c.type_line,
           c.oracle_text,
+          c.keywords,
           c.color_identity,
           c.edhrec_rank,
           c.edhrec_saltiness,
@@ -177,6 +179,7 @@ export class CardsService {
         m.mana_value,
         m.type_line,
         m.oracle_text,
+        m.keywords,
         m.color_identity,
         m.edhrec_rank,
         m.edhrec_saltiness,
@@ -488,6 +491,7 @@ const toCard = (row: SearchRow): CardSearchResult => ({
   manaValue: row.mana_value,
   typeLine: row.type_line,
   oracleText: row.oracle_text,
+  keywords: row.keywords,
   colorIdentity: row.color_identity,
   imageNormal: row.image_normal,
   edhrecRank: row.edhrec_rank,

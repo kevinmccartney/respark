@@ -11,6 +11,7 @@ export const cardSearchResultSchema = z.object({
   manaValue: z.string().nullable(),
   typeLine: z.string().nullable(),
   oracleText: z.string().nullable(),
+  keywords: z.array(z.string()).nullable(),
   colorIdentity: z.array(z.string()).nullable(),
   imageNormal: z.string().nullable(),
   edhrecRank: z.number().int().nullable(),

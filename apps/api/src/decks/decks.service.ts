@@ -61,6 +61,7 @@ type DeckCardRow = {
   mana_value: string | null;
   type_line: string | null;
   oracle_text: string | null;
+  keywords: string[] | null;
   color_identity: string[] | null;
   foil: boolean;
   sideboard: boolean;
@@ -847,6 +848,7 @@ export class DecksService {
         c.mana_value::text AS mana_value,
         c.type_line,
         c.oracle_text,
+        c.keywords,
         c.color_identity,
         dc.foil,
         dc.sideboard,
@@ -1032,6 +1034,7 @@ const toDeckCard = (row: DeckCardRow): DeckCard => ({
   manaValue: row.mana_value,
   typeLine: row.type_line,
   oracleText: row.oracle_text,
+  keywords: row.keywords,
   colorIdentity: parseColorIdentity(row.color_identity),
   foil: resolveDeckLineFoil(row.finishes ?? [], row.foil),
   hasFoil: printingFoilIsOptional(row.finishes ?? []),

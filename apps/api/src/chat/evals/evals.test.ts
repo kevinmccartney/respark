@@ -13,6 +13,7 @@ import { allowlistCardIds } from '../allowlist';
 import type { ChatService } from '../chat.service';
 import { ChatOrchestrator } from '../orchestrator';
 import { ScriptedChatProvider, type ScriptedRound } from '../provider/scripted.provider';
+import { recommendPolicy } from '../recommend-policy';
 import { cardMatchesSearchFilters, FIXTURE_CARDS, IDS, type FixtureCard } from './fixtures';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -26,6 +27,7 @@ type EvalCase = {
     tools: string[];
     recommendationIds?: string[];
     noCardParts?: boolean;
+    policyViolations?: string[];
   };
 };
 
@@ -45,6 +47,7 @@ const commanderLine = (): DeckCard => ({
   manaValue: '5',
   typeLine: 'Legendary Creature — Merfolk Druid',
   oracleText: null,
+  keywords: null,
   colorIdentity: ['G', 'U'],
   foil: false,
   hasFoil: true,
@@ -66,6 +69,7 @@ const solRingLine = (): DeckCard => ({
   manaValue: '1',
   typeLine: 'Artifact',
   oracleText: null,
+  keywords: null,
   colorIdentity: [],
   foil: false,
   hasFoil: true,
@@ -99,12 +103,13 @@ const toSearchCard = (card: FixtureCard) => ({
   manaValue: card.manaValue,
   typeLine: card.typeLine,
   oracleText: card.oracleText,
+  keywords: card.keywords ?? null,
   colorIdentity: card.colorIdentity,
   imageNormal: null,
   edhrecRank: null,
   edhrecSaltiness: null,
   isGameChanger: null,
-  downweight: null,
+  downweight: card.downweight ?? null,
 });
 
 const stubCards = (): CardsService =>
@@ -130,14 +135,14 @@ const stubCards = (): CardsService =>
         ...card,
         oracleId: card.id,
         colors: card.colorIdentity,
-        keywords: [],
+        keywords: card.keywords ?? [],
         leadershipSkills: null,
         layout: 'normal',
         reserved: false,
         edhrecRank: null,
         edhrecSaltiness: null,
         isGameChanger: null,
-        downweight: null,
+        downweight: card.downweight ?? null,
         printings: [],
       };
     },
@@ -232,6 +237,20 @@ describe('chat fixture evals', () => {
       expect(recommended).toEqual(fixture.expect.recommendationIds);
     }
     expect(recommended.every((id) => retrievedIds.includes(id))).toBe(true);
+
+    if (fixture.expect.policyViolations) {
+      const retrieved = retrievedIds.map((id) => {
+        const card = FIXTURE_CARDS.find((entry) => entry.id === id);
+        return { id, downweight: card?.downweight ?? null };
+      });
+      expect(
+        recommendPolicy({
+          userText: fixture.user,
+          presentedIds: recommended,
+          retrieved,
+        }),
+      ).toEqual(fixture.expect.policyViolations);
+    }
 
     if (deckId || fixture.expect.tools.includes('getDeck')) {
       const inDeck = new Set(deckDetail().cards.map((card) => card.cardId));

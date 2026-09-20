@@ -43,6 +43,7 @@ export const deckCardSchema = z.object({
   manaValue: z.string().nullable(),
   typeLine: z.string().nullable(),
   oracleText: z.string().nullable(),
+  keywords: z.array(z.string()).nullable(),
   colorIdentity: colorIdentitySchema,
   foil: z.boolean(),
   hasFoil: z.boolean(),
