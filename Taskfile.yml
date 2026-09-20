@@ -73,6 +73,8 @@ tasks:
 
   test:
     desc: Run unit tests (etl node:test + api Vitest / chat evals)
+    deps:
+      - schemas:build
     cmds:
       - npm test -w etl
       - npm test -w api

@@ -55,7 +55,7 @@ Production deploys are intentional: use **Actions → CI / CD → Run workflow**
 | Format (write)        | `task format`                              | —                                                                      |
 | Format (check)        | `task format:check`                        | `format` job                                                           |
 | Lint                  | `task lint`                                | `format` job                                                           |
-| Test                  | `task test`                                | `format` job                                                           |
+| Test                  | `task test`                                | `format` job (`schemas:build` then etl + api tests)                    |
 | Lint commit messages  | `task commit` / `task commitlint`          | `format` job on PRs (title + commits)                                  |
 | Platform release      | `task release -- --dry-run`                | `release` job on push to `main`                                        |
 | Build apps            | `task build`                               | conditional `task *:build`                                             |
