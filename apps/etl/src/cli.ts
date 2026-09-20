@@ -43,17 +43,6 @@ const withDb = async <T>(work: (pool: ReturnType<typeof createPool>) => Promise<
   }
 };
 
-const stub = (command: string, description: string) => {
-  program
-    .command(command)
-    .description(`${description} (not implemented yet)`)
-    .action(async () => {
-      const flags = flagsFrom(program);
-      const logger = createLogger(flags.verbose);
-      logger.info({ event: 'etl.stub', command, ...flags }, `${command} is not implemented yet`);
-    });
-};
-
 const runSyncCommand = async (opts: {
   catalog?: boolean;
   enrichment?: string | string[];
@@ -137,8 +126,6 @@ program
       );
     });
   });
-
-stub('forecast', 'Emit capacity forecast from measured sizes');
 
 program.parseAsync(process.argv).catch((err) => {
   console.error(err);

@@ -1,4 +1,5 @@
 import type { PoolClient } from 'pg';
+import { upsertHashGatedBatch, type UpsertBatchResult } from './rawUpsert';
 
 export type RawMtgjsonUpsert = {
   mtgjsonUuid: string;
@@ -7,11 +8,7 @@ export type RawMtgjsonUpsert = {
   payloadHash: string;
 };
 
-export type UpsertBatchResult = {
-  inserted: number;
-  updated: number;
-  unchanged: number;
-};
+export type { UpsertBatchResult };
 
 /**
  * Batch upsert into raw.mtgjson_card.
@@ -20,44 +17,24 @@ export type UpsertBatchResult = {
 export const upsertMtgjsonCards = async (
   client: PoolClient,
   rows: RawMtgjsonUpsert[],
-): Promise<UpsertBatchResult> => {
-  if (rows.length === 0) {
-    return { inserted: 0, updated: 0, unchanged: 0 };
-  }
-
-  const values: unknown[] = [];
-  const placeholders: string[] = [];
-
-  rows.forEach((row, i) => {
-    const o = i * 4;
-    placeholders.push(`($${o + 1}, $${o + 2}, $${o + 3}::jsonb, $${o + 4})`);
-    values.push(row.mtgjsonUuid, row.scryfallId, JSON.stringify(row.payload), row.payloadHash);
-  });
-
-  const result = await client.query<{ is_insert: boolean }>(
-    `insert into raw.mtgjson_card as t
-       (mtgjson_uuid, scryfall_id, payload, payload_hash)
-     values ${placeholders.join(',')}
-     on conflict (mtgjson_uuid) do update set
-       scryfall_id = excluded.scryfall_id,
-       payload = excluded.payload,
-       payload_hash = excluded.payload_hash,
-       ingested_at = now()
-     where t.payload_hash is distinct from excluded.payload_hash
-     returning (xmax::text = '0') as is_insert`,
-    values,
+): Promise<UpsertBatchResult> =>
+  upsertHashGatedBatch(
+    client,
+    {
+      table: 'raw.mtgjson_card',
+      conflictTarget: 'mtgjson_uuid',
+      columns: [
+        { name: 'mtgjson_uuid' },
+        { name: 'scryfall_id' },
+        { name: 'payload', cast: 'jsonb' },
+        { name: 'payload_hash' },
+      ],
+      updateColumns: ['scryfall_id', 'payload', 'payload_hash'],
+    },
+    rows.map((row) => [
+      row.mtgjsonUuid,
+      row.scryfallId,
+      JSON.stringify(row.payload),
+      row.payloadHash,
+    ]),
   );
-
-  let inserted = 0;
-  let updated = 0;
-  for (const row of result.rows) {
-    if (row.is_insert) inserted += 1;
-    else updated += 1;
-  }
-
-  return {
-    inserted,
-    updated,
-    unchanged: rows.length - result.rows.length,
-  };
-};

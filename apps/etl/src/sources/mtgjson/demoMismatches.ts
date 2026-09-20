@@ -10,7 +10,6 @@ export type DemoBatchItem = {
     payloadHash: string;
   };
   enrichment: MtgjsonEnrichment;
-  sourcePayload: unknown;
 };
 
 const DEMO_UNMATCHED_SCRYFALL_ID = '00000000-0000-4000-8000-000000000001';
@@ -35,7 +34,6 @@ const demoItem = (enrichment: MtgjsonEnrichment, note: string): DemoBatchItem =>
       payloadHash: payloadHash(payload),
     },
     enrichment,
-    sourcePayload: payload,
   };
 };
 

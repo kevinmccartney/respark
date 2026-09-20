@@ -52,16 +52,6 @@ export const syncEventSchema = z.discriminatedUnion('type', [
     startedAt: isoDateTimeSchema,
   }),
   z.object({
-    type: z.literal('job.updated'),
-    syncId: uuidSchema,
-    jobRunId: uuidSchema,
-    stage: z.string(),
-    job: z.string(),
-    status: ingestionRunStatusSchema,
-    metrics: jobMetricsSchema,
-    errorMessage: z.string().nullable(),
-  }),
-  z.object({
     type: z.literal('job.completed'),
     syncId: uuidSchema,
     jobRunId: uuidSchema,

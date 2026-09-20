@@ -1,5 +1,5 @@
 import type { Pool, PoolClient } from 'pg';
-import type { IngestionRunStatus } from '../core/types';
+import type { IngestionRunStatus } from 'schemas/etl-sync';
 
 export type StartJobRunInput = {
   syncId: string;

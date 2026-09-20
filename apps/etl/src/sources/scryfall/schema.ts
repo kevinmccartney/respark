@@ -1,23 +1,72 @@
 import { z } from 'zod';
 
-/** Minimum fields required to stage a Scryfall printing into raw storage. */
+const optionalText = z.string().optional().nullable();
+const optionalStringList = z.array(z.string()).optional();
+const optionalId = z.union([z.number(), z.string()]).optional();
+const imageUrisSchema = z.record(z.string(), z.string()).optional().nullable();
+
+const scryfallFaceSchema = z
+  .object({
+    oracle_id: z.uuid().optional().nullable(),
+    name: z.string().optional().nullable(),
+    mana_cost: optionalText,
+    type_line: z.string().optional(),
+    oracle_text: optionalText,
+    colors: optionalStringList,
+    power: optionalText,
+    toughness: optionalText,
+    loyalty: optionalText,
+    defense: optionalText,
+    image_uris: imageUrisSchema,
+  })
+  .passthrough();
+
+/** Identity fields required for catalog; extras stay optional via passthrough. */
 export const scryfallCardSchema = z
   .object({
     id: z.uuid(),
     oracle_id: z.uuid().optional().nullable(),
     name: z.string().min(1),
+    set: z.string().min(1),
+    set_name: z.string().min(1),
+    collector_number: z.string().min(1),
     lang: z.string().optional(),
-    released_at: z.string().optional().nullable(),
+    released_at: optionalText,
     uri: z.string().optional(),
     scryfall_uri: z.string().optional(),
     layout: z.string().optional(),
     type_line: z.string().optional(),
-    set: z.string().optional(),
-    set_name: z.string().optional(),
-    collector_number: z.string().optional(),
     digital: z.boolean().optional(),
     rarity: z.string().optional(),
     updated_at: z.union([z.string(), z.number()]).optional().nullable(),
+    set_id: z.uuid().optional().nullable(),
+    set_type: z.string().optional(),
+    mana_cost: optionalText,
+    cmc: z.union([z.number(), z.string()]).optional().nullable(),
+    oracle_text: optionalText,
+    colors: optionalStringList,
+    color_identity: optionalStringList,
+    keywords: optionalStringList,
+    reserved: z.boolean().optional(),
+    artist: optionalText,
+    border_color: z.string().optional(),
+    frame: z.string().optional(),
+    full_art: z.boolean().optional(),
+    textless: z.boolean().optional(),
+    oversized: z.boolean().optional(),
+    promo: z.boolean().optional(),
+    reprint: z.boolean().optional(),
+    finishes: optionalStringList,
+    image_uris: imageUrisSchema,
+    card_faces: z.array(scryfallFaceSchema).optional(),
+    tcgplayer_id: optionalId,
+    tcgplayer_etched_id: optionalId,
+    cardmarket_id: optionalId,
+    mtgo_id: optionalId,
+    power: optionalText,
+    toughness: optionalText,
+    loyalty: optionalText,
+    defense: optionalText,
   })
   .passthrough();
 

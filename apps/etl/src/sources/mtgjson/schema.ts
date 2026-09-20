@@ -4,7 +4,6 @@ import { z } from 'zod';
 export const mtgjsonIdentifiersSchema = z
   .object({
     scryfallId: z.string().optional(),
-    scryfallOracleId: z.string().optional(),
     tcgplayerProductId: z.string().optional(),
     tcgplayerEtchedProductId: z.string().optional(),
     mcmId: z.string().optional(),

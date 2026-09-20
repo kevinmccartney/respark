@@ -1,10 +1,12 @@
 import type { Pool } from 'pg';
+import type { IngestionRunStatus } from 'schemas/etl-sync';
+import { resolveStoreRaw } from '../../core/flags';
 import { payloadHash } from '../../core/hashing';
 import type { Logger } from '../../core/logger';
 import { ProgressBar, tapByteStream } from '../../core/progress';
 import { emitSyncEvent } from '../../core/stream-events';
 import { isNonPlayableTypeLine } from '../../core/typeLine';
-import type { GlobalFlags, IngestionRunStatus, JobContext } from '../../core/types';
+import type { GlobalFlags, JobContext } from '../../core/types';
 import { upsertCatalogRecords } from '../../repositories/catalog';
 import { finishJobRun, insertIngestionError, startJobRun } from '../../repositories/ingestionRuns';
 import { upsertScryfallCards, type RawScryfallUpsert } from '../../repositories/rawScryfall';
@@ -26,13 +28,6 @@ export type ScryfallImportOptions = GlobalFlags & {
 type BatchItem = {
   raw: RawScryfallUpsert;
   canonical: CanonicalRecord | null;
-  sourcePayload: unknown;
-};
-
-const resolveStoreRaw = (flags: GlobalFlags): boolean => {
-  if (flags.storeRaw !== undefined) return flags.storeRaw;
-  if (process.env.ETL_STORE_RAW === 'false') return false;
-  return true;
 };
 
 const parseSourceUpdatedAt = (value: string | number | null | undefined): Date | null => {
@@ -182,12 +177,38 @@ export const runScryfallImport = async (
       renderProgress();
     });
 
-    for await (const raw of streamJsonlGzip(trackedBody)) {
+    for await (const record of streamJsonlGzip(trackedBody)) {
       if (options.limit !== undefined && recordsSeen >= options.limit) {
         break;
       }
 
       recordsSeen += 1;
+      if (!record.ok) {
+        recordsFailed += 1;
+        await insertIngestionError(pool, {
+          runId,
+          source: SOURCE,
+          externalId: null,
+          stage: 'parse',
+          errorMessage: record.error,
+          payload: { line: record.line },
+        });
+        emitSyncEvent(ctx.onEvent, {
+          type: 'job.error',
+          syncId: ctx.syncId,
+          jobRunId: runId,
+          error: {
+            source: SOURCE,
+            externalId: null,
+            stage: 'parse',
+            errorMessage: record.error,
+            payload: { line: record.line },
+          },
+        });
+        continue;
+      }
+
+      const raw = record.value;
       const parsed = scryfallCardSchema.safeParse(raw);
       if (!parsed.success) {
         recordsFailed += 1;
@@ -222,7 +243,7 @@ export const runScryfallImport = async (
         continue;
       }
 
-      const canonical = transformScryfallCard(raw);
+      const canonical = transformScryfallCard(card);
       if (!canonical) {
         recordsFailed += 1;
         await insertIngestionError(pool, {
@@ -257,7 +278,6 @@ export const runScryfallImport = async (
               payloadHash: payloadHash(raw),
             },
             canonical: null,
-            sourcePayload: raw,
           });
         }
         continue;
@@ -272,7 +292,6 @@ export const runScryfallImport = async (
           payloadHash: payloadHash(raw),
         },
         canonical,
-        sourcePayload: raw,
       });
 
       if (batch.length >= (options.batchSize ?? DEFAULT_BATCH_SIZE)) {

@@ -8,8 +8,6 @@ export type CatalogJob = 'catalog';
 export type EnrichmentJob = 'identifiers';
 export type SyncJob = CatalogJob | EnrichmentJob;
 
-export type IngestionRunStatus = 'running' | 'success' | 'partial_success' | 'failed';
-
 export type GlobalFlags = {
   limit?: number;
   dryRun: boolean;

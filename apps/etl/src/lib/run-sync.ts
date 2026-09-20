@@ -1,7 +1,8 @@
 import type { Pool } from 'pg';
+import type { IngestionRunStatus } from 'schemas/etl-sync';
 import type { Logger } from '../core/logger';
 import { emitSyncEvent, type SyncEventHandler } from '../core/stream-events';
-import type { GlobalFlags, IngestionRunStatus } from '../core/types';
+import type { GlobalFlags } from '../core/types';
 import { insertEtlSyncLog, syncLogFromEvent } from '../repositories/etlSyncLogs';
 import { finishEtlSync, rollupSyncStatus, startEtlSync } from '../repositories/etlSyncs';
 import { updateJobRunProgress } from '../repositories/ingestionRuns';

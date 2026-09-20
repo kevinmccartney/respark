@@ -1,9 +1,10 @@
 /**
- * Maps a Scryfall card object (full JSON) into canonical catalog rows.
+ * Maps a parsed Scryfall card into canonical catalog rows.
  * Scryfall owns oracle/printing fields — MTGJSON must not overwrite these later.
  */
 
 import { isNonPlayableTypeLine } from '../../core/typeLine';
+import type { ScryfallCard } from './schema';
 
 export type CanonicalSet = {
   scryfallId: string | null;
@@ -77,156 +78,123 @@ export type CanonicalRecord = {
   identifiers: CanonicalIdentifier[];
 };
 
-const asRecord = (value: unknown): Record<string, unknown> | null =>
-  value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
+const nonempty = (value: string | null | undefined): string | null =>
+  value && value.length > 0 ? value : null;
 
-const asString = (value: unknown): string | null =>
-  typeof value === 'string' && value.length > 0 ? value : null;
-
-const asBool = (value: unknown): boolean | null => (typeof value === 'boolean' ? value : null);
-
-const asStringArray = (value: unknown): string[] | null => {
-  if (!Array.isArray(value)) return null;
-  const out = value.filter((v): v is string => typeof v === 'string');
-  return out;
-};
-
-const asDateOnly = (value: unknown): string | null => {
-  const s = asString(value);
+const asDateOnly = (value: string | null | undefined): string | null => {
+  const s = nonempty(value);
   if (!s) return null;
-  // Scryfall dates are YYYY-MM-DD or ISO timestamps
   return s.slice(0, 10);
 };
 
-const asManaValue = (value: unknown): string | null => {
+const asManaValue = (value: number | string | null | undefined): string | null => {
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  if (typeof value === 'string' && value.length > 0) return value;
-  return null;
+  return nonempty(typeof value === 'string' ? value : null);
 };
 
-const imageField = (images: Record<string, unknown> | null, key: string): string | null =>
-  images ? asString(images[key]) : null;
+const imageField = (
+  images: Record<string, string> | null | undefined,
+  key: string,
+): string | null => nonempty(images?.[key]);
+
+const pushProviderId = (
+  identifiers: CanonicalIdentifier[],
+  provider: string,
+  value: number | string | undefined,
+) => {
+  if (typeof value === 'number' || typeof value === 'string') {
+    identifiers.push({ provider, externalId: String(value) });
+  }
+};
 
 /**
- * Returns null when the object should not become a catalog.card: missing identity
- * fields, or a non-playable extra (a `Card` face on the type line).
+ * Returns null when the object should not become a catalog.card: missing oracle
+ * identity, or a non-playable extra (a `Card` face on the type line).
  */
-export const transformScryfallCard = (raw: unknown): CanonicalRecord | null => {
-  const card = asRecord(raw);
-  if (!card) return null;
-
-  if (isNonPlayableTypeLine(asString(card.type_line))) {
+export const transformScryfallCard = (card: ScryfallCard): CanonicalRecord | null => {
+  if (isNonPlayableTypeLine(card.type_line)) {
     return null;
   }
 
-  const scryfallId = asString(card.id);
-  const setCode = asString(card.set);
-  const setName = asString(card.set_name);
-  const collectorNumber = asString(card.collector_number);
-  const name = asString(card.name);
+  const facesRaw = card.card_faces;
+  const oracleId = nonempty(card.oracle_id) ?? nonempty(facesRaw?.[0]?.oracle_id);
+  if (!oracleId) return null;
 
-  const imageUris = asRecord(card.image_uris);
-  const facesRaw = Array.isArray(card.card_faces) ? card.card_faces : null;
-
-  // Reversible / some multi-face layouts omit top-level oracle_id and only put it
-  // on each face (often the same id). Fall back so those printings still catalog.
-  const oracleId =
-    asString(card.oracle_id) ?? (facesRaw?.[0] ? asString(asRecord(facesRaw[0])?.oracle_id) : null);
-
-  if (!oracleId || !scryfallId || !setCode || !setName || !collectorNumber || !name) {
-    return null;
-  }
-
+  const imageUris = card.image_uris;
   const faces: CanonicalFace[] = facesRaw
-    ? facesRaw.flatMap((face, index) => {
-        const f = asRecord(face);
-        if (!f) return [];
-        const faceImages = asRecord(f.image_uris);
-        return [
-          {
-            faceIndex: index,
-            name: asString(f.name),
-            manaCost: asString(f.mana_cost),
-            typeLine: asString(f.type_line),
-            oracleText: asString(f.oracle_text),
-            colors: asStringArray(f.colors),
-            power: asString(f.power),
-            toughness: asString(f.toughness),
-            loyalty: asString(f.loyalty),
-            defense: asString(f.defense),
-            imageNormal: imageField(faceImages, 'normal'),
-            imageLarge: imageField(faceImages, 'large'),
-          },
-        ];
-      })
+    ? facesRaw.map((face, index) => ({
+        faceIndex: index,
+        name: nonempty(face.name),
+        manaCost: nonempty(face.mana_cost),
+        typeLine: nonempty(face.type_line),
+        oracleText: nonempty(face.oracle_text),
+        colors: face.colors ?? null,
+        power: nonempty(face.power),
+        toughness: nonempty(face.toughness),
+        loyalty: nonempty(face.loyalty),
+        defense: nonempty(face.defense),
+        imageNormal: imageField(face.image_uris, 'normal'),
+        imageLarge: imageField(face.image_uris, 'large'),
+      }))
     : [
         {
           faceIndex: 0,
-          name,
-          manaCost: asString(card.mana_cost),
-          typeLine: asString(card.type_line),
-          oracleText: asString(card.oracle_text),
-          colors: asStringArray(card.colors),
-          power: asString(card.power),
-          toughness: asString(card.toughness),
-          loyalty: asString(card.loyalty),
-          defense: asString(card.defense),
+          name: card.name,
+          manaCost: nonempty(card.mana_cost),
+          typeLine: nonempty(card.type_line),
+          oracleText: nonempty(card.oracle_text),
+          colors: card.colors ?? null,
+          power: nonempty(card.power),
+          toughness: nonempty(card.toughness),
+          loyalty: nonempty(card.loyalty),
+          defense: nonempty(card.defense),
           imageNormal: imageField(imageUris, 'normal'),
           imageLarge: imageField(imageUris, 'large'),
         },
       ];
 
-  const identifiers: CanonicalIdentifier[] = [{ provider: 'scryfall', externalId: scryfallId }];
-  const tcgplayer = card.tcgplayer_id ?? card.tcgplayer_etched_id;
-  if (typeof tcgplayer === 'number' || typeof tcgplayer === 'string') {
-    identifiers.push({ provider: 'tcgplayer', externalId: String(tcgplayer) });
-  }
-  if (typeof card.cardmarket_id === 'number' || typeof card.cardmarket_id === 'string') {
-    identifiers.push({ provider: 'cardmarket', externalId: String(card.cardmarket_id) });
-  }
-  if (typeof card.mtgo_id === 'number' || typeof card.mtgo_id === 'string') {
-    identifiers.push({ provider: 'mtgo', externalId: String(card.mtgo_id) });
-  }
+  const identifiers: CanonicalIdentifier[] = [{ provider: 'scryfall', externalId: card.id }];
+  pushProviderId(identifiers, 'tcgplayer', card.tcgplayer_id ?? card.tcgplayer_etched_id);
+  pushProviderId(identifiers, 'cardmarket', card.cardmarket_id);
+  pushProviderId(identifiers, 'mtgo', card.mtgo_id);
 
   return {
     set: {
-      scryfallId: asString(card.set_id),
-      code: setCode,
-      name: setName,
-      setType: asString(card.set_type),
+      scryfallId: nonempty(card.set_id),
+      code: card.set,
+      name: card.set_name,
+      setType: nonempty(card.set_type),
       releasedAt: asDateOnly(card.released_at),
-      digital: asBool(card.digital),
+      digital: card.digital ?? null,
     },
     card: {
       oracleId,
-      name,
-      manaCost: asString(card.mana_cost),
+      name: card.name,
+      manaCost: nonempty(card.mana_cost),
       manaValue: asManaValue(card.cmc),
-      typeLine: asString(card.type_line),
-      oracleText: asString(card.oracle_text),
-      colors: asStringArray(card.colors),
-      colorIdentity: asStringArray(card.color_identity),
-      keywords: asStringArray(card.keywords),
-      layout: asString(card.layout),
-      reserved: asBool(card.reserved),
+      typeLine: nonempty(card.type_line),
+      oracleText: nonempty(card.oracle_text),
+      colors: card.colors ?? null,
+      colorIdentity: card.color_identity ?? null,
+      keywords: card.keywords ?? null,
+      layout: nonempty(card.layout),
+      reserved: card.reserved ?? null,
     },
     printing: {
-      scryfallId,
-      collectorNumber,
-      language: asString(card.lang),
-      rarity: asString(card.rarity),
-      artist: asString(card.artist),
+      scryfallId: card.id,
+      collectorNumber: card.collector_number,
+      language: nonempty(card.lang),
+      rarity: nonempty(card.rarity),
+      artist: nonempty(card.artist),
       releasedAt: asDateOnly(card.released_at),
-      borderColor: asString(card.border_color),
-      frame: asString(card.frame),
-      fullArt: asBool(card.full_art),
-      textless: asBool(card.textless),
-      oversized: asBool(card.oversized),
-      promo: asBool(card.promo),
-      reprint: asBool(card.reprint),
-      finishes: asStringArray(card.finishes) ?? [],
+      borderColor: nonempty(card.border_color),
+      frame: nonempty(card.frame),
+      fullArt: card.full_art ?? null,
+      textless: card.textless ?? null,
+      oversized: card.oversized ?? null,
+      promo: card.promo ?? null,
+      reprint: card.reprint ?? null,
+      finishes: card.finishes ?? [],
       imageSmall: imageField(imageUris, 'small'),
       imageNormal: imageField(imageUris, 'normal'),
       imageLarge: imageField(imageUris, 'large'),

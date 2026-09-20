@@ -12,6 +12,6 @@ export {
   type EnrichmentJobId,
   type SyncOptions,
 } from './lib/run-sync';
-export type { GlobalFlags, IngestionRunStatus } from './core/types';
+export type { GlobalFlags } from './core/types';
 export { createPool, loadEnv } from './core/db';
 export { createLogger } from './core/logger';

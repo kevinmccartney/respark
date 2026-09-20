@@ -1,5 +1,5 @@
 import type { Pool } from 'pg';
-import type { IngestionRunStatus } from '../core/types';
+import type { IngestionRunStatus } from 'schemas/etl-sync';
 
 export type EtlSyncStatus = IngestionRunStatus;
 

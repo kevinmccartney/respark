@@ -1,10 +1,12 @@
 import type { Pool } from 'pg';
+import type { IngestionRunStatus } from 'schemas/etl-sync';
+import { resolveStoreRaw } from '../../core/flags';
 import { payloadHash } from '../../core/hashing';
 import type { Logger } from '../../core/logger';
 import { ProgressBar, tapByteStream } from '../../core/progress';
 import { emitSyncEvent } from '../../core/stream-events';
 import { isNonPlayableTypeLine } from '../../core/typeLine';
-import type { GlobalFlags, IngestionRunStatus, JobContext } from '../../core/types';
+import type { GlobalFlags, JobContext } from '../../core/types';
 import { finishJobRun, insertIngestionError, startJobRun } from '../../repositories/ingestionRuns';
 import {
   reconcileMtgjsonCard,
@@ -30,13 +32,6 @@ const DEFAULT_BATCH_SIZE = 500;
 type BatchItem = {
   raw: RawMtgjsonUpsert;
   enrichment: ReturnType<typeof extractEnrichment>;
-  sourcePayload: unknown;
-};
-
-const resolveStoreRaw = (flags: GlobalFlags): boolean => {
-  if (flags.storeRaw !== undefined) return flags.storeRaw;
-  if (process.env.ETL_STORE_RAW === 'false') return false;
-  return true;
 };
 
 export type MtgjsonImportStats = {
@@ -385,7 +380,6 @@ export const runMtgjsonImport = async (
             payloadHash: payloadHash(value),
           },
           enrichment,
-          sourcePayload: value,
         });
 
         if (batch.length >= batchSize) {

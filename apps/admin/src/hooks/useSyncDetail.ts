@@ -215,18 +215,6 @@ export const useSyncDetail = (id: string | undefined) => {
         return;
       }
 
-      if (event.type === 'job.updated') {
-        upsertJob({
-          id: event.jobRunId,
-          stage: event.stage,
-          job: event.job,
-          status: event.status,
-          errorMessage: event.errorMessage,
-          ...event.metrics,
-        });
-        return;
-      }
-
       if (event.type === 'job.completed') {
         upsertJob({
           id: event.jobRunId,
