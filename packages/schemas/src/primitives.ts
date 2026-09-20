@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-/** JSON wire format for timestamps (`Date.toISOString()`, always UTC `Z`). */
-export const isoDateTimeSchema = z.iso.datetime();
+/** JSON timestamps: ISO-8601 with `Z` or a numeric offset (`Date.toISOString()` or Postgres JSON). */
+export const isoDateTimeSchema = z.iso.datetime({ offset: true });
 
 /** Postgres `uuid` columns on the wire. Serial/bigserial PKs stay `z.number()`. */
 export const uuidSchema = z.uuid();
