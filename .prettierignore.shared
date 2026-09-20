@@ -1,0 +1,9 @@
+# Trees already format-checked by other task *:ci targets.
+apps/api/
+apps/admin/
+apps/client/
+apps/etl/
+packages/schemas/
+packages/ui/
+scripts/redeploy-api-ec2.sh
+scripts/push-api-secrets.sh

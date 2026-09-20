@@ -63,126 +63,32 @@ jobs:
           echo "force=${FORCE}" >> "$GITHUB_OUTPUT"
           echo "Resolved ENV=${ENV} deploy=${DEPLOY} force=${FORCE}"
 
-  format:
-    name: Format & lint
-    needs: [config]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-          terraform_wrapper: false
-
-      - uses: arduino/setup-task@v2
-        with:
-          version: ${{ env.TASK_VERSION }}
-
-      - name: Install dependencies
-        run: task install
-
-      - name: Lint PR title
-        if: github.event_name == 'pull_request'
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-        run: printf '%s\n' "$PR_TITLE" | task commitlint:title
-
-      - name: Lint commit messages
-        if: github.event_name == 'pull_request'
-        run: task commitlint BASE=${{ github.event.pull_request.base.sha }} TO=${{ github.event.pull_request.head.sha }}
-
-      - name: Check formatting (task format:check)
-        run: task format:check
-
-      - name: Lint (task lint)
-        run: task lint
-
-      - name: Test (task test)
-        run: task test
-
-  release:
-    name: Version & changelog
-    if: |
-      github.ref == 'refs/heads/main' &&
-      github.event_name == 'push' &&
-      !startsWith(github.event.head_commit.message, 'chore(release):')
-    needs: [format]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      sha: ${{ steps.sha.outputs.sha }}
-      bumped: ${{ steps.sha.outputs.bumped }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: true
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - uses: arduino/setup-task@v2
-        with:
-          version: ${{ env.TASK_VERSION }}
-
-      - name: Install dependencies
-        run: task install
-
-      - name: Bump, changelog, tag, GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: task release
-
-      - id: sha
-        run: |
-          set -euo pipefail
-          SHA=$(git rev-parse HEAD)
-          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
-          if [ "${SHA}" = "${{ github.sha }}" ]; then
-            echo "bumped=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "bumped=true" >> "$GITHUB_OUTPUT"
-          fi
-
   changes:
     name: Detect changes
-    if: |
-      always() &&
-      !cancelled() &&
-      needs.config.result == 'success' &&
-      needs.format.result == 'success' &&
-      (needs.release.result == 'success' || needs.release.result == 'skipped')
-    needs: [config, format, release]
+    needs: [config]
     runs-on: ubuntu-latest
     outputs:
+      shared: ${{ steps.flags.outputs.shared }}
+      schemas: ${{ steps.flags.outputs.schemas }}
+      ui: ${{ steps.flags.outputs.ui }}
       etl: ${{ steps.flags.outputs.etl }}
       api: ${{ steps.flags.outputs.api }}
       client: ${{ steps.flags.outputs.client }}
       admin: ${{ steps.flags.outputs.admin }}
       infra: ${{ steps.flags.outputs.infra }}
-      build: ${{ steps.flags.outputs.build }}
       deploy_api: ${{ steps.flags.outputs.deploy_api }}
       deploy_client: ${{ steps.flags.outputs.deploy_client }}
       deploy_admin: ${{ steps.flags.outputs.deploy_admin }}
       sha: ${{ steps.ref.outputs.sha }}
     steps:
       - id: ref
-        run: echo "sha=${{ needs.release.outputs.sha || github.sha }}" >> "$GITHUB_OUTPUT"
+        run: echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v4
         with:
-          ref: ${{ steps.ref.outputs.sha }}
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          fetch-tags: true
 
       - uses: dorny/paths-filter@v3
         id: filter
@@ -190,10 +96,28 @@ jobs:
         with:
           filters: |
             shared:
+              - 'docs/**'
+              - 'README.md'
+              - 'CHANGELOG.md'
+              - 'AGENTS.md'
+              - 'TODO.md'
+              - '.github/**'
+              - '.husky/**'
+              - 'commitlint.config.mjs'
+              - 'docker-compose.yml'
+              - 'tech-debt-analysis-prompt.md'
+              - '.prettierignore.shared'
+              - 'scripts/**'
+              - '!scripts/redeploy-api-ec2.sh'
+              - '!scripts/push-api-secrets.sh'
+            toolchain:
               - 'package.json'
               - 'package-lock.json'
               - 'tsconfig*.json'
               - 'Taskfile.yml'
+              - 'eslint.config.mjs'
+              - '.prettierrc.json'
+              - '.prettierignore'
             schemas:
               - 'packages/schemas/**'
             ui:
@@ -215,8 +139,9 @@ jobs:
       - id: flags
         env:
           FORCE: ${{ needs.config.outputs.force }}
-          BUMPED: ${{ needs.release.outputs.bumped || 'false' }}
+          IS_PR: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
           F_SHARED: ${{ steps.filter.outputs.shared || 'false' }}
+          F_TOOLCHAIN: ${{ steps.filter.outputs.toolchain || 'false' }}
           F_SCHEMAS: ${{ steps.filter.outputs.schemas || 'false' }}
           F_UI: ${{ steps.filter.outputs.ui || 'false' }}
           F_ETL: ${{ steps.filter.outputs.etl || 'false' }}
@@ -234,88 +159,166 @@ jobs:
             echo false
           }
 
-          if [ "$FORCE" = "true" ]; then
-            ETL=true; API=true; CLIENT=true; ADMIN=true; INFRA=true
-          else
-            ETL=$(or "$F_ETL" "$F_SHARED")
-            # API image includes etl + schemas; treat those as API build/deploy.
-            # A platform version bump must redeploy API so GET /info serves the new version.
-            API=$(or "$F_API" "$F_ETL" "$F_SCHEMAS" "$F_SHARED" "$BUMPED")
-            CLIENT=$(or "$F_CLIENT" "$F_SCHEMAS" "$F_UI" "$F_SHARED")
-            ADMIN=$(or "$F_ADMIN" "$F_SCHEMAS" "$F_UI" "$F_SHARED")
-            INFRA=$(true_if "$F_INFRA")
+          # Release runs after CI, so detect a likely SemVer bump here to force API CI.
+          # Deploy still keys off path flags plus needs.release.outputs.bumped.
+          WILL_BUMP=false
+          if [ "$FORCE" != "true" ] && [ "${GITHUB_REF}" = "refs/heads/main" ] && [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+            HEAD_MSG=$(git log -1 --pretty=%s)
+            case "$HEAD_MSG" in
+              'chore(release):'*) ;;
+              *)
+                LAST_TAG=$(git tag --list 'v*' --sort=-v:refname | head -n 1 || true)
+                if [ -n "${LAST_TAG}" ]; then
+                  SUBJECTS=$(git log "${LAST_TAG}..HEAD" --pretty=%s)
+                  BODIES=$(git log "${LAST_TAG}..HEAD" --pretty=%B)
+                  if printf '%s\n' "$SUBJECTS" | grep -Eiq '^(feat|fix)(\(.*\))?(!)?:' \
+                    || printf '%s\n' "$BODIES" | grep -Fq 'BREAKING CHANGE:'; then
+                    WILL_BUMP=true
+                  fi
+                fi
+                ;;
+            esac
           fi
 
-          BUILD=$(or "$ETL" "$API" "$CLIENT" "$ADMIN")
-          # Infra changes may replace EC2 / CDN; redeploy affected surfaces.
-          DEPLOY_API=$(or "$API" "$INFRA")
-          DEPLOY_CLIENT=$(or "$CLIENT" "$INFRA")
-          DEPLOY_ADMIN=$(or "$ADMIN" "$INFRA")
+          if [ "$FORCE" = "true" ]; then
+            SHARED=true; SCHEMAS=true; UI=true; ETL=true; API=true; CLIENT=true; ADMIN=true; INFRA=true
+            DEPLOY_API=true; DEPLOY_CLIENT=true; DEPLOY_ADMIN=true
+          else
+            SHARED=$(or "$F_SHARED" "$F_TOOLCHAIN" "$IS_PR")
+            SCHEMAS=$(or "$F_SCHEMAS" "$F_TOOLCHAIN")
+            UI=$(or "$F_UI" "$F_TOOLCHAIN")
+            ETL=$(or "$F_ETL" "$F_SCHEMAS" "$F_TOOLCHAIN")
+            API=$(or "$F_API" "$F_ETL" "$F_SCHEMAS" "$F_TOOLCHAIN" "$WILL_BUMP")
+            CLIENT=$(or "$F_CLIENT" "$F_SCHEMAS" "$F_UI" "$F_TOOLCHAIN")
+            ADMIN=$(or "$F_ADMIN" "$F_SCHEMAS" "$F_UI" "$F_TOOLCHAIN")
+            INFRA=$(true_if "$F_INFRA")
+            # Infra changes may replace EC2 / CDN; redeploy affected surfaces.
+            DEPLOY_API=$(or "$F_API" "$F_ETL" "$F_SCHEMAS" "$F_TOOLCHAIN" "$INFRA")
+            DEPLOY_CLIENT=$(or "$CLIENT" "$INFRA")
+            DEPLOY_ADMIN=$(or "$ADMIN" "$INFRA")
+          fi
 
           {
+            echo "shared=${SHARED}"
+            echo "schemas=${SCHEMAS}"
+            echo "ui=${UI}"
             echo "etl=${ETL}"
             echo "api=${API}"
             echo "client=${CLIENT}"
             echo "admin=${ADMIN}"
             echo "infra=${INFRA}"
-            echo "build=${BUILD}"
             echo "deploy_api=${DEPLOY_API}"
             echo "deploy_client=${DEPLOY_CLIENT}"
             echo "deploy_admin=${DEPLOY_ADMIN}"
           } >> "$GITHUB_OUTPUT"
 
-          echo "Changes etl=${ETL} api=${API} client=${CLIENT} admin=${ADMIN} infra=${INFRA} build=${BUILD}"
+          echo "Jobs shared=${SHARED} schemas=${SCHEMAS} ui=${UI} etl=${ETL} api=${API} client=${CLIENT} admin=${ADMIN} infra=${INFRA}"
 
-  build:
-    name: Build apps
-    if: needs.changes.outputs.build == 'true'
-    needs: [config, changes, format]
+  shared:
+    name: Shared
+    if: needs.changes.outputs.shared == 'true'
+    needs: [config, changes]
     runs-on: ubuntu-latest
-    environment: ${{ needs.config.outputs.environment }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.changes.outputs.sha }}
+          fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-js
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+          task-version: ${{ env.TASK_VERSION }}
 
-      - uses: arduino/setup-task@v2
+      - name: Lint PR title
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" | task commitlint:title
+
+      - name: Lint commit messages
+        if: github.event_name == 'pull_request'
+        run: task commitlint BASE=${{ github.event.pull_request.base.sha }} TO=${{ github.event.pull_request.head.sha }}
+
+      - name: Format-check and lint root / docs / scripts
+        run: task shared:ci
+
+  schemas:
+    name: Build schemas
+    if: needs.changes.outputs.schemas == 'true'
+    needs: [config, changes]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
         with:
-          version: ${{ env.TASK_VERSION }}
+          ref: ${{ needs.changes.outputs.sha }}
 
-      - name: Install dependencies
-        run: task install
+      - uses: ./.github/actions/setup-js
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          task-version: ${{ env.TASK_VERSION }}
 
-      - name: Build etl
-        if: needs.changes.outputs.etl == 'true'
-        run: task etl:build
+      - name: Format, lint, and build schemas
+        run: task schemas:ci
 
-      - name: Build API
-        if: needs.changes.outputs.api == 'true'
-        run: task api:build
+  ui:
+    name: Build ui
+    if: needs.changes.outputs.ui == 'true'
+    needs: [config, changes]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.changes.outputs.sha }}
 
-      - name: Build client
-        if: needs.changes.outputs.client == 'true'
-        env:
-          # Compile-time check only; deploy jobs rebuild with live api_url from Terraform.
-          VITE_API_URL: ${{ vars.COMPILE_CHECK_API_URL }}
-          VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
-        run: task client:build
+      - uses: ./.github/actions/setup-js
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          task-version: ${{ env.TASK_VERSION }}
 
-      - name: Build admin
-        if: needs.changes.outputs.admin == 'true'
-        env:
-          VITE_API_URL: ${{ vars.COMPILE_CHECK_API_URL }}
-          VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
-        run: task admin:build
+      - name: Format, lint, and build ui
+        run: task ui:ci
 
-  plan:
-    name: Plan infra
-    if: needs.changes.outputs.infra == 'true'
-    needs: [config, changes, format]
+  etl:
+    name: Build etl
+    if: needs.changes.outputs.etl == 'true'
+    needs: [config, changes]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.changes.outputs.sha }}
+
+      - uses: ./.github/actions/setup-js
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          task-version: ${{ env.TASK_VERSION }}
+
+      - name: Format, lint, test, and build etl
+        run: task etl:ci
+
+  api:
+    name: Build API
+    if: needs.changes.outputs.api == 'true'
+    needs: [config, changes]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.changes.outputs.sha }}
+
+      - uses: ./.github/actions/setup-js
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          task-version: ${{ env.TASK_VERSION }}
+
+      - name: Format, lint, test, and build API
+        run: task api:ci
+
+  client:
+    name: Build client
+    if: needs.changes.outputs.client == 'true'
+    needs: [config, changes]
     runs-on: ubuntu-latest
     environment: ${{ needs.config.outputs.environment }}
     steps:
@@ -323,11 +326,49 @@ jobs:
         with:
           ref: ${{ needs.changes.outputs.sha }}
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: ./.github/actions/setup-js
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          node-version: ${{ env.NODE_VERSION }}
+          task-version: ${{ env.TASK_VERSION }}
+
+      - name: Format, lint, and build client
+        env:
+          VITE_API_URL: ${{ vars.COMPILE_CHECK_API_URL }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
+        run: task client:ci
+
+  admin:
+    name: Build admin
+    if: needs.changes.outputs.admin == 'true'
+    needs: [config, changes]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.config.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.changes.outputs.sha }}
+
+      - uses: ./.github/actions/setup-js
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          task-version: ${{ env.TASK_VERSION }}
+
+      - name: Format, lint, and build admin
+        env:
+          VITE_API_URL: ${{ vars.COMPILE_CHECK_API_URL }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
+        run: task admin:ci
+
+  infra:
+    name: Build infra
+    if: needs.changes.outputs.infra == 'true'
+    needs: [config, changes]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.config.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.changes.outputs.sha }}
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -337,6 +378,15 @@ jobs:
       - uses: arduino/setup-task@v2
         with:
           version: ${{ env.TASK_VERSION }}
+
+      - name: Format-check and validate Terraform
+        run: task infra:ci
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform plan (task infra:plan)
         run: task infra:plan ENV=${{ needs.config.outputs.environment }}
@@ -349,22 +399,81 @@ jobs:
           if-no-files-found: error
           retention-days: 5
 
+  release:
+    name: Version & changelog
+    if: |
+      always() &&
+      !cancelled() &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      !startsWith(github.event.head_commit.message, 'chore(release):') &&
+      needs.changes.result == 'success' &&
+      (needs.shared.result == 'success' || needs.shared.result == 'skipped') &&
+      (needs.schemas.result == 'success' || needs.schemas.result == 'skipped') &&
+      (needs.ui.result == 'success' || needs.ui.result == 'skipped') &&
+      (needs.etl.result == 'success' || needs.etl.result == 'skipped') &&
+      (needs.api.result == 'success' || needs.api.result == 'skipped') &&
+      (needs.client.result == 'success' || needs.client.result == 'skipped') &&
+      (needs.admin.result == 'success' || needs.admin.result == 'skipped') &&
+      (needs.infra.result == 'success' || needs.infra.result == 'skipped')
+    needs: [changes, shared, schemas, ui, etl, api, client, admin, infra]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+      bumped: ${{ steps.sha.outputs.bumped }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.changes.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - uses: ./.github/actions/setup-js
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          task-version: ${{ env.TASK_VERSION }}
+
+      - name: Bump, changelog, tag, GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: task release
+
+      - id: sha
+        run: |
+          set -euo pipefail
+          SHA=$(git rev-parse HEAD)
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          if [ "${SHA}" = "${{ needs.changes.outputs.sha }}" ]; then
+            echo "bumped=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "bumped=true" >> "$GITHUB_OUTPUT"
+          fi
+
   apply:
-    name: Apply infra
+    name: Deploy infra
     if: |
       always() &&
       !cancelled() &&
       needs.config.outputs.deploy == 'true' &&
       needs.changes.outputs.infra == 'true' &&
-      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
-      needs.plan.result == 'success'
-    needs: [config, changes, build, plan]
+      needs.infra.result == 'success' &&
+      (needs.release.result == 'success' || needs.release.result == 'skipped') &&
+      (needs.shared.result == 'success' || needs.shared.result == 'skipped') &&
+      (needs.schemas.result == 'success' || needs.schemas.result == 'skipped') &&
+      (needs.ui.result == 'success' || needs.ui.result == 'skipped') &&
+      (needs.etl.result == 'success' || needs.etl.result == 'skipped') &&
+      (needs.api.result == 'success' || needs.api.result == 'skipped') &&
+      (needs.client.result == 'success' || needs.client.result == 'skipped') &&
+      (needs.admin.result == 'success' || needs.admin.result == 'skipped')
+    needs: [config, changes, shared, schemas, ui, etl, api, client, admin, infra, release]
     runs-on: ubuntu-latest
     environment: ${{ needs.config.outputs.environment }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.changes.outputs.sha }}
+          ref: ${{ needs.release.outputs.sha || needs.changes.outputs.sha }}
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -396,17 +505,25 @@ jobs:
       always() &&
       !cancelled() &&
       needs.config.outputs.deploy == 'true' &&
-      needs.changes.outputs.deploy_api == 'true' &&
-      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
-      (needs.apply.result == 'success' || needs.apply.result == 'skipped')
-    needs: [config, changes, build, apply]
+      (needs.changes.outputs.deploy_api == 'true' || needs.release.outputs.bumped == 'true') &&
+      (needs.apply.result == 'success' || needs.apply.result == 'skipped') &&
+      (needs.release.result == 'success' || needs.release.result == 'skipped') &&
+      (needs.shared.result == 'success' || needs.shared.result == 'skipped') &&
+      (needs.schemas.result == 'success' || needs.schemas.result == 'skipped') &&
+      (needs.ui.result == 'success' || needs.ui.result == 'skipped') &&
+      (needs.etl.result == 'success' || needs.etl.result == 'skipped') &&
+      (needs.api.result == 'success' || needs.api.result == 'skipped') &&
+      (needs.client.result == 'success' || needs.client.result == 'skipped') &&
+      (needs.admin.result == 'success' || needs.admin.result == 'skipped') &&
+      (needs.infra.result == 'success' || needs.infra.result == 'skipped')
+    needs: [config, changes, shared, schemas, ui, etl, api, client, admin, infra, release, apply]
     # Native arm64 so linux/arm64 npm ci is not QEMU-emulated (SIGILL on Node 22/Alpine).
     runs-on: ubuntu-24.04-arm
     environment: ${{ needs.config.outputs.environment }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.changes.outputs.sha }}
+          ref: ${{ needs.release.outputs.sha || needs.changes.outputs.sha }}
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -433,7 +550,7 @@ jobs:
         run: >
           task api:deploy
           ENV=${{ needs.config.outputs.environment }}
-          API_IMAGE_TAG=${{ needs.changes.outputs.sha }}
+          API_IMAGE_TAG=${{ needs.release.outputs.sha || needs.changes.outputs.sha }}
           DOCKER_BUILDX=1
 
   deploy-client:
@@ -444,14 +561,38 @@ jobs:
       needs.config.outputs.deploy == 'true' &&
       needs.changes.outputs.deploy_client == 'true' &&
       (needs.apply.result == 'success' || needs.apply.result == 'skipped') &&
-      (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped')
-    needs: [config, changes, apply, deploy-api]
+      (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped') &&
+      (needs.release.result == 'success' || needs.release.result == 'skipped') &&
+      (needs.client.result == 'success' || needs.client.result == 'skipped') &&
+      (needs.shared.result == 'success' || needs.shared.result == 'skipped') &&
+      (needs.schemas.result == 'success' || needs.schemas.result == 'skipped') &&
+      (needs.ui.result == 'success' || needs.ui.result == 'skipped') &&
+      (needs.etl.result == 'success' || needs.etl.result == 'skipped') &&
+      (needs.api.result == 'success' || needs.api.result == 'skipped') &&
+      (needs.admin.result == 'success' || needs.admin.result == 'skipped') &&
+      (needs.infra.result == 'success' || needs.infra.result == 'skipped')
+    needs:
+      [
+        config,
+        changes,
+        shared,
+        schemas,
+        ui,
+        etl,
+        api,
+        client,
+        admin,
+        infra,
+        release,
+        apply,
+        deploy-api,
+      ]
     runs-on: ubuntu-latest
     environment: ${{ needs.config.outputs.environment }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.changes.outputs.sha }}
+          ref: ${{ needs.release.outputs.sha || needs.changes.outputs.sha }}
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -459,22 +600,15 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-js
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+          task-version: ${{ env.TASK_VERSION }}
 
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: false
-
-      - uses: arduino/setup-task@v2
-        with:
-          version: ${{ env.TASK_VERSION }}
-
-      - name: Install dependencies
-        run: task install
 
       - name: Terraform init (outputs for deploy)
         run: task infra:init ENV=${{ needs.config.outputs.environment }}
@@ -492,14 +626,38 @@ jobs:
       needs.config.outputs.deploy == 'true' &&
       needs.changes.outputs.deploy_admin == 'true' &&
       (needs.apply.result == 'success' || needs.apply.result == 'skipped') &&
-      (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped')
-    needs: [config, changes, apply, deploy-api]
+      (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped') &&
+      (needs.release.result == 'success' || needs.release.result == 'skipped') &&
+      (needs.admin.result == 'success' || needs.admin.result == 'skipped') &&
+      (needs.shared.result == 'success' || needs.shared.result == 'skipped') &&
+      (needs.schemas.result == 'success' || needs.schemas.result == 'skipped') &&
+      (needs.ui.result == 'success' || needs.ui.result == 'skipped') &&
+      (needs.etl.result == 'success' || needs.etl.result == 'skipped') &&
+      (needs.api.result == 'success' || needs.api.result == 'skipped') &&
+      (needs.client.result == 'success' || needs.client.result == 'skipped') &&
+      (needs.infra.result == 'success' || needs.infra.result == 'skipped')
+    needs:
+      [
+        config,
+        changes,
+        shared,
+        schemas,
+        ui,
+        etl,
+        api,
+        client,
+        admin,
+        infra,
+        release,
+        apply,
+        deploy-api,
+      ]
     runs-on: ubuntu-latest
     environment: ${{ needs.config.outputs.environment }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.changes.outputs.sha }}
+          ref: ${{ needs.release.outputs.sha || needs.changes.outputs.sha }}
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -507,22 +665,15 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-js
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+          task-version: ${{ env.TASK_VERSION }}
 
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: false
-
-      - uses: arduino/setup-task@v2
-        with:
-          version: ${{ env.TASK_VERSION }}
-
-      - name: Install dependencies
-        run: task install
 
       - name: Terraform init (outputs for deploy)
         run: task infra:init ENV=${{ needs.config.outputs.environment }}

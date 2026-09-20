@@ -1,0 +1,24 @@
+name: Setup JS
+description: Node, Task, and workspace npm ci
+inputs:
+  node-version:
+    description: Node.js version
+    required: true
+  task-version:
+    description: go-task version
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+
+    - uses: arduino/setup-task@v2
+      with:
+        version: ${{ inputs.task-version }}
+
+    - name: Install dependencies
+      shell: bash
+      run: task install

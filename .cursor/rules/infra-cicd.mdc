@@ -20,5 +20,5 @@ Deep reference: [`docs/ci-cd.md`](../../docs/ci-cd.md). Develop env notes: [`inf
 - Remote state in S3; do not rely on local-only `terraform.tfstate` for shared work.
 - GitHub Actions assumes AWS via OIDC; trust `repository` + `environment:*` claims (see ci-cd docs) — GitHub `sub` embeds owner/repo IDs.
 - Workflow jobs should call **Task**, not duplicate shell orchestration.
-- Path filters skip unchanged apps; `workflow_dispatch` force-deploys all for the chosen env.
+- Path filters skip unchanged projects; `workflow_dispatch` force-deploys all for the chosen env.
 - `infra:validate` uses `terraform init -backend=false` so hooks/CI work without AWS credentials.

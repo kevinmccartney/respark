@@ -11,4 +11,3 @@ Writing down ideas for the future
 - (admin) Table of cards/sets/etc
 - (admin) User management
 - (admin) ai cost management
-- ci: only run tests/lint on changed projects

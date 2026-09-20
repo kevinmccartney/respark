@@ -30,7 +30,7 @@ tasks:
       - format:terraform
 
   format:check:
-    desc: Check formatting without writing (Prettier + terraform fmt) — used in CI
+    desc: Check formatting without writing (Prettier + terraform fmt)
     deps:
       - format:prettier:check
       - format:terraform:check
@@ -220,6 +220,68 @@ tasks:
     desc: Compile shared UI package to packages/ui/dist
     cmds:
       - npm run build -w ui
+
+  schemas:ci:
+    desc: Format-check, lint, and build packages/schemas
+    cmds:
+      - npx prettier --check packages/schemas
+      - npx eslint packages/schemas
+      - task: schemas:build
+
+  ui:ci:
+    desc: Format-check, lint, and build packages/ui
+    cmds:
+      - npx prettier --check packages/ui
+      - npx eslint packages/ui
+      - task: ui:build
+
+  etl:ci:
+    desc: Format-check, lint, test, and build the ETL CLI
+    cmds:
+      - npx prettier --check apps/etl
+      - npx eslint apps/etl
+      - task: schemas:build
+      - npm test -w etl
+      - task: etl:build
+
+  api:ci:
+    desc: Format-check, lint, test, and build the API
+    cmds:
+      - npx prettier --check apps/api scripts/redeploy-api-ec2.sh scripts/push-api-secrets.sh
+      - npx eslint apps/api
+      - task: schemas:build
+      - npm test -w api
+      - task: api:build
+
+  client:ci:
+    desc: Format-check, lint, and production-build the client
+    cmds:
+      - npx prettier --check apps/client
+      - npx eslint apps/client
+      - task: client:build
+
+  admin:ci:
+    desc: Format-check, lint, and production-build the admin app
+    cmds:
+      - npx prettier --check apps/admin
+      - npx eslint apps/admin
+      - task: admin:build
+
+  infra:ci:
+    desc: Format-check and validate Terraform (plan stays in CI with OIDC)
+    deps:
+      - format:terraform:check
+      - infra:validate
+
+  shared:ci:
+    desc: Format-check and lint repo-root, docs, and scripts
+    cmds:
+      - |
+        npx prettier --check . \
+          --ignore-path .gitignore \
+          --ignore-path .prettierignore \
+          --ignore-path .prettierignore.shared
+      - npx eslint scripts commitlint.config.mjs eslint.config.mjs
 
   docs:diagrams:
     desc: Render docs/**/*.mmd Mermaid sources to sibling .svg files
