@@ -10,12 +10,10 @@ export const AppShell = () => (
     <div className="flex h-svh overflow-hidden">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <SiteHeader />
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <div className="flex min-h-0 flex-1 flex-col">
-            <Outlet />
-          </div>
-          <ApiHealthFooter />
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <Outlet />
         </div>
+        <ApiHealthFooter />
       </div>
       <Show when="signed-in">
         <GlobalChat />

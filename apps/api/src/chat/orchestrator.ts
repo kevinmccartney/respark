@@ -127,6 +127,10 @@ export class ChatOrchestrator {
             signal: controller.signal,
           })) {
             if (event.type === 'text-delta') {
+              if (!roundText && textAccum) {
+                textAccum += '\n\n';
+                opts.emit({ type: 'text', delta: '\n\n' });
+              }
               roundText += event.delta;
               textAccum += event.delta;
               opts.emit({ type: 'text', delta: event.delta });

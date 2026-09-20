@@ -168,6 +168,32 @@ describe('ChatOrchestrator stop logging', () => {
     expect(events.some((event) => event.type === 'error')).toBe(true);
   });
 
+  it('separates text from successive rounds with a paragraph break', async () => {
+    const { result, events } = await runTurn(
+      new ScriptedChatProvider([
+        {
+          text: 'Let me search.',
+          toolCalls: [{ name: 'searchCards', input: { q: 'draw', limit: 15 } }],
+        },
+        { text: 'Growth Spiral is a solid add.' },
+      ]),
+      capturingLogger([]),
+    );
+
+    const expected = 'Let me search.\n\nGrowth Spiral is a solid add.';
+    expect(result.parts).toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: 'text', text: expected })]),
+    );
+    expect(
+      events
+        .filter(
+          (event): event is Extract<ChatServerEvent, { type: 'text' }> => event.type === 'text',
+        )
+        .map((event) => event.delta)
+        .join(''),
+    ).toBe(expected);
+  });
+
   it('still runs presentRecommendations after the catalog budget is spent', async () => {
     const lines: LogLine[] = [];
     const searches = Array.from({ length: CHAT_MAX_TOOL_CALLS }, () => ({

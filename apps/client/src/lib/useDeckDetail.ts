@@ -115,8 +115,17 @@ export const useDeckDetail = (id: string) => {
 
   const setPrinting = async (deckCardId: string, printingId: string): Promise<void> => {
     if (!detail) return;
+    const previous = detail.cards.find((row) => row.id === deckCardId);
     const updated = await setDeckCardPrinting(getToken, detail.deck.id, deckCardId, printingId);
-    replaceCard(deckCardId, updated);
+    setDetail((prev) => {
+      if (!prev) return prev;
+      const next = upsertDeckCard(prev, deckCardId, updated);
+      if (!previous || prev.deck.commanderPrintingId !== previous.printingId) return next;
+      return {
+        ...next,
+        deck: { ...next.deck, commanderPrintingId: updated.printingId },
+      };
+    });
   };
 
   const toggleFoil = async (card: DeckCard): Promise<void> => {

@@ -49,7 +49,7 @@ export const ApiHealthFooter = () => {
     state === 'checking' ? 'Checking API…' : state === 'ok' ? 'API OK' : 'API unavailable';
 
   return (
-    <footer className="border-t bg-card px-5 py-2 text-center">
+    <footer className="shrink-0 border-t bg-card px-5 py-2 text-center">
       <Badge
         variant={state === 'error' ? 'destructive' : state === 'ok' ? 'secondary' : 'outline'}
         role="status"
