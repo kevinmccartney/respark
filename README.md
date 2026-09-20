@@ -80,6 +80,9 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 | `task lint:eslint`           | ESLint only                                                                                 |
 | `task infra:validate`        | `terraform validate` for `$ENV` (no remote backend)                                         |
 | `task precommit`             | Husky hook: staged format/lint + infra validate                                             |
+| `task commit`                | Interactive Conventional Commit (Commitizen)                                                |
+| `task commitlint`            | Lint commit messages from `origin/main` (or `BASE=`) to HEAD                                |
+| `task release`               | Platform version bump + changelog + tag (CI on `main`; locally `-- --dry-run`)              |
 | `task build`                 | Production build etl, API, client, and admin                                                |
 | `task etl:build`             | Compile the ETL CLI                                                                         |
 | `task client:build`          | Production build of the player client                                                       |

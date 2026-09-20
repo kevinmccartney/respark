@@ -1,6 +1,6 @@
 # CI / CD (GitHub Actions)
 
-Pipeline: **detect changes** → **format check** → **build** (changed apps) and **plan** (if infra) → on deployable refs, **apply** (if infra) → **deploy API** (if needed) → **client** ∥ **admin** (if needed).
+Pipeline: **format check** → **release** (push to `main` only) → **detect changes** → **build** (changed apps) and **plan** (if infra) → on deployable refs, **apply** (if infra) → **deploy API** (if needed) → **client** ∥ **admin** (if needed).
 
 Orchestration lives in [`Taskfile.yml`](../Taskfile.yml). The workflow only wires GitHub Environments, OIDC, path filters, and artifacts, then runs `task …` (never raw `npm` / `terraform` beyond what Task invokes). npm scripts stay in `package.json` for package binaries; Task calls those scripts.
 
@@ -14,17 +14,18 @@ Workflow file: [`.github/workflows/ci-cd.yml`](../.github/workflows/ci-cd.yml).
 | Check format         | `task format:check`                                                                           | `format` job               |
 | ESLint + TF validate | `task lint`                                                                                   | `format` job (`task lint`) |
 | Unit / fixture tests | `task test`                                                                                   | `format` job (`task test`) |
+| Commit messages      | husky `commit-msg` → commitlint; `task commit` (Commitizen)                                   | `format` job on PRs        |
 | On commit            | husky → `task precommit` (lint-staged Prettier/ESLint/`terraform fmt`, then `infra:validate`) | —                          |
 
 Prettier covers JS/TS/JSON/MD/YAML/CSS; ESLint covers apps; Terraform uses `terraform fmt` + `terraform validate` under `infra/`.
 
 ## Triggers
 
-| Event                         | Environment                        | What runs                                                                                   |
-| ----------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------- |
-| Pull request                  | `develop`                          | `build` + `plan` for changed paths only                                                     |
-| Push to `main`                | `develop`                          | changed paths: `build` / `plan` → `apply` → `deploy-api` → `deploy-client` ∥ `deploy-admin` |
-| `workflow_dispatch` on `main` | choice (`develop` or `production`) | **Force all** paths for the selected env (full rebuild + plan/apply + deploy)               |
+| Event                         | Environment                        | What runs                                                                                                                                     |
+| ----------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pull request                  | `develop`                          | format/lint/test, Conventional Commit lint (PR title + commits), `build` + `plan` for changed paths                                           |
+| Push to `main`                | `develop`                          | format/lint/test → platform release (if needed) → changed paths: `build` / `plan` → `apply` → `deploy-api` → `deploy-client` ∥ `deploy-admin` |
+| `workflow_dispatch` on `main` | choice (`develop` or `production`) | **Force all** paths for the selected env (full rebuild + plan/apply + deploy)                                                                 |
 
 Production deploys are intentional: use **Actions → CI / CD → Run workflow** and pick `production`.
 
@@ -43,6 +44,7 @@ Production deploys are intentional: use **Actions → CI / CD → Run workflow**
 - **Build** runs only the matching `task *:build` steps.
 - **Plan / apply** run only when `infra` changed (or on force).
 - **Deploy** runs for the matching app; an `infra` change also redeploys API/client/admin (EC2 / CDN may have moved).
+- A platform version bump also deploys the API so `GET /info` serves the new version.
 - Skipped upstream jobs do not block later deploys (e.g. a client-only change skips plan/apply/API, then deploys client).
 - Client/admin still wait on API when API _is_ deploying.
 
@@ -54,6 +56,8 @@ Production deploys are intentional: use **Actions → CI / CD → Run workflow**
 | Format (check)        | `task format:check`                        | `format` job                                                           |
 | Lint                  | `task lint`                                | `format` job                                                           |
 | Test                  | `task test`                                | `format` job                                                           |
+| Lint commit messages  | `task commit` / `task commitlint`          | `format` job on PRs (title + commits)                                  |
+| Platform release      | `task release -- --dry-run`                | `release` job on push to `main`                                        |
 | Build apps            | `task build`                               | conditional `task *:build`                                             |
 | Plan                  | `task infra:plan ENV=develop`              | same                                                                   |
 | Apply                 | `task infra:apply ENV=develop`             | same (applies uploaded `tfplan`)                                       |
@@ -61,6 +65,33 @@ Production deploys are intentional: use **Actions → CI / CD → Run workflow**
 | Deploy client / admin | `task client:deploy` / `task admin:deploy` | same                                                                   |
 
 `ENV` selects `infra/envs/<ENV>` (override with `TF_DIR` if needed).
+
+## Platform version & Conventional Commits
+
+The platform has a single SemVer on the root [`package.json`](../package.json) (not per app). [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) drive the bump:
+
+| Commits since the last `v*` tag               | Bump       |
+| --------------------------------------------- | ---------- |
+| `BREAKING CHANGE:` footer or `type!`          | major      |
+| At least one `feat`                           | minor      |
+| At least one `fix` (or other releasable type) | patch      |
+| Only `chore` / `docs` / `test` / `ci` / …     | no release |
+
+Authoring:
+
+- husky **commit-msg** runs commitlint (`@commitlint/config-conventional`).
+- `task commit` runs Commitizen (`cz-conventional-changelog`). Do not use a `prepare-commit-msg` hook — `git commit -m` must keep working.
+- PRs: CI lints the **PR title** and every commit on the branch. **Squash-merge** (or rebase) with a conventional title; a default “Merge pull request #N” commit is not a bump signal.
+
+Release (CI `release` job on push to `main`, skipped for `chore(release):` commits):
+
+1. No `v*` tags yet: tag `v0.1.0` from the current root version and create a GitHub Release (does not rewrite history into the changelog).
+2. Otherwise: `conventional-recommended-bump` + `conventional-changelog` (`conventionalcommits` preset) via `task release` ([`scripts/release.mjs`](../scripts/release.mjs)): bump root `package.json` / lockfile, prepend [`CHANGELOG.md`](../CHANGELOG.md), commit `chore(release): vX.Y.Z`, tag, push, `gh release create`.
+3. Later jobs check out that SHA. Locally: `task release -- --dry-run` (does not tag or push).
+
+If `main` is protected, allow GitHub Actions to push so the job can tag.
+
+Running APIs expose the version on public **`GET /info`** `{ "version": "0.1.0" }` (read from root `package.json`, or `APP_VERSION`). **`GET /healthz`** stays `{ "status": "ok" }` for load balancers. Client and admin footers fetch `/info` next to `/healthz`.
 
 ## One-time setup
 

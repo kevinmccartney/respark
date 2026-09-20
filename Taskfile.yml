@@ -83,6 +83,30 @@ tasks:
       - task: format:staged
       - task: infra:validate
 
+  commit:
+    desc: Interactive Conventional Commit (Commitizen)
+    interactive: true
+    cmds:
+      - npx cz
+
+  commitlint:
+    desc: Lint commit messages from BASE (default origin/main) to TO (default HEAD)
+    vars:
+      BASE: origin/main
+      TO: HEAD
+    cmds:
+      - npx commitlint --from {{.BASE}} --to {{.TO}} --verbose
+
+  commitlint:title:
+    desc: Lint a commit message from stdin (PR titles in CI)
+    cmds:
+      - npx commitlint
+
+  release:
+    desc: Bump platform version, changelog, tag, and GitHub Release (CI on main)
+    cmds:
+      - node scripts/release.mjs {{.CLI_ARGS}}
+
   build:
     desc: Production build etl, API, client, and admin
     deps:

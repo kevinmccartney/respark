@@ -55,6 +55,7 @@ services:
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
     volumes:
+      - ./package.json:/repo/package.json:ro
       - ./apps/api/src:/repo/apps/api/src
       - ./apps/api/drizzle:/repo/apps/api/drizzle
       - ./apps/etl:/repo/apps/etl

@@ -65,10 +65,12 @@ jobs:
 
   format:
     name: Format & lint
-    needs: [changes]
+    needs: [config]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -87,6 +89,16 @@ jobs:
       - name: Install dependencies
         run: task install
 
+      - name: Lint PR title
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" | task commitlint:title
+
+      - name: Lint commit messages
+        if: github.event_name == 'pull_request'
+        run: task commitlint BASE=${{ github.event.pull_request.base.sha }} TO=${{ github.event.pull_request.head.sha }}
+
       - name: Check formatting (task format:check)
         run: task format:check
 
@@ -96,9 +108,62 @@ jobs:
       - name: Test (task test)
         run: task test
 
+  release:
+    name: Version & changelog
+    if: |
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      !startsWith(github.event.head_commit.message, 'chore(release):')
+    needs: [format]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+      bumped: ${{ steps.sha.outputs.bumped }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: arduino/setup-task@v2
+        with:
+          version: ${{ env.TASK_VERSION }}
+
+      - name: Install dependencies
+        run: task install
+
+      - name: Bump, changelog, tag, GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: task release
+
+      - id: sha
+        run: |
+          set -euo pipefail
+          SHA=$(git rev-parse HEAD)
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          if [ "${SHA}" = "${{ github.sha }}" ]; then
+            echo "bumped=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "bumped=true" >> "$GITHUB_OUTPUT"
+          fi
+
   changes:
     name: Detect changes
-    needs: [config]
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.config.result == 'success' &&
+      needs.format.result == 'success' &&
+      (needs.release.result == 'success' || needs.release.result == 'skipped')
+    needs: [config, format, release]
     runs-on: ubuntu-latest
     outputs:
       etl: ${{ steps.flags.outputs.etl }}
@@ -110,8 +175,14 @@ jobs:
       deploy_api: ${{ steps.flags.outputs.deploy_api }}
       deploy_client: ${{ steps.flags.outputs.deploy_client }}
       deploy_admin: ${{ steps.flags.outputs.deploy_admin }}
+      sha: ${{ steps.ref.outputs.sha }}
     steps:
+      - id: ref
+        run: echo "sha=${{ needs.release.outputs.sha || github.sha }}" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ref.outputs.sha }}
 
       - uses: dorny/paths-filter@v3
         id: filter
@@ -144,6 +215,7 @@ jobs:
       - id: flags
         env:
           FORCE: ${{ needs.config.outputs.force }}
+          BUMPED: ${{ needs.release.outputs.bumped || 'false' }}
           F_SHARED: ${{ steps.filter.outputs.shared || 'false' }}
           F_SCHEMAS: ${{ steps.filter.outputs.schemas || 'false' }}
           F_UI: ${{ steps.filter.outputs.ui || 'false' }}
@@ -167,7 +239,8 @@ jobs:
           else
             ETL=$(or "$F_ETL" "$F_SHARED")
             # API image includes etl + schemas; treat those as API build/deploy.
-            API=$(or "$F_API" "$F_ETL" "$F_SCHEMAS" "$F_SHARED")
+            # A platform version bump must redeploy API so GET /info serves the new version.
+            API=$(or "$F_API" "$F_ETL" "$F_SCHEMAS" "$F_SHARED" "$BUMPED")
             CLIENT=$(or "$F_CLIENT" "$F_SCHEMAS" "$F_UI" "$F_SHARED")
             ADMIN=$(or "$F_ADMIN" "$F_SCHEMAS" "$F_UI" "$F_SHARED")
             INFRA=$(true_if "$F_INFRA")
@@ -201,6 +274,8 @@ jobs:
     environment: ${{ needs.config.outputs.environment }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.changes.outputs.sha }}
 
       - uses: actions/setup-node@v4
         with:
@@ -245,6 +320,8 @@ jobs:
     environment: ${{ needs.config.outputs.environment }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.changes.outputs.sha }}
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -286,6 +363,8 @@ jobs:
     environment: ${{ needs.config.outputs.environment }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.changes.outputs.sha }}
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -326,6 +405,8 @@ jobs:
     environment: ${{ needs.config.outputs.environment }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.changes.outputs.sha }}
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -352,7 +433,7 @@ jobs:
         run: >
           task api:deploy
           ENV=${{ needs.config.outputs.environment }}
-          API_IMAGE_TAG=${{ github.sha }}
+          API_IMAGE_TAG=${{ needs.changes.outputs.sha }}
           DOCKER_BUILDX=1
 
   deploy-client:
@@ -369,6 +450,8 @@ jobs:
     environment: ${{ needs.config.outputs.environment }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.changes.outputs.sha }}
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -415,6 +498,8 @@ jobs:
     environment: ${{ needs.config.outputs.environment }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.changes.outputs.sha }}
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4

@@ -40,6 +40,12 @@
       "import": "./src/chat.ts",
       "require": "./dist/chat.js",
       "default": "./dist/chat.js"
+    },
+    "./platform": {
+      "types": "./dist/platform.d.ts",
+      "import": "./src/platform.ts",
+      "require": "./dist/platform.js",
+      "default": "./dist/platform.js"
     }
   },
   "typesVersions": {
@@ -61,6 +67,9 @@
       ],
       "chat": [
         "./dist/chat.d.ts"
+      ],
+      "platform": [
+        "./dist/platform.d.ts"
       ]
     }
   },

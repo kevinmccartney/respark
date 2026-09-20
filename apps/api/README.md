@@ -20,7 +20,7 @@ task docker:logs    # follow API + client + admin logs
 
 Compose overrides the API `DATABASE_URL` to `postgres://respark:respark@db:5432/respark` so the container reaches Postgres on the Compose network (your `.env` can keep `localhost` for host-side tools like Drizzle Studio). The client and admin containers get `VITE_API_URL=http://localhost:3000` because the browser runs on your machine, not inside the Compose network.
 
-`RUN_MIGRATIONS=true` is set on the API service, so a fresh DB volume gets schema on first boot. `apps/api/src`, `apps/client/src`, and `apps/admin/src` are bind-mounted; Nest/Vite reload on save. API inspector is on **9229** (`start:debug`).
+`RUN_MIGRATIONS=true` is set on the API service, so a fresh DB volume gets schema on first boot. `apps/api/src`, `apps/client/src`, and `apps/admin/src` are bind-mounted; Nest/Vite reload on save. The API also mounts the repo root `package.json` so `GET /info` can read the platform version. API inspector is on **9229** (`start:debug`).
 
 ```bash
 task docker:down    # stop stack, keep DB volume
@@ -40,7 +40,7 @@ npm run start:dev -w api
 
 The server binds **`0.0.0.0:$PORT`** so it works from Docker and LAN.
 
-Logs are **JSON** in production (`NODE_ENV=production`). Local dev uses pretty-printed structured logs. Set **`LOG_LEVEL`** (default: `debug` locally, `info` in production). HTTP access logs include **`userId`** when Clerk auth ran; **`/healthz`** is excluded to reduce noise. Authorization headers are redacted.
+Logs are **JSON** in production (`NODE_ENV=production`). Local dev uses pretty-printed structured logs. Set **`LOG_LEVEL`** (default: `debug` locally, `info` in production). HTTP access logs include **`userId`** when Clerk auth ran; **`/healthz`** is excluded to reduce noise. Authorization headers are redacted. **`GET /info`** returns `{ "version": "<root package.json>" }` for the platform version shown in the client and admin footers.
 
 ## Database (Postgres + Drizzle)
 
