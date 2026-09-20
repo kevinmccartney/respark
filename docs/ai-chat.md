@@ -106,7 +106,7 @@ type ToolContext = {
 
 **Errors:** tools return `{ ok: false, code, message }` JSON, not thrown provider exceptions. HTTP 404 from `requireOwnedDeck` becomes `code: 'not_found'`.
 
-**Loop limits:** max 10 model rounds, max 16 tool calls, 45s budget per round. On limit: WS `error` with a safe message.
+**Loop limits:** max 16 model rounds, max 32 tool calls, 45s budget per round. On limit: WS `error` with a safe message.
 
 MVP tools are **read-only**. Future writes (add card to deck) need confirmation UX, not silent tool execution.
 

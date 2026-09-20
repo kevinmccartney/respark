@@ -1,5 +1,5 @@
-export const CHAT_MAX_ROUNDS = 10;
-export const CHAT_MAX_TOOL_CALLS = 16;
+export const CHAT_MAX_ROUNDS = 16;
+export const CHAT_MAX_TOOL_CALLS = 32;
 
 export type ChatTurnStopReason =
   'completed' | 'max_tool_calls' | 'max_rounds' | 'timeout' | 'provider_error';
