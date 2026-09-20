@@ -100,12 +100,12 @@ jobs:
     outputs:
       etl: ${{ steps.flags.outputs.etl }}
       api: ${{ steps.flags.outputs.api }}
-      web: ${{ steps.flags.outputs.web }}
+      client: ${{ steps.flags.outputs.client }}
       admin: ${{ steps.flags.outputs.admin }}
       infra: ${{ steps.flags.outputs.infra }}
       build: ${{ steps.flags.outputs.build }}
       deploy_api: ${{ steps.flags.outputs.deploy_api }}
-      deploy_web: ${{ steps.flags.outputs.deploy_web }}
+      deploy_client: ${{ steps.flags.outputs.deploy_client }}
       deploy_admin: ${{ steps.flags.outputs.deploy_admin }}
     steps:
       - uses: actions/checkout@v4
@@ -130,8 +130,8 @@ jobs:
               - 'apps/api/**'
               - 'scripts/redeploy-api-ec2.sh'
               - 'scripts/push-api-secrets.sh'
-            web:
-              - 'apps/web/**'
+            client:
+              - 'apps/client/**'
             admin:
               - 'apps/admin/**'
             infra:
@@ -146,7 +146,7 @@ jobs:
           F_UI: ${{ steps.filter.outputs.ui || 'false' }}
           F_ETL: ${{ steps.filter.outputs.etl || 'false' }}
           F_API: ${{ steps.filter.outputs.api || 'false' }}
-          F_WEB: ${{ steps.filter.outputs.web || 'false' }}
+          F_CLIENT: ${{ steps.filter.outputs.client || 'false' }}
           F_ADMIN: ${{ steps.filter.outputs.admin || 'false' }}
           F_INFRA: ${{ steps.filter.outputs.infra || 'false' }}
         run: |
@@ -160,35 +160,35 @@ jobs:
           }
 
           if [ "$FORCE" = "true" ]; then
-            ETL=true; API=true; WEB=true; ADMIN=true; INFRA=true
+            ETL=true; API=true; CLIENT=true; ADMIN=true; INFRA=true
           else
             ETL=$(or "$F_ETL" "$F_SHARED")
             # API image includes etl + schemas; treat those as API build/deploy.
             API=$(or "$F_API" "$F_ETL" "$F_SCHEMAS" "$F_SHARED")
-            WEB=$(or "$F_WEB" "$F_SCHEMAS" "$F_UI" "$F_SHARED")
+            CLIENT=$(or "$F_CLIENT" "$F_SCHEMAS" "$F_UI" "$F_SHARED")
             ADMIN=$(or "$F_ADMIN" "$F_SCHEMAS" "$F_UI" "$F_SHARED")
             INFRA=$(true_if "$F_INFRA")
           fi
 
-          BUILD=$(or "$ETL" "$API" "$WEB" "$ADMIN")
+          BUILD=$(or "$ETL" "$API" "$CLIENT" "$ADMIN")
           # Infra changes may replace EC2 / CDN; redeploy affected surfaces.
           DEPLOY_API=$(or "$API" "$INFRA")
-          DEPLOY_WEB=$(or "$WEB" "$INFRA")
+          DEPLOY_CLIENT=$(or "$CLIENT" "$INFRA")
           DEPLOY_ADMIN=$(or "$ADMIN" "$INFRA")
 
           {
             echo "etl=${ETL}"
             echo "api=${API}"
-            echo "web=${WEB}"
+            echo "client=${CLIENT}"
             echo "admin=${ADMIN}"
             echo "infra=${INFRA}"
             echo "build=${BUILD}"
             echo "deploy_api=${DEPLOY_API}"
-            echo "deploy_web=${DEPLOY_WEB}"
+            echo "deploy_client=${DEPLOY_CLIENT}"
             echo "deploy_admin=${DEPLOY_ADMIN}"
           } >> "$GITHUB_OUTPUT"
 
-          echo "Changes etl=${ETL} api=${API} web=${WEB} admin=${ADMIN} infra=${INFRA} build=${BUILD}"
+          echo "Changes etl=${ETL} api=${API} client=${CLIENT} admin=${ADMIN} infra=${INFRA} build=${BUILD}"
 
   build:
     name: Build apps
@@ -219,13 +219,13 @@ jobs:
         if: needs.changes.outputs.api == 'true'
         run: task api:build
 
-      - name: Build web
-        if: needs.changes.outputs.web == 'true'
+      - name: Build client
+        if: needs.changes.outputs.client == 'true'
         env:
           # Compile-time check only; deploy jobs rebuild with live api_url from Terraform.
           VITE_API_URL: ${{ vars.COMPILE_CHECK_API_URL }}
           VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
-        run: task web:build
+        run: task client:build
 
       - name: Build admin
         if: needs.changes.outputs.admin == 'true'
@@ -352,13 +352,13 @@ jobs:
           API_IMAGE_TAG=${{ github.sha }}
           DOCKER_BUILDX=1
 
-  deploy-web:
-    name: Deploy web
+  deploy-client:
+    name: Deploy client
     if: |
       always() &&
       !cancelled() &&
       needs.config.outputs.deploy == 'true' &&
-      needs.changes.outputs.deploy_web == 'true' &&
+      needs.changes.outputs.deploy_client == 'true' &&
       (needs.apply.result == 'success' || needs.apply.result == 'skipped') &&
       (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped')
     needs: [config, changes, apply, deploy-api]
@@ -393,10 +393,10 @@ jobs:
       - name: Terraform init (outputs for deploy)
         run: task infra:init ENV=${{ needs.config.outputs.environment }}
 
-      - name: Deploy web (task web:deploy)
+      - name: Deploy client (task client:deploy)
         env:
           VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
-        run: task web:deploy ENV=${{ needs.config.outputs.environment }}
+        run: task client:deploy ENV=${{ needs.config.outputs.environment }}
 
   deploy-admin:
     name: Deploy admin

@@ -7,7 +7,7 @@ Hosts a Vite SPA on a custom domain with HTTPS:
 - **CloudFront** distribution (HTTPS, SPA error handling)
 - **Route53** alias records for the app hostname
 
-Reusable for web and admin via `component` (`"web"` / `"admin"`).
+Reusable for the player client and admin via `component`. The develop player SPA still uses `component = "web"` so the existing S3 bucket name does not change; pass `app_dir = "client"` so `deploy_command` points at `apps/client/dist`.
 
 ## Usage
 
@@ -23,6 +23,7 @@ module "ui" {
   }
 
   component        = "web"
+  app_dir          = "client"
   domain_name      = "dev.respark.kevinmccartney.is"
   hosted_zone_name = "kevinmccartney.is"
 }

@@ -1,21 +1,21 @@
 ---
-description: Vite React web and admin apps — Clerk publishable key, Task builds
-globs: apps/web/**,apps/admin/**
+description: Vite React client and admin apps — Clerk publishable key, Task builds
+globs: apps/client/**,apps/admin/**
 alwaysApply: false
 ---
 
-# Web & admin UI
+# Client & admin UI
 
-- **Web** (`apps/web`): player-facing Vite + React + Clerk.
+- **Client** (`apps/client`): player-facing Vite + React + Clerk.
 - **Admin** (`apps/admin`): ops dashboard; same Clerk app; requires user public metadata `{ "role": "admin" }`.
 
-READMEs: [`apps/web`](../../apps/web) (via root README), [`apps/admin/README.md`](../../apps/admin/README.md).
+READMEs: [`apps/client`](../../apps/client) (via root README), [`apps/admin/README.md`](../../apps/admin/README.md).
 
 ## Commands
 
 - Dev: `npm run dev` / `task admin:dev` (or root npm scripts).
-- Build: `task web:build` / `task admin:build`
-- Deploy: `task web:deploy` / `task admin:deploy` (bake `VITE_API_URL` from Terraform `api_url`)
+- Build: `task client:build` / `task admin:build`
+- Deploy: `task client:deploy` / `task admin:deploy` (bake `VITE_API_URL` from Terraform `api_url`)
 
 ## Conventions
 

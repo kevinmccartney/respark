@@ -17,9 +17,15 @@ variable "environment" {
 }
 
 variable "component" {
-  description = "Short name for this static site (web, admin). Used in default bucket naming and tags."
+  description = "Short name for this static site (`web` for the player client, `admin`). Used in default bucket naming and tags. Do not change existing env values — they are part of bucket names."
   type        = string
   default     = "web"
+}
+
+variable "app_dir" {
+  description = "Monorepo app directory under apps/ for the Vite dist path. Defaults to component. The player SPA lives in apps/client even though component stays \"web\"."
+  type        = string
+  default     = null
 }
 
 variable "bucket_name" {

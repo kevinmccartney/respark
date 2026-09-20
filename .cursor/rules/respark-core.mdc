@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Respark core
 
-MTG companion monorepo: `apps/web`, `apps/admin`, `apps/api`, `apps/etl`, plus `infra/` and `docs/`.
+MTG companion monorepo: `apps/client`, `apps/admin`, `apps/api`, `apps/etl`, plus `infra/` and `docs/`.
 
 ## Orchestration
 

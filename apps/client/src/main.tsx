@@ -9,7 +9,7 @@ import { ThemeProvider } from './lib/theme.tsx';
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 if (!publishableKey) {
-  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY. Run `clerk env pull` in apps/web.');
+  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY. Run `clerk env pull` in apps/client.');
 }
 
 createRoot(document.getElementById('root')!).render(

@@ -1,11 +1,11 @@
 flowchart TB
   subgraph clients [Browsers]
-    Web["Web SPA<br/>decks and catalog"]
+    Client["Client SPA<br/>decks and catalog"]
     Admin["Admin SPA<br/>ETL ops"]
   end
 
   Clerk["Clerk<br/>auth and user profile"]
-  CFWeb["CloudFront + S3<br/>web"]
+  CFClient["CloudFront + S3<br/>client"]
   CFAdmin["CloudFront + S3<br/>admin"]
   CFApi["CloudFront<br/>API"]
 
@@ -17,12 +17,12 @@ flowchart TB
   RDS[("Postgres<br/>raw catalog ops app")]
   SSM["SSM<br/>DATABASE_URL<br/>Clerk secret"]
 
-  Web --> CFWeb
+  Client --> CFClient
   Admin --> CFAdmin
-  Web -->|"Bearer JWT"| CFApi
+  Client -->|"Bearer JWT"| CFApi
   Admin -->|"Bearer JWT + WS"| CFApi
   Clerk -->|"user webhooks"| Nest
-  Web --> Clerk
+  Client --> Clerk
   Admin --> Clerk
   CFApi --> Nest
   Nest --> EtlLib

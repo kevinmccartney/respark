@@ -1,6 +1,6 @@
 # CI / CD (GitHub Actions)
 
-Pipeline: **detect changes** → **format check** → **build** (changed apps) and **plan** (if infra) → on deployable refs, **apply** (if infra) → **deploy API** (if needed) → **web** ∥ **admin** (if needed).
+Pipeline: **detect changes** → **format check** → **build** (changed apps) and **plan** (if infra) → on deployable refs, **apply** (if infra) → **deploy API** (if needed) → **client** ∥ **admin** (if needed).
 
 Orchestration lives in [`Taskfile.yml`](../Taskfile.yml). The workflow only wires GitHub Environments, OIDC, path filters, and artifacts, then runs `task …` (never raw `npm` / `terraform` beyond what Task invokes). npm scripts stay in `package.json` for package binaries; Task calls those scripts.
 
@@ -19,11 +19,11 @@ Prettier covers JS/TS/JSON/MD/YAML/CSS; ESLint covers apps; Terraform uses `terr
 
 ## Triggers
 
-| Event                         | Environment                        | What runs                                                                                |
-| ----------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------- |
-| Pull request                  | `develop`                          | `build` + `plan` for changed paths only                                                  |
-| Push to `main`                | `develop`                          | changed paths: `build` / `plan` → `apply` → `deploy-api` → `deploy-web` ∥ `deploy-admin` |
-| `workflow_dispatch` on `main` | choice (`develop` or `production`) | **Force all** paths for the selected env (full rebuild + plan/apply + deploy)            |
+| Event                         | Environment                        | What runs                                                                                   |
+| ----------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------- |
+| Pull request                  | `develop`                          | `build` + `plan` for changed paths only                                                     |
+| Push to `main`                | `develop`                          | changed paths: `build` / `plan` → `apply` → `deploy-api` → `deploy-client` ∥ `deploy-admin` |
+| `workflow_dispatch` on `main` | choice (`develop` or `production`) | **Force all** paths for the selected env (full rebuild + plan/apply + deploy)               |
 
 Production deploys are intentional: use **Actions → CI / CD → Run workflow** and pick `production`.
 
@@ -31,32 +31,32 @@ Production deploys are intentional: use **Actions → CI / CD → Run workflow**
 
 [`dorny/paths-filter`](https://github.com/dorny/paths-filter) maps the git diff to flags:
 
-| Flag    | Paths (also triggered by root `package.json` / lockfile / `Taskfile.yml` / tsconfig as “shared”) |
-| ------- | ------------------------------------------------------------------------------------------------ |
-| `etl`   | `apps/etl/**`                                                                                    |
-| `api`   | `apps/api/**`, API deploy scripts (etl and `packages/schemas` changes count as API)              |
-| `web`   | `apps/web/**` (also `packages/schemas`, `packages/ui`)                                           |
-| `admin` | `apps/admin/**` (also `packages/schemas`, `packages/ui`)                                         |
-| `infra` | `infra/**`, TF backend bootstrap script                                                          |
+| Flag     | Paths (also triggered by root `package.json` / lockfile / `Taskfile.yml` / tsconfig as “shared”) |
+| -------- | ------------------------------------------------------------------------------------------------ |
+| `etl`    | `apps/etl/**`                                                                                    |
+| `api`    | `apps/api/**`, API deploy scripts (etl and `packages/schemas` changes count as API)              |
+| `client` | `apps/client/**` (also `packages/schemas`, `packages/ui`)                                        |
+| `admin`  | `apps/admin/**` (also `packages/schemas`, `packages/ui`)                                         |
+| `infra`  | `infra/**`, TF backend bootstrap script                                                          |
 
 - **Build** runs only the matching `task *:build` steps.
 - **Plan / apply** run only when `infra` changed (or on force).
-- **Deploy** runs for the matching app; an `infra` change also redeploys API/web/admin (EC2 / CDN may have moved).
-- Skipped upstream jobs do not block later deploys (e.g. web-only change skips plan/apply/API, then deploys web).
-- Web/admin still wait on API when API _is_ deploying.
+- **Deploy** runs for the matching app; an `infra` change also redeploys API/client/admin (EC2 / CDN may have moved).
+- Skipped upstream jobs do not block later deploys (e.g. a client-only change skips plan/apply/API, then deploys client).
+- Client/admin still wait on API when API _is_ deploying.
 
 ## Local ↔ CI isomorphism
 
-| Goal               | Local                                   | CI                                                                     |
-| ------------------ | --------------------------------------- | ---------------------------------------------------------------------- |
-| Format (write)     | `task format`                           | —                                                                      |
-| Format (check)     | `task format:check`                     | `format` job                                                           |
-| Lint               | `task lint`                             | `format` job                                                           |
-| Build apps         | `task build`                            | conditional `task *:build`                                             |
-| Plan               | `task infra:plan ENV=develop`           | same                                                                   |
-| Apply              | `task infra:apply ENV=develop`          | same (applies uploaded `tfplan`)                                       |
-| Deploy API         | `task api:deploy ENV=develop`           | same on `ubuntu-24.04-arm` (+ `DOCKER_BUILDX=1` `API_IMAGE_TAG=<sha>`) |
-| Deploy web / admin | `task web:deploy` / `task admin:deploy` | same                                                                   |
+| Goal                  | Local                                      | CI                                                                     |
+| --------------------- | ------------------------------------------ | ---------------------------------------------------------------------- |
+| Format (write)        | `task format`                              | —                                                                      |
+| Format (check)        | `task format:check`                        | `format` job                                                           |
+| Lint                  | `task lint`                                | `format` job                                                           |
+| Build apps            | `task build`                               | conditional `task *:build`                                             |
+| Plan                  | `task infra:plan ENV=develop`              | same                                                                   |
+| Apply                 | `task infra:apply ENV=develop`             | same (applies uploaded `tfplan`)                                       |
+| Deploy API            | `task api:deploy ENV=develop`              | same on `ubuntu-24.04-arm` (+ `DOCKER_BUILDX=1` `API_IMAGE_TAG=<sha>`) |
+| Deploy client / admin | `task client:deploy` / `task admin:deploy` | same                                                                   |
 
 `ENV` selects `infra/envs/<ENV>` (override with `TF_DIR` if needed).
 
@@ -85,7 +85,7 @@ Per environment, set:
 | -------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Variable | `AWS_ROLE_ARN`               | IAM role ARN assumed via OIDC for this env                                                                       |
 | Variable | `COMPILE_CHECK_API_URL`      | Placeholder `VITE_API_URL` for the compile-check `task build` (e.g. `https://dev.api.respark.kevinmccartney.is`) |
-| Variable | `VITE_CLERK_PUBLISHABLE_KEY` | Clerk **publishable** key for that Clerk instance (dev vs prod). Public; baked into the web/admin bundle.        |
+| Variable | `VITE_CLERK_PUBLISHABLE_KEY` | Clerk **publishable** key for that Clerk instance (dev vs prod). Public; baked into the client/admin bundle.     |
 
 Clerk **secret** keys stay in SSM (`task api:secrets:push ENV=…`); the workflow does not push them.
 
@@ -144,6 +144,6 @@ Alternatively, pin the exact `sub` from a debug JWT decode (includes `@ownerId` 
 ## Notes
 
 - API images are built for **`linux/arm64`** (Graviton) and tagged with the git SHA and `latest`. The `deploy-api` job runs on **`ubuntu-24.04-arm`** so `npm ci` is native; do not reintroduce QEMU for this image (Node 22 on Alpine under amd64→arm64 emulation hits SIGILL).
-- Web/admin deploy tasks rebuild with `VITE_API_URL` from Terraform `api_url` and `VITE_CLERK_PUBLISHABLE_KEY` from the **GitHub Environment variable** of the same name (locally: `apps/web/.env.local` / `apps/admin/.env.local`). Web and admin share one Clerk app, so they share one publishable key. Production Vite builds fail if it is unset. Clerk **secret** keys stay in SSM.
+- Client/admin deploy tasks rebuild with `VITE_API_URL` from Terraform `api_url` and `VITE_CLERK_PUBLISHABLE_KEY` from the **GitHub Environment variable** of the same name (locally: `apps/client/.env.local` / `apps/admin/.env.local`). Client and admin share one Clerk app, so they share one publishable key. Production Vite builds fail if it is unset. Clerk **secret** keys stay in SSM.
 - `terraform apply` uses the exact plan artifact from the matching `plan` job (`tfplan-<env>`).
 - Overlapping runs on the same ref + env are serialized via workflow concurrency; PR runs cancel superseded builds.

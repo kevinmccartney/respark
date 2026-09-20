@@ -11,13 +11,13 @@ variable "project" {
 }
 
 variable "bucket_name" {
-  description = "Optional fixed S3 bucket name for the web UI (globally unique)."
+  description = "Optional fixed S3 bucket name for the player client (globally unique)."
   type        = string
   default     = null
 }
 
 variable "domain_name" {
-  description = "Public hostname for the develop web UI (0.x pre-prod)."
+  description = "Public hostname for the develop player client (0.x pre-prod)."
   type        = string
   default     = "dev.respark.kevinmccartney.is"
 }

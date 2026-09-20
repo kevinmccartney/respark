@@ -22,6 +22,6 @@ Package README: [`apps/api/README.md`](../../apps/api/README.md). ETL that the A
 
 ## Conventions
 
-- Keep Clerk **secret** keys out of web/admin bundles and Terraform state; use env / SSM.
+- Keep Clerk **secret** keys out of client/admin bundles and Terraform state; use env / SSM.
 - Prefer extending existing Nest modules (`decks`, etc.) over new top-level packages.
 - API Docker image is `linux/arm64` (Graviton) for EC2.

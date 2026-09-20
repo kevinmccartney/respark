@@ -9,7 +9,7 @@ Terraform root for the **develop** AWS environment (0.x): S3 origin, CloudFront,
 
 ## Modules
 
-- **`ui`** — S3 + CloudFront + ACM + Route53 for the web app (`component = "web"`)
+- **`ui`** — S3 + CloudFront + ACM + Route53 for the player client (`component = "web"` so the existing bucket name stays)
 - **`admin`** — same `ui` module for the admin dashboard (`component = "admin"`)
 - **`api`** — ECR, EC2, CloudFront, ACM, DNS, CloudWatch Logs
 - **`db`** — RDS Postgres, private to the API security group, with the connection string in SSM Parameter Store
@@ -29,7 +29,7 @@ task infra:apply
 
 CI/CD (GitHub Actions) plans on every PR and applies + deploys from `main`. See [`docs/ci-cd.md`](../../docs/ci-cd.md).
 
-Or apply infra and deploy API + web + admin in one shot locally:
+Or apply infra and deploy API + client + admin in one shot locally:
 
 ```bash
 task deploy
@@ -52,12 +52,12 @@ Terraform generates the database password and writes **`DATABASE_URL`** to SSM P
 
 `task api:deploy` needs **`ssm:SendCommand`** on the instance, and Postgres is only reachable from the API security group — use SSM port forwarding through the EC2 box for psql access.
 
-## Deploy the web app
+## Deploy the client
 
 Upload assets to the private S3 bucket (CloudFront serves them):
 
 ```bash
-task web:deploy
+task client:deploy
 ```
 
 Open the site at:
@@ -68,7 +68,7 @@ terraform -chdir=infra/envs/develop output -raw site_url
 
 ## Deploy the admin app
 
-Same pattern as web; builds with `VITE_API_URL` from Terraform and syncs to the admin bucket:
+Same pattern as the client; builds with `VITE_API_URL` from Terraform and syncs to the admin bucket:
 
 ```bash
 task admin:deploy
@@ -82,6 +82,6 @@ terraform -chdir=infra/envs/develop output -raw admin_site_url
 
 Default hostname: `https://dev.admin.respark.kevinmccartney.is`.
 
-In the [Clerk Dashboard](https://dashboard.clerk.com/), add that origin to **Allowed origins** / redirect URLs for the shared Clerk application (same publishable key as web).
+In the [Clerk Dashboard](https://dashboard.clerk.com/), add that origin to **Allowed origins** / redirect URLs for the shared Clerk application (same publishable key as the client).
 
-After deploy, you may need a CloudFront invalidation if you only changed cached assets; for many static deploys, syncing S3 and waiting for TTL is enough. `task web:deploy` / `task admin:deploy` already create an invalidation.
+After deploy, you may need a CloudFront invalidation if you only changed cached assets; for many static deploys, syncing S3 and waiting for TTL is enough. `task client:deploy` / `task admin:deploy` already create an invalidation.

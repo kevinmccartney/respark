@@ -1,6 +1,6 @@
 # ui
 
-Shared React UI for `apps/web` and `apps/admin`. First slice is mana shortcode interpolation (`ui/mana`).
+Shared React UI for `apps/client` and `apps/admin`. First slice is mana shortcode interpolation (`ui/mana`).
 
 ```ts
 import { ManaCost, ManaText } from 'ui/mana';

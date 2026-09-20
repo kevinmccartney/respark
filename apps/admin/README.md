@@ -1,6 +1,6 @@
 # respark admin
 
-Local ops dashboard for ETL syncs. Uses the same Clerk application as `apps/web`; API routes under `/admin` require `publicMetadata.role === "admin"`.
+Local ops dashboard for ETL syncs. Uses the same Clerk application as `apps/client`; API routes under `/admin` require `publicMetadata.role === "admin"`.
 
 ## Setup
 
@@ -10,7 +10,7 @@ Local ops dashboard for ETL syncs. Uses the same Clerk application as `apps/web`
 cp apps/admin/.env.example apps/admin/.env.local
 ```
 
-2. Set `VITE_CLERK_PUBLISHABLE_KEY` to the same value as `apps/web/.env.local` (or run `clerk env pull` against that Clerk app from `apps/admin`).
+2. Set `VITE_CLERK_PUBLISHABLE_KEY` to the same value as `apps/client/.env.local` (or run `clerk env pull` against that Clerk app from `apps/admin`).
 
 3. In the [Clerk Dashboard](https://dashboard.clerk.com/), open your user → **Public metadata** and set:
 
@@ -46,7 +46,7 @@ task infra:apply    # once, creates admin bucket + CloudFront + DNS
 task admin:deploy   # build with VITE_API_URL from Terraform, sync + invalidate
 ```
 
-Add the admin origin to Clerk allowed origins / redirect URLs (same Clerk app as web). See [`infra/envs/develop/README.md`](../../infra/envs/develop/README.md).
+Add the admin origin to Clerk allowed origins / redirect URLs (same Clerk app as the client). See [`infra/envs/develop/README.md`](../../infra/envs/develop/README.md).
 
 ## Screens
 

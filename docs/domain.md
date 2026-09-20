@@ -10,7 +10,7 @@ If you have a diagrams.net architecture file, drop `architecture.drawio` (and an
 
 | Piece        | Role                                                                                      |
 | ------------ | ----------------------------------------------------------------------------------------- |
-| **Web**      | Player app: decks, card search, Clerk-signed requests to the API                          |
+| **Client**   | Player app: decks, card search, Clerk-signed requests to the API                          |
 | **Admin**    | Ops dashboard: start ETL syncs, watch jobs over WebSocket                                 |
 | **API**      | Nest: auth, decks, catalog reads, Clerk webhooks, embeds the etl lib                      |
 | **etl lib**  | In-process ingest (also a CLI). Writes `raw` / `catalog` / `ops`. Never creates app decks |

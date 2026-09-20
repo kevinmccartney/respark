@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, dirname, 'VITE_');
   if (mode === 'production' && !env.VITE_CLERK_PUBLISHABLE_KEY?.trim()) {
     throw new Error(
-      'Missing VITE_CLERK_PUBLISHABLE_KEY. Set the GitHub Environment variable, or apps/web/.env.local locally.',
+      'Missing VITE_CLERK_PUBLISHABLE_KEY. Set the GitHub Environment variable, or apps/client/.env.local locally.',
     );
   }
 

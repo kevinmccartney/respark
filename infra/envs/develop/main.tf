@@ -18,7 +18,8 @@ module "ui" {
   aws_region       = var.aws_region
   project          = var.project
   environment      = local.environment
-  component        = "web"
+  component        = "web" # keep: part of the existing S3 bucket name
+  app_dir          = "client"
   bucket_name      = var.bucket_name
   hosted_zone_name = var.hosted_zone_name
   domain_name      = var.domain_name

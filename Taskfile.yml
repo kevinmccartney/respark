@@ -5,7 +5,7 @@ vars:
   ENV: develop
   TF_DIR: infra/envs/{{.ENV}}
   TF_PLAN_FILE: tfplan
-  WEB_DIST: apps/web/dist
+  CLIENT_DIST: apps/client/dist
   ADMIN_DIST: apps/admin/dist
   API_PORT: '3000'
   API_DOCKERFILE: apps/api/Dockerfile
@@ -78,22 +78,22 @@ tasks:
       - task: infra:validate
 
   build:
-    desc: Production build etl, API, web, and admin
+    desc: Production build etl, API, client, and admin
     deps:
       - schemas:build
       - ui:build
       - etl:build
       - api:build
-      - web:build
+      - client:build
       - admin:build
 
-  web:build:
-    desc: Production build of the React web app (uses VITE_* from env / .env.local)
+  client:build:
+    desc: Production build of the React client app (uses VITE_* from env / .env.local)
     deps:
       - schemas:build
       - ui:build
     cmds:
-      - npm run build:web
+      - npm run build:client
 
   admin:build:
     desc: Production build of the admin app (uses VITE_* from env / .env.local)
@@ -126,9 +126,9 @@ tasks:
       - docker compose -f {{.COMPOSE_FILE}} down
 
   docker:logs:
-    desc: Follow local API + web + admin container logs
+    desc: Follow local API + client + admin container logs
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} logs -f api web admin
+      - docker compose -f {{.COMPOSE_FILE}} logs -f api client admin
 
   docker:ps:
     desc: Show local Compose service status
@@ -349,23 +349,23 @@ tasks:
         fi
 
   deploy:ui:
-    desc: Deploy web and admin in parallel for {{.ENV}}
+    desc: Deploy client and admin in parallel for {{.ENV}}
     deps:
-      - web:deploy
+      - client:deploy
       - admin:deploy
 
   deploy:
-    desc: Apply Terraform for {{.ENV}}, deploy API, then web+admin in parallel
+    desc: Apply Terraform for {{.ENV}}, deploy API, then client+admin in parallel
     cmds:
       - task: infra:apply
       - task: api:deploy
       - task: deploy:ui
 
-  web:deploy:
+  client:deploy:
     desc: Build against the deployed API, sync dist to S3, and invalidate CloudFront ({{.ENV}})
     cmds:
       # VITE_API_URL from Terraform; VITE_CLERK_PUBLISHABLE_KEY from the GitHub
-      # Environment variable (CI) or apps/web/.env.local (local Vite loadEnv).
+      # Environment variable (CI) or apps/client/.env.local (local Vite loadEnv).
       - |
         set -euo pipefail
         if [[ -n "${GITHUB_ACTIONS:-}" && -z "${VITE_CLERK_PUBLISHABLE_KEY:-}" ]]; then
@@ -373,9 +373,9 @@ tasks:
           exit 1
         fi
         VITE_API_URL=$(terraform -chdir={{.TF_DIR}} output -raw api_url)
-        echo "Building web against $VITE_API_URL (env={{.ENV}})"
-        VITE_API_URL="$VITE_API_URL" npm run build:web
-      - aws s3 sync {{.WEB_DIST}} s3://$(terraform -chdir={{.TF_DIR}} output -raw bucket_name) --delete
+        echo "Building client against $VITE_API_URL (env={{.ENV}})"
+        VITE_API_URL="$VITE_API_URL" npm run build:client
+      - aws s3 sync {{.CLIENT_DIST}} s3://$(terraform -chdir={{.TF_DIR}} output -raw bucket_name) --delete
       - aws cloudfront create-invalidation --distribution-id $(terraform -chdir={{.TF_DIR}} output -raw cloudfront_distribution_id) --paths "/*"
 
   admin:deploy:

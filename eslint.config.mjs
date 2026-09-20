@@ -14,7 +14,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/.terraform/**',
       '**/drizzle/**',
-      'apps/web/src/components/ui/**',
+      'apps/client/src/components/ui/**',
       'apps/admin/src/components/ui/**',
     ],
   },
@@ -41,7 +41,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/web/**/*.{ts,tsx}', 'apps/admin/**/*.{ts,tsx}'],
+    files: ['apps/client/**/*.{ts,tsx}', 'apps/admin/**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.browser,

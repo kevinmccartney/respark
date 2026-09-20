@@ -1,7 +1,7 @@
-# Local development stack — Postgres + API + web + admin (watch mode).
+# Local development stack — Postgres + API + client + admin (watch mode).
 #
 #   task docker:up      # build + start
-#   task docker:logs    # follow API + web + admin logs
+#   task docker:logs    # follow API + client + admin logs
 #   task docker:down    # stop (keeps the DB volume)
 #
 # HUSKY=0 on app services. Dockerfiles also set it: compose env is not
@@ -58,25 +58,25 @@ services:
         condition: service_healthy
     command: ['npm', 'run', 'start:debug']
 
-  web:
+  client:
     build:
       context: .
-      dockerfile: apps/web/Dockerfile.dev
+      dockerfile: apps/client/Dockerfile.dev
     ports:
-      - '${WEB_PORT:-5173}:5173'
+      - '${CLIENT_PORT:-5173}:5173'
     env_file:
-      - path: apps/web/.env
+      - path: apps/client/.env
         required: false
-      - path: apps/web/.env.local
+      - path: apps/client/.env.local
         required: false
     environment:
       # Browser talks to the published API port on the host, not the Compose service name.
       VITE_API_URL: http://localhost:${PORT:-3000}
       HUSKY: '0'
     volumes:
-      - ./apps/web/src:/repo/apps/web/src
-      - ./apps/web/index.html:/repo/apps/web/index.html
-      - ./apps/web/vite.config.ts:/repo/apps/web/vite.config.ts
+      - ./apps/client/src:/repo/apps/client/src
+      - ./apps/client/index.html:/repo/apps/client/index.html
+      - ./apps/client/vite.config.ts:/repo/apps/client/vite.config.ts
       - ./packages/schemas:/repo/packages/schemas
       - ./packages/ui:/repo/packages/ui
     depends_on:

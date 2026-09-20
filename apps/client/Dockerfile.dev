@@ -1,22 +1,22 @@
 # syntax=docker/dockerfile:1
 # Local Vite dev server. Build from repository root:
-#   docker compose build web
+#   docker compose build client
 
 FROM node:22-alpine
 WORKDIR /repo
 
 COPY package.json package-lock.json ./
-COPY apps/web/package.json apps/web/
+COPY apps/client/package.json apps/client/
 COPY packages/schemas/package.json packages/schemas/
 COPY packages/ui/package.json packages/ui/
 ENV HUSKY=0
-RUN npm ci --workspace=web --workspace=schemas --workspace=ui
+RUN npm ci --workspace=client --workspace=schemas --workspace=ui
 
-COPY apps/web apps/web
+COPY apps/client apps/client
 COPY packages/schemas packages/schemas
 COPY packages/ui packages/ui
 
-WORKDIR /repo/apps/web
+WORKDIR /repo/apps/client
 ENV NODE_ENV=development
 EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

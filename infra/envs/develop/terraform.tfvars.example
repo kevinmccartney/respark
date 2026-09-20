@@ -4,5 +4,6 @@
 # domain_name        = "dev.respark.kevinmccartney.is"
 # admin_domain_name  = "dev.admin.respark.kevinmccartney.is"
 # hosted_zone_name   = "kevinmccartney.is"
+# Player client bucket names still use "web" (Terraform component) so existing buckets stay.
 # bucket_name        = "respark-develop-web-example"
 # admin_bucket_name  = "respark-develop-admin-example"

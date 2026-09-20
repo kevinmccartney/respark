@@ -11,7 +11,7 @@ Deep reference: [`docs/ci-cd.md`](../../docs/ci-cd.md). Develop env notes: [`inf
 ## Commands
 
 - Plan / apply / validate: `task infra:plan|apply|validate ENV=…`
-- Deploy: `task api:deploy`, `task web:deploy`, `task admin:deploy` (web/admin after API in CI).
+- Deploy: `task api:deploy`, `task client:deploy`, `task admin:deploy` (client/admin after API in CI).
 - Secrets to SSM: `task api:secrets:push ENV=…` (not Terraform).
 
 ## Conventions
