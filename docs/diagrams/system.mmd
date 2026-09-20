@@ -1,6 +1,6 @@
 flowchart TB
   subgraph clients [Browsers]
-    Client["Client SPA<br/>decks and catalog"]
+    Client["Client SPA<br/>decks, catalog, chat"]
     Admin["Admin SPA<br/>ETL ops"]
   end
 
@@ -15,11 +15,12 @@ flowchart TB
   end
 
   RDS[("Postgres<br/>raw catalog ops app")]
-  SSM["SSM<br/>DATABASE_URL<br/>Clerk secret"]
+  SSM["SSM<br/>DATABASE_URL<br/>Clerk secret<br/>Bedrock model id"]
+  Bedrock["AWS Bedrock<br/>ConverseStream"]
 
   Client --> CFClient
   Admin --> CFAdmin
-  Client -->|"Bearer JWT"| CFApi
+  Client -->|"Bearer JWT + chat WS"| CFApi
   Admin -->|"Bearer JWT + WS"| CFApi
   Clerk -->|"user webhooks"| Nest
   Client --> Clerk
@@ -29,4 +30,5 @@ flowchart TB
   Nest --> RDS
   EtlLib --> RDS
   Nest --> SSM
+  Nest --> Bedrock
   Nest -->|"LISTEN etl_sync"| RDS

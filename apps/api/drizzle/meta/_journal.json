@@ -169,6 +169,34 @@
       "when": 1789905600000,
       "tag": "0023_card_leadership_skills",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1789908909094,
+      "tag": "0024_chat_conversations",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1789911078543,
+      "tag": "0025_chat_conversation_optional_deck",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1789912313655,
+      "tag": "0026_chat_conversation_deck_set_null",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1789923868486,
+      "tag": "0027_chat_conversation_sticky_card",
+      "breakpoints": true
     }
   ]
 }

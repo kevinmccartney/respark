@@ -57,6 +57,12 @@ variable "log_retention_in_days" {
 # Passed as a plain path rather than read from the db module, so the two modules
 # stay acyclic: the db module needs this module's security group id.
 variable "parameter_prefix" {
-  description = "SSM Parameter Store prefix holding API secrets (database-url, clerk-secret-key)."
+  description = "SSM Parameter Store prefix holding API secrets (database-url, clerk-secret-key) and chat config (bedrock-model-id)."
   type        = string
+}
+
+variable "bedrock_model_id" {
+  description = "Bedrock Converse inference profile id stored in SSM and injected as BEDROCK_MODEL_ID. Haiku 4.5 requires the us. profile, not on-demand foundation-model id."
+  type        = string
+  default     = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 }

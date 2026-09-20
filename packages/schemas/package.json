@@ -34,6 +34,12 @@
       "import": "./src/sync-event.ts",
       "require": "./dist/sync-event.js",
       "default": "./dist/sync-event.js"
+    },
+    "./chat": {
+      "types": "./dist/chat.d.ts",
+      "import": "./src/chat.ts",
+      "require": "./dist/chat.js",
+      "default": "./dist/chat.js"
     }
   },
   "typesVersions": {
@@ -52,6 +58,9 @@
       ],
       "sync-event": [
         "./dist/sync-event.d.ts"
+      ],
+      "chat": [
+        "./dist/chat.d.ts"
       ]
     }
   },

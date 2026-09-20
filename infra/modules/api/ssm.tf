@@ -29,3 +29,12 @@ resource "aws_iam_role_policy" "ec2_read_parameters" {
     ]
   })
 }
+
+resource "aws_ssm_parameter" "bedrock_model_id" {
+  name        = "${var.parameter_prefix}/bedrock-model-id"
+  description = "Bedrock Converse model id for player deck chat."
+  type        = "String"
+  value       = var.bedrock_model_id
+
+  tags = local.common_tags
+}

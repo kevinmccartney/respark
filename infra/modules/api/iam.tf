@@ -31,3 +31,15 @@ resource "aws_iam_instance_profile" "ec2" {
   name = "${local.name_prefix}-ec2"
   role = aws_iam_role.ec2.name
 }
+
+module "bedrock_invoke" {
+  source = "../bedrock_invoke"
+
+  name_prefix = local.name_prefix
+  tags        = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_bedrock" {
+  role       = aws_iam_role.ec2.name
+  policy_arn = module.bedrock_invoke.policy_arn
+}

@@ -11,7 +11,7 @@ Terraform root for the **develop** AWS environment (0.x): S3 origin, CloudFront,
 
 - **`ui`** — S3 + CloudFront + ACM + Route53 for the player client (`component = "web"` so the existing bucket name stays)
 - **`admin`** — same `ui` module for the admin dashboard (`component = "admin"`)
-- **`api`** — ECR, EC2, CloudFront, ACM, DNS, CloudWatch Logs
+- **`api`** — ECR, EC2, CloudFront, ACM, DNS, CloudWatch Logs. Runtime identity is the EC2 instance role (Bedrock chat).
 - **`db`** — RDS Postgres, private to the API security group, with the connection string in SSM Parameter Store
 
 The `db` module takes the API security group as input, so the `api` module receives the SSM parameter **path** as a plain string (`local.database_url_parameter_name`) rather than referencing `module.db`. That keeps the two modules acyclic.
@@ -46,7 +46,7 @@ task api:secrets:push   # once, and after any Clerk key rotation
 task api:deploy
 ```
 
-Terraform generates the database password and writes **`DATABASE_URL`** to SSM Parameter Store as a `SecureString`; `api:secrets:push` adds **`clerk-secret-key`** from `apps/api/.env` so it never lands in Terraform state. The instance role reads both during redeploy, so no secret passes through an operator's machine, and the container applies pending migrations on boot via `RUN_MIGRATIONS=true`.
+Terraform generates the database password and writes **`DATABASE_URL`** to SSM Parameter Store as a `SecureString`; `api:secrets:push` adds **`clerk-secret-key`** from `apps/api/.env` so it never lands in Terraform state. Terraform also writes **`bedrock-model-id`** (plain String). The instance role reads parameters during redeploy, so no secret passes through an operator's machine, and the container applies pending migrations on boot via `RUN_MIGRATIONS=true`. Deck chat uses the instance profile for Bedrock (`InvokeModel` / `InvokeModelWithResponseStream`); the container reaches IMDSv2 because the hop limit is 2. That EC2 role is the **develop** API principal (`api_runtime_role_arn`). Laptop Compose uses a separate IAM user from [`local/README.md`](../local/README.md).
 
 `infra:apply` replaces the EC2 instance whenever `user_data` changes. The redeploy script waits for cloud-init to finish installing `/usr/local/bin/respark-deploy-api.sh`, so running `task api:deploy` immediately afterwards is safe.
 

@@ -76,6 +76,7 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 | `task format:check`          | Check formatting (CI); does not write                                                       |
 | `task format:staged`         | Format + ESLint staged files (lint-staged)                                                  |
 | `task lint`                  | ESLint + `terraform validate`                                                               |
+| `task test`                  | Unit tests (etl + API chat evals, no Bedrock)                                               |
 | `task lint:eslint`           | ESLint only                                                                                 |
 | `task infra:validate`        | `terraform validate` for `$ENV` (no remote backend)                                         |
 | `task precommit`             | Husky hook: staged format/lint + infra validate                                             |
@@ -138,10 +139,11 @@ Both deploy tasks inject **`VITE_API_URL`** from the Terraform `api_url` output 
 
 ## Documentation
 
-| Doc                                | Topic                                  |
-| ---------------------------------- | -------------------------------------- |
-| [`docs/domain.md`](docs/domain.md) | Business objects, system diagram, ERDs |
-| [`docs/README.md`](docs/README.md) | Full index (CI/CD, ETL)                |
+| Doc                                  | Topic                                                       |
+| ------------------------------------ | ----------------------------------------------------------- |
+| [`docs/domain.md`](docs/domain.md)   | Business objects, system diagram, ERDs                      |
+| [`docs/ai-chat.md`](docs/ai-chat.md) | Global assistant: sticky context, tools, Bedrock, WebSocket |
+| [`docs/README.md`](docs/README.md)   | Full index (CI/CD, ETL, chat)                               |
 
 ## Contributing
 

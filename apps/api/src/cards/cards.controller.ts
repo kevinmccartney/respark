@@ -23,6 +23,9 @@ export class CardsController {
       legalIn: query.legalIn,
       colorIdentity: query.colorIdentity,
       commanderEligible: query.commanderEligible,
+      typeContains: query.typeContains,
+      maxManaValue: query.maxManaValue,
+      excludeCardIds: query.excludeCardIds,
       limit: query.limit ?? CARD_SEARCH_DEFAULT_LIMIT,
       page: query.page ?? 1,
     });

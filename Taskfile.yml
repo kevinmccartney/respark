@@ -72,9 +72,10 @@ tasks:
       - npm run eslint
 
   test:
-    desc: Run unit tests
+    desc: Run unit tests (etl node:test + api Vitest / chat evals)
     cmds:
       - npm test -w etl
+      - npm test -w api
 
   precommit:
     desc: Format staged files, ESLint on staged files, terraform validate (husky)
@@ -312,6 +313,14 @@ tasks:
     cmds:
       - bash scripts/push-api-secrets.sh
 
+  api:local-aws:write:
+    desc: Write respark-local-api access keys into apps/api/.env.local (apply ENV=local first)
+    env:
+      AWS_REGION: '{{.AWS_REGION}}'
+      TF_DIR: infra/envs/local
+    cmds:
+      - bash scripts/write-local-api-aws-creds.sh {{.CLI_ARGS}}
+
   api:deploy:ec2:
     desc: Pull latest image on the API EC2 instance via SSM and restart the container
     env:
@@ -335,11 +344,15 @@ tasks:
       - terraform init -input=false
 
   infra:validate:
-    desc: Terraform validate for {{.ENV}} (local init, no remote backend — safe for hooks/CI without AWS)
-    dir: '{{.TF_DIR}}'
+    desc: Terraform validate all env roots (local init, no remote backend — safe for hooks/CI without AWS)
     cmds:
-      - terraform init -backend=false -input=false
-      - terraform validate
+      - |
+        set -euo pipefail
+        for dir in infra/envs/*/; do
+          echo "terraform validate ${dir}"
+          terraform -chdir="$dir" init -backend=false -input=false
+          terraform -chdir="$dir" validate
+        done
 
   infra:plan:
     desc: Terraform plan for {{.ENV}} (writes {{.TF_PLAN_FILE}}; fmt/validate via format:check + infra:validate)

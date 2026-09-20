@@ -1,0 +1,235 @@
+[
+  {
+    "id": "good-add",
+    "user": "What would be a good add to this deck?",
+    "rounds": [
+      { "toolCalls": [{ "name": "getDeck", "input": {} }] },
+      { "toolCalls": [{ "name": "searchCards", "input": { "limit": 15 } }] },
+      {
+        "toolCalls": [
+          {
+            "name": "presentRecommendations",
+            "input": {
+              "cardIds": [
+                "00000000-0000-4000-8000-000000000005",
+                "00000000-0000-4000-8000-000000000006",
+                "00000000-0000-4000-8000-000000000007"
+              ]
+            }
+          }
+        ]
+      },
+      { "text": "Here are three catalog cards that fit this Simic list." }
+    ],
+    "expect": {
+      "tools": ["getDeck", "searchCards", "presentRecommendations"],
+      "recommendationIds": [
+        "00000000-0000-4000-8000-000000000005",
+        "00000000-0000-4000-8000-000000000006",
+        "00000000-0000-4000-8000-000000000007"
+      ]
+    }
+  },
+  {
+    "id": "three-creatures",
+    "user": "Suggest three creatures",
+    "rounds": [
+      { "toolCalls": [{ "name": "getDeck", "input": {} }] },
+      {
+        "toolCalls": [{ "name": "searchCards", "input": { "typeContains": "Creature" } }]
+      },
+      {
+        "toolCalls": [
+          {
+            "name": "presentRecommendations",
+            "input": {
+              "cardIds": ["00000000-0000-4000-8000-000000000009"]
+            }
+          }
+        ]
+      },
+      { "text": "Birds of Paradise is a legal Simic creature." }
+    ],
+    "expect": {
+      "tools": ["getDeck", "searchCards", "presentRecommendations"],
+      "recommendationIds": ["00000000-0000-4000-8000-000000000009"]
+    }
+  },
+  {
+    "id": "identity-and-legality",
+    "user": "Give me interaction",
+    "rounds": [
+      { "toolCalls": [{ "name": "getDeck", "input": {} }] },
+      { "toolCalls": [{ "name": "searchCards", "input": { "q": "counter" } }] },
+      {
+        "toolCalls": [
+          {
+            "name": "presentRecommendations",
+            "input": {
+              "cardIds": [
+                "00000000-0000-4000-8000-000000000005",
+                "00000000-0000-4000-8000-000000000008"
+              ]
+            }
+          }
+        ]
+      },
+      { "text": "Lightning Bolt is off-identity and is dropped." }
+    ],
+    "expect": {
+      "tools": ["getDeck", "searchCards", "presentRecommendations"],
+      "recommendationIds": ["00000000-0000-4000-8000-000000000005"]
+    }
+  },
+  {
+    "id": "not-already-in-deck",
+    "user": "More rocks",
+    "rounds": [
+      { "toolCalls": [{ "name": "getDeck", "input": {} }] },
+      { "toolCalls": [{ "name": "searchCards", "input": { "typeContains": "Artifact" } }] },
+      {
+        "toolCalls": [
+          {
+            "name": "presentRecommendations",
+            "input": {
+              "cardIds": ["00000000-0000-4000-8000-000000000004"]
+            }
+          }
+        ]
+      },
+      { "text": "Sol Ring is already in the deck, so search excludes it and the id is ungrounded." }
+    ],
+    "expect": {
+      "tools": ["getDeck", "searchCards", "presentRecommendations"],
+      "noCardParts": true
+    }
+  },
+  {
+    "id": "ungrounded-ids-dropped",
+    "user": "Recommend anything",
+    "rounds": [
+      { "toolCalls": [{ "name": "getDeck", "input": {} }] },
+      { "toolCalls": [{ "name": "searchCards", "input": {} }] },
+      {
+        "toolCalls": [
+          {
+            "name": "presentRecommendations",
+            "input": {
+              "cardIds": ["00000000-0000-4000-8000-000000000099"]
+            }
+          }
+        ]
+      },
+      { "text": "I will not invent catalog ids." }
+    ],
+    "expect": {
+      "tools": ["getDeck", "searchCards", "presentRecommendations"],
+      "noCardParts": true
+    }
+  },
+  {
+    "id": "interaction",
+    "user": "I need more interaction",
+    "rounds": [
+      { "toolCalls": [{ "name": "getDeck", "input": {} }] },
+      {
+        "toolCalls": [
+          { "name": "searchCards", "input": { "q": "counter", "typeContains": "Instant" } }
+        ]
+      },
+      {
+        "toolCalls": [
+          {
+            "name": "presentRecommendations",
+            "input": {
+              "cardIds": ["00000000-0000-4000-8000-000000000005"]
+            }
+          }
+        ]
+      },
+      { "text": "Counterspell is legal interaction in this identity." }
+    ],
+    "expect": {
+      "tools": ["getDeck", "searchCards", "presentRecommendations"],
+      "recommendationIds": ["00000000-0000-4000-8000-000000000005"]
+    }
+  },
+  {
+    "id": "cheaper",
+    "user": "What is a cheap add?",
+    "rounds": [
+      { "toolCalls": [{ "name": "getDeck", "input": {} }] },
+      { "toolCalls": [{ "name": "searchCards", "input": { "maxManaValue": 1 } }] },
+      {
+        "toolCalls": [
+          {
+            "name": "presentRecommendations",
+            "input": {
+              "cardIds": ["00000000-0000-4000-8000-000000000009"]
+            }
+          }
+        ]
+      },
+      { "text": "Birds of Paradise is a one-mana add inside the identity." }
+    ],
+    "expect": {
+      "tools": ["getDeck", "searchCards", "presentRecommendations"],
+      "recommendationIds": ["00000000-0000-4000-8000-000000000009"]
+    }
+  },
+  {
+    "id": "no-deck-catalog",
+    "deckId": null,
+    "user": "Show me some counterspells",
+    "rounds": [
+      { "toolCalls": [{ "name": "searchCards", "input": { "q": "counter" } }] },
+      {
+        "toolCalls": [
+          {
+            "name": "presentRecommendations",
+            "input": {
+              "cardIds": ["00000000-0000-4000-8000-000000000005"]
+            }
+          }
+        ]
+      },
+      { "text": "Counterspell is in the catalog." }
+    ],
+    "expect": {
+      "tools": ["searchCards", "presentRecommendations"],
+      "recommendationIds": ["00000000-0000-4000-8000-000000000005"]
+    }
+  },
+  {
+    "id": "get-deck-explicit-id",
+    "deckId": null,
+    "user": "What's a good add to my Simic list?",
+    "rounds": [
+      { "toolCalls": [{ "name": "listDecks", "input": {} }] },
+      {
+        "toolCalls": [
+          {
+            "name": "getDeck",
+            "input": { "deckId": "00000000-0000-4000-8000-000000000001" }
+          }
+        ]
+      },
+      { "toolCalls": [{ "name": "searchCards", "input": { "limit": 15 } }] },
+      {
+        "toolCalls": [
+          {
+            "name": "presentRecommendations",
+            "input": {
+              "cardIds": ["00000000-0000-4000-8000-000000000005"]
+            }
+          }
+        ]
+      },
+      { "text": "Counterspell fits that Simic list." }
+    ],
+    "expect": {
+      "tools": ["listDecks", "getDeck", "searchCards", "presentRecommendations"],
+      "recommendationIds": ["00000000-0000-4000-8000-000000000005"]
+    }
+  }
+]

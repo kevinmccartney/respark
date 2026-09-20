@@ -7,8 +7,10 @@ export const cardSearchResultSchema = z.object({
   oracleId: z.string(),
   name: z.string(),
   manaCost: z.string().nullable(),
+  manaValue: z.string().nullable(),
   typeLine: z.string().nullable(),
   oracleText: z.string().nullable(),
+  colorIdentity: z.array(z.string()).nullable(),
   imageNormal: z.string().nullable(),
 });
 
@@ -102,6 +104,7 @@ export type CardSuggestionsResponse = z.infer<typeof cardSuggestionsResponseSche
 
 export const CARD_SEARCH_DEFAULT_LIMIT = 60;
 export const CARD_SEARCH_MAX_LIMIT = 100;
+export const CARD_SEARCH_EXCLUDE_IDS_MAX = 400;
 
 const optionalQueryString = <S extends z.ZodType>(schema: S) =>
   z.preprocess((value: unknown) => {
@@ -121,11 +124,26 @@ const colorIdentityQuerySchema = z.preprocess((value: unknown) => {
   return value;
 }, colorIdentitySchema.optional());
 
+const uuidListQuerySchema = z.preprocess((value: unknown) => {
+  if (value === undefined || value === '' || value === null) return undefined;
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+  return value;
+}, z.array(uuidSchema).max(CARD_SEARCH_EXCLUDE_IDS_MAX).optional());
+
 export const cardSearchQuerySchema = z.object({
   q: z.string().optional(),
   legalIn: optionalQueryString(deckFormatSchema),
   colorIdentity: colorIdentityQuerySchema,
   commanderEligible: queryBoolSchema,
+  typeContains: optionalQueryString(z.string().trim().min(1).max(80)),
+  maxManaValue: queryIntSchema(0, 20),
+  excludeCardIds: uuidListQuerySchema,
   limit: queryIntSchema(1, CARD_SEARCH_MAX_LIMIT),
   page: queryIntSchema(1, 10_000),
 });

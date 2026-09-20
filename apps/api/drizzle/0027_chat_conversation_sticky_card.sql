@@ -1,0 +1,3 @@
+ALTER TABLE "app"."chat_conversation" ADD COLUMN "card_id" uuid;--> statement-breakpoint
+ALTER TABLE "app"."chat_conversation" ADD CONSTRAINT "chat_conversation_card_id_card_id_fk" FOREIGN KEY ("card_id") REFERENCES "catalog"."card"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "chat_conversation_user_id_card_id_idx" ON "app"."chat_conversation" USING btree ("user_id","card_id");

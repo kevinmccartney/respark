@@ -72,3 +72,13 @@ output "db_database_url_parameter" {
   description = "SSM parameter holding the API connection string."
   value       = module.db.database_url_parameter_name
 }
+
+output "api_runtime_role_arn" {
+  description = "IAM role the develop API instance uses for Bedrock and other AWS APIs."
+  value       = module.api.runtime_role_arn
+}
+
+output "api_runtime_role_name" {
+  description = "Name of the develop API instance role."
+  value       = module.api.runtime_role_name
+}

@@ -93,6 +93,9 @@ jobs:
       - name: Lint (task lint)
         run: task lint
 
+      - name: Test (task test)
+        run: task test
+
   changes:
     name: Detect changes
     needs: [config]

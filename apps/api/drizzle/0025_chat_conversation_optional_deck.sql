@@ -1,0 +1,1 @@
+ALTER TABLE "app"."chat_conversation" ALTER COLUMN "deck_id" DROP NOT NULL;

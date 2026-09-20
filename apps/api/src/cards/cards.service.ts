@@ -22,8 +22,10 @@ type SearchRow = {
   oracle_id: string;
   name: string;
   mana_cost: string | null;
+  mana_value: string | null;
   type_line: string | null;
   oracle_text: string | null;
+  color_identity: string[] | null;
   image_normal: string | null;
 };
 
@@ -80,6 +82,9 @@ export class CardsService {
     legalIn?: DeckFormat;
     colorIdentity?: ColorIdentityPip[];
     commanderEligible?: boolean;
+    typeContains?: string;
+    maxManaValue?: number;
+    excludeCardIds?: string[];
     limit?: number;
     page?: number;
   }): Promise<CardSearchPage> {
@@ -92,6 +97,9 @@ export class CardsService {
     const legalPredicate = legalInSql(opts.legalIn);
     const identityPredicate = colorIdentitySql(opts.colorIdentity);
     const commanderPredicate = commanderEligibleSql(opts.commanderEligible);
+    const typePredicate = typeContainsSql(opts.typeContains);
+    const manaPredicate = maxManaValueSql(opts.maxManaValue);
+    const excludePredicate = excludeCardIdsSql(opts.excludeCardIds);
 
     const countResult = await this.db.execute<CountRow>(sql`
       SELECT count(*)::int AS total
@@ -100,6 +108,9 @@ export class CardsService {
         AND ${legalPredicate}
         AND ${identityPredicate}
         AND ${commanderPredicate}
+        AND ${typePredicate}
+        AND ${manaPredicate}
+        AND ${excludePredicate}
     `);
     const total = Number(countResult.rows[0]?.total ?? 0);
     const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
@@ -113,13 +124,18 @@ export class CardsService {
           c.oracle_id,
           c.name,
           c.mana_cost,
+          c.mana_value::text AS mana_value,
           c.type_line,
-          c.oracle_text
+          c.oracle_text,
+          c.color_identity
         FROM catalog.card c
         WHERE ${matchPredicate}
           AND ${legalPredicate}
           AND ${identityPredicate}
           AND ${commanderPredicate}
+          AND ${typePredicate}
+          AND ${manaPredicate}
+          AND ${excludePredicate}
         ORDER BY c.name ASC, c.id ASC
         LIMIT ${pageSize}
         OFFSET ${offset}
@@ -129,8 +145,10 @@ export class CardsService {
         m.oracle_id,
         m.name,
         m.mana_cost,
+        m.mana_value,
         m.type_line,
         m.oracle_text,
+        m.color_identity,
         COALESCE(img.image_normal, img.face_image_normal) AS image_normal
       FROM matched m
       LEFT JOIN LATERAL (
@@ -152,10 +170,14 @@ export class CardsService {
     this.logger.info(
       {
         event: 'cards.search',
+        q: q || null,
         qLength: q.length,
         legalIn: opts.legalIn ?? null,
         colorIdentity: opts.colorIdentity?.join('') ?? null,
         commanderEligible: opts.commanderEligible ?? null,
+        typeContains: opts.typeContains ?? null,
+        maxManaValue: opts.maxManaValue ?? null,
+        excludeCount: opts.excludeCardIds?.length ?? 0,
         page,
         pageSize,
         resultCount: cards.length,
@@ -307,6 +329,26 @@ const colorIdentitySql = (colorIdentity: ColorIdentityPip[] | undefined): SQL =>
   )}]::text[]`;
 };
 
+const typeContainsSql = (typeContains: string | undefined): SQL => {
+  const q = typeContains?.trim();
+  if (!q) return sql`TRUE`;
+  const pattern = `%${escapeIlike(q)}%`;
+  return sql`c.type_line ILIKE ${pattern} ESCAPE '\\'`;
+};
+
+const maxManaValueSql = (maxManaValue: number | undefined): SQL => {
+  if (maxManaValue === undefined) return sql`TRUE`;
+  return sql`c.mana_value IS NOT NULL AND c.mana_value <= ${maxManaValue}`;
+};
+
+const excludeCardIdsSql = (excludeCardIds: string[] | undefined): SQL => {
+  if (!excludeCardIds || excludeCardIds.length === 0) return sql`TRUE`;
+  return sql`c.id NOT IN (${sql.join(
+    excludeCardIds.map((id) => sql`${id}::uuid`),
+    sql`, `,
+  )})`;
+};
+
 const parseLegalities = (raw: CardLegalities | null): CardLegalities | null => {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   return raw;
@@ -347,8 +389,10 @@ const toCard = (row: SearchRow): CardSearchResult => ({
   oracleId: row.oracle_id,
   name: row.name,
   manaCost: row.mana_cost,
+  manaValue: row.mana_value,
   typeLine: row.type_line,
   oracleText: row.oracle_text,
+  colorIdentity: row.color_identity,
   imageNormal: row.image_normal,
 });
 

@@ -62,11 +62,12 @@ task db:migrate   # or restart the Compose API (migrate-on-boot)
 
 Current tables:
 
-- **`app.users`** / **`app.decks`** / **`app.deck_card`** — app-owned identity, decks (`description`, `format`: standard/commander/modern), and deck lines keyed by **printing** (add-by-card picks a default printing).
-- **`GET /cards`** — authenticated keyword search over unique `catalog.card` rows (trigram indexes; `page` + `limit` pagination; optional `legalIn`, `colorIdentity`, `commanderEligible`).
+- **`app.users`** / **`app.decks`** / **`app.deck_card`** / **`app.chat_conversation`** / **`app.chat_message`** — app-owned identity, decks (`description`, `format`: standard/commander/modern), deck lines keyed by **printing** (add-by-card picks a default printing), and chat threads (optional sticky `deck_id` / `card_id`).
+- **`GET /cards`** — authenticated keyword search over unique `catalog.card` rows (trigram indexes; `page` + `limit` pagination; optional `legalIn`, `colorIdentity`, `commanderEligible`, `typeContains`, `maxManaValue`, `excludeCardIds`).
 - **`GET /cards/suggestions`** — name-only autocomplete (`id` + `name`) for deck building (same optional filters).
 - **`GET /cards/:id`** — card detail plus printings (set, collector number, images).
 - **`GET/POST /decks`**, **`GET/PATCH/DELETE /decks/:id`**, **`POST /decks/:id/import`**, **`POST/PATCH/DELETE /decks/:id/cards…`** — deck CRUD + Moxfield-style list import (incl. `SIDEBOARD:` / `SB:`) + card lines (`POST` accepts `cardId`; deck `PATCH` applies any provided fields — `name`, `description`, `format`; card `PATCH` accepts `quantity`, `printingId`, `foil`, and/or `sideboard`; `foil: true` is rejected when the printing’s `finishes` are known and lack `foil`; lines are unique per printing + foil + board).
+- **Chat** — player WebSocket `/chat/ws` (Clerk `?token=`) plus `GET /chat/conversations…` for the latest user thread. Sticky `deckId` is optional context (omit / set / clear). Tools call decks/cards services; the model is Bedrock. Local Compose authenticates as IAM user `respark-local-api` (`task api:local-aws:write`). Develop uses the API EC2 instance role. See [`docs/ai-chat.md`](../../docs/ai-chat.md).
 - **Pipeline schemas** — `raw`, `catalog`, `market`, `ops`, plus `ops.etl_sync` / `ops.etl_job_run` for ETL sync tracking. Admin starts syncs in-process via the `etl` lib and streams events on `/admin/etl-syncs/ws`. See [`apps/etl/README.md`](../etl/README.md) and `task etl -- --help`.
 
 ## Clerk webhooks
@@ -111,6 +112,7 @@ Secrets live in **SSM Parameter Store** and are read by the instance role at dep
 - **`/respark/develop/api/database-url`** — written by Terraform, which generates the password
 - **`/respark/develop/api/clerk-secret-key`** — pushed with `task api:secrets:push` from `apps/api/.env`, so it stays out of Terraform state
 - **`/respark/develop/api/clerk-webhook-signing-secret`** — same push, but optional: it only exists after you create the webhook endpoint in the Clerk dashboard. Until then `/webhooks/clerk` returns 503 and the rest of the API is unaffected.
+- **`/respark/develop/api/bedrock-model-id`** — written by Terraform (not a secret). Injected as `BEDROCK_MODEL_ID` so deck chat can ConverseStream. See [`docs/ai-chat.md`](../../docs/ai-chat.md).
 
 Run `task api:secrets:push` once (and again whenever a Clerk key rotates), then `task api:deploy`.
 

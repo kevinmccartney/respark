@@ -10,9 +10,9 @@ If you have a diagrams.net architecture file, drop `architecture.drawio` (and an
 
 | Piece        | Role                                                                                      |
 | ------------ | ----------------------------------------------------------------------------------------- |
-| **Client**   | Player app: decks, card search, Clerk-signed requests to the API                          |
+| **Client**   | Player app: decks, card search, chat, Clerk-signed requests to the API                    |
 | **Admin**    | Ops dashboard: start ETL syncs, watch jobs over WebSocket                                 |
-| **API**      | Nest: auth, decks, catalog reads, Clerk webhooks, embeds the etl lib                      |
+| **API**      | Nest: auth, decks, catalog reads, Clerk webhooks, embeds the etl lib, chat tools          |
 | **etl lib**  | In-process ingest (also a CLI). Writes `raw` / `catalog` / `ops`. Never creates app decks |
 | **Clerk**    | Authentication and profile source of truth. Local `app.users` is a cache                  |
 | **Postgres** | One database, four live schemas (`raw`, `catalog`, `ops`, `app`). `market` is reserved    |
@@ -25,7 +25,7 @@ Deployed develop hosts the SPAs and API behind CloudFront; RDS is private to the
 
 | Schema    | Owns                                             | Writers                           |
 | --------- | ------------------------------------------------ | --------------------------------- |
-| `app`     | Player identity and decks                        | API request path + Clerk webhooks |
+| `app`     | Player identity, decks, and chat threads         | API request path + Clerk webhooks |
 | `catalog` | Canonical cards, sets, printings                 | ETL catalog (+ identifiers job)   |
 | `ops`     | Sync/job runs, errors, identifier reconciliation | ETL                               |
 | `raw`     | Latest provider JSON snapshots (optional)        | ETL                               |
@@ -55,6 +55,14 @@ A player's named list. `format` is `standard`, `commander`, or `modern`. Command
 One stack in a deck: a **printing** + foil + main/sideboard + quantity. Unique on `(deck_id, printing_id, foil, sideboard)`. Adding a card by oracle id picks a default printing (image + recency). Changing printing/foil/board merges into an existing line when the key collides. Quantity `0` deletes the line.
 
 The line points at `catalog.printing`, not `catalog.card`, so the player can choose set, collector number, and art.
+
+### Chat conversation (`app.chat_conversation`)
+
+One thread per user, not per page. Optional sticky **`deck_id`** and **`card_id`** are last-picked discussion context (`getDeck` / `getCard` or an explicit send), not conversation identity. Follow-ups keep those values unless the client sets or clears them. Deleting a deck or catalog card sets the matching column to null; the thread remains. The open page is sent per turn as view metadata and is not stored on this row.
+
+### Chat message (`app.chat_message`)
+
+A turn in a conversation: `user` / `assistant` / `tool`, with structured `parts` jsonb (text, card ids). Tool rows (name, args, compact result) are stored for debugging and are not replayed unbounded into the next model call. See [`docs/ai-chat.md`](ai-chat.md).
 
 ## Catalog objects (`catalog`)
 

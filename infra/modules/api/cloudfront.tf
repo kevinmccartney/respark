@@ -14,6 +14,10 @@ resource "aws_cloudfront_distribution" "api" {
       https_port             = 443
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
+      # Chat turns stream over WebSocket; raise origin timeouts and send WS pings
+      # from the API so CloudFront does not idle-drop the connection.
+      origin_read_timeout      = 60
+      origin_keepalive_timeout = 60
     }
   }
 

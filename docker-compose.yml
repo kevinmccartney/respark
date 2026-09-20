@@ -48,6 +48,12 @@ services:
       # Apply drizzle/ on boot so a fresh volume is usable immediately
       RUN_MIGRATIONS: 'true'
       ETL_REPO_ROOT: /repo
+      # Bedrock via IAM user respark-local-api keys in apps/api/.env.local
+      # (`task api:local-aws:write`). Do not mount ~/.aws (that is the terraform user).
+      CHAT_PROVIDER: ${CHAT_PROVIDER:-bedrock}
+      BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-us.anthropic.claude-haiku-4-5-20251001-v1:0}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
     volumes:
       - ./apps/api/src:/repo/apps/api/src
       - ./apps/api/drizzle:/repo/apps/api/drizzle

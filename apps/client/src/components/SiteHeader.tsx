@@ -1,7 +1,9 @@
 import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react';
+import { MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { useChatSession } from '../lib/chat-session.tsx';
 
 type SiteHeaderProps = {
   showAuthActions?: boolean;
@@ -36,6 +38,9 @@ export const SiteHeader = ({ showAuthActions = true }: SiteHeaderProps) => (
       </Show>
     </div>
     <div className="flex items-center gap-2">
+      <Show when="signed-in">
+        <ChatToggle />
+      </Show>
       <ThemeToggle />
       {showAuthActions ? (
         <nav className="flex items-center gap-2" aria-label="Account">
@@ -57,3 +62,22 @@ export const SiteHeader = ({ showAuthActions = true }: SiteHeaderProps) => (
     </div>
   </header>
 );
+
+const ChatToggle = () => {
+  const { isOpen, setOpen } = useChatSession();
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="icon-sm"
+      aria-pressed={isOpen}
+      aria-expanded={isOpen}
+      aria-controls="global-chat-drawer"
+      aria-label={isOpen ? 'Close chat' : 'Open chat'}
+      title={isOpen ? 'Close chat' : 'Open chat'}
+      onClick={() => setOpen(!isOpen)}
+    >
+      <MessageSquare />
+    </Button>
+  );
+};

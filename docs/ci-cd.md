@@ -13,6 +13,7 @@ Workflow file: [`.github/workflows/ci-cd.yml`](../.github/workflows/ci-cd.yml).
 | Write format         | `task format`                                                                                 | —                          |
 | Check format         | `task format:check`                                                                           | `format` job               |
 | ESLint + TF validate | `task lint`                                                                                   | `format` job (`task lint`) |
+| Unit / fixture tests | `task test`                                                                                   | `format` job (`task test`) |
 | On commit            | husky → `task precommit` (lint-staged Prettier/ESLint/`terraform fmt`, then `infra:validate`) | —                          |
 
 Prettier covers JS/TS/JSON/MD/YAML/CSS; ESLint covers apps; Terraform uses `terraform fmt` + `terraform validate` under `infra/`.
@@ -52,6 +53,7 @@ Production deploys are intentional: use **Actions → CI / CD → Run workflow**
 | Format (write)        | `task format`                              | —                                                                      |
 | Format (check)        | `task format:check`                        | `format` job                                                           |
 | Lint                  | `task lint`                                | `format` job                                                           |
+| Test                  | `task test`                                | `format` job                                                           |
 | Build apps            | `task build`                               | conditional `task *:build`                                             |
 | Plan                  | `task infra:plan ENV=develop`              | same                                                                   |
 | Apply                 | `task infra:apply ENV=develop`             | same (applies uploaded `tfplan`)                                       |
@@ -73,7 +75,7 @@ task infra:init ENV=develop
 terraform -chdir=infra/envs/develop init -migrate-state
 ```
 
-This creates `respark-tfstate` (S3) and `respark-tfstate-lock` (DynamoDB) in `us-east-1`. Each env’s `versions.tf` should use a distinct state key (e.g. `envs/develop/terraform.tfstate`).
+This creates `respark-tfstate` (S3) and `respark-tfstate-lock` (DynamoDB) in `us-east-1`. Each env’s `versions.tf` should use a distinct state key (e.g. `envs/develop/terraform.tfstate`). Laptop Compose IAM lives in [`infra/envs/local`](../infra/envs/local/README.md) (`task infra:apply ENV=local`) and is not a GitHub Environment.
 
 ### 2. GitHub Environments
 

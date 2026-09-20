@@ -32,3 +32,13 @@ output "security_group_id" {
   description = "Security group attached to the API instance (source for database access)."
   value       = aws_security_group.api.id
 }
+
+output "runtime_role_arn" {
+  description = "IAM role the API EC2 instance (and container) assumes for AWS APIs including Bedrock."
+  value       = aws_iam_role.ec2.arn
+}
+
+output "runtime_role_name" {
+  description = "Name of the API EC2 instance role."
+  value       = aws_iam_role.ec2.name
+}

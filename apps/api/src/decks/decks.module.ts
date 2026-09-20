@@ -7,5 +7,6 @@ import { DecksService } from './decks.service';
   imports: [UsersModule],
   controllers: [DecksController],
   providers: [DecksService],
+  exports: [DecksService],
 })
 export class DecksModule {}

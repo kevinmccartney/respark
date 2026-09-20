@@ -2,6 +2,10 @@ erDiagram
   app_users ||--o{ app_decks : "user_id CASCADE"
   app_decks ||--o{ app_deck_card : "deck_id CASCADE"
   catalog_printing ||--o{ app_deck_card : "printing_id RESTRICT"
+  app_users ||--o{ app_chat_conversation : "user_id CASCADE"
+  app_decks |o--o{ app_chat_conversation : "deck_id SET NULL"
+  catalog_card |o--o{ app_chat_conversation : "card_id SET NULL"
+  app_chat_conversation ||--o{ app_chat_message : "conversation_id CASCADE"
 
   app_users {
     uuid id PK
@@ -20,6 +24,7 @@ erDiagram
     text name
     text description
     text format
+    uuid commander_printing_id FK
     timestamptz updated_at
   }
 
@@ -30,4 +35,23 @@ erDiagram
     bool foil
     bool sideboard
     int quantity
+  }
+
+  app_chat_conversation {
+    uuid id PK
+    uuid user_id FK
+    uuid deck_id FK
+    uuid card_id FK
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  app_chat_message {
+    uuid id PK
+    uuid conversation_id FK
+    text role
+    jsonb parts
+    text tool_name
+    text tool_call_id
+    timestamptz created_at
   }

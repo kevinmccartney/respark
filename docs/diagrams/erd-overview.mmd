@@ -1,6 +1,10 @@
 erDiagram
   app_users ||--o{ app_decks : owns
   app_decks ||--o{ app_deck_card : contains
+  app_users ||--o{ app_chat_conversation : "chats about"
+  app_decks |o--o{ app_chat_conversation : "optional deck"
+  catalog_card |o--o{ app_chat_conversation : "optional card"
+  app_chat_conversation ||--o{ app_chat_message : contains
   catalog_printing ||--o{ app_deck_card : "listed as"
   catalog_card ||--o{ catalog_printing : "has printings"
   catalog_set ||--o{ catalog_printing : "contains"

@@ -1,0 +1,38 @@
+flowchart TB
+  subgraph client [apps/client]
+    Shell["AppShell signed-in"]
+    ChatUI["GlobalChat right drawer"]
+    CardView["Existing card image/name UI"]
+  end
+
+  subgraph api [apps/api Nest]
+    Verify[verifyClerkToken on WS connect]
+    ChatGw["ChatGateway /chat/ws"]
+    Orch[ChatOrchestrator]
+    Tools[Tool registry]
+    Decks[DecksService]
+    Cards[CardsService]
+    Provider[ChatProvider Bedrock]
+  end
+
+  subgraph data [Postgres]
+    AppDecks["app.decks / deck_card"]
+    Catalog["catalog.card / printing"]
+    ChatTables["app.chat_conversation / chat_message"]
+  end
+
+  Bedrock[AWS Bedrock ConverseStream]
+
+  Shell --> ChatUI
+  ChatUI -->|"wss + Clerk token + sticky context"| Verify
+  Verify --> ChatGw
+  ChatGw --> Orch
+  Orch --> Provider
+  Provider --> Bedrock
+  Orch --> Tools
+  Tools --> Decks
+  Tools --> Cards
+  Decks --> AppDecks
+  Cards --> Catalog
+  ChatGw --> ChatTables
+  ChatUI --> CardView
