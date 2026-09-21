@@ -10,6 +10,10 @@ export const logLevelSchema = z.enum(['debug', 'info', 'warn', 'error']);
 
 export type LogLevel = z.infer<typeof logLevelSchema>;
 
+export const SORT_DIRS = ['asc', 'desc'] as const;
+export const sortDirSchema = z.enum(SORT_DIRS);
+export type SortDir = z.infer<typeof sortDirSchema>;
+
 /**
  * Query-string integers. Missing or empty stay undefined; non-numeric values fail.
  */

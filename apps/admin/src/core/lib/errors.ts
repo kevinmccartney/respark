@@ -28,8 +28,10 @@ export const applyAdminLoadError = (
     return;
   }
   if (isNotFound(err)) {
-    setters.setNotFound?.(true);
-    return;
+    if (setters.setNotFound) {
+      setters.setNotFound(true);
+      return;
+    }
   }
   setters.setError(apiErrorMessage(err, fallback));
 };

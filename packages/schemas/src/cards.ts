@@ -1,7 +1,18 @@
-import { cardFaceSchema, queryBoolSchema, queryIntSchema, uuidSchema } from './primitives.js';
-import { colorIdentitySchema, deckFormatSchema, type DeckFormat } from './decks.js';
+import {
+  cardFaceSchema,
+  queryBoolSchema,
+  queryIntSchema,
+  sortDirSchema,
+  uuidSchema,
+  type SortDir,
+} from './primitives.js';
+import { deckFormatSchema, type DeckFormat } from './decks.js';
 import { recommendationGoodstuffFlagSchema } from './recommendations.js';
 import { z } from 'zod';
+
+export const cardLegalitiesSchema = z.record(z.string(), z.string());
+
+export type CardLegalities = z.infer<typeof cardLegalitiesSchema>;
 
 export const cardSearchResultSchema = z.object({
   id: uuidSchema,
@@ -13,7 +24,10 @@ export const cardSearchResultSchema = z.object({
   oracleText: z.string().nullable(),
   keywords: z.array(z.string()).nullable(),
   colorIdentity: z.array(z.string()).nullable(),
+  legalities: cardLegalitiesSchema.nullable(),
   imageNormal: z.string().nullable(),
+  /** Rarity of the representative (best) printing used for the list image. */
+  rarity: z.string().nullable(),
   edhrecRank: z.number().int().nullable(),
   edhrecSaltiness: z.number().nullable(),
   isGameChanger: z.boolean().nullable(),
@@ -89,10 +103,6 @@ export const premiumFinishLabel = (finishes: readonly string[]): 'Etched' | 'Foi
 export const formatPrintingFinishes = (finishes: readonly string[]): string =>
   finishes.map((finish) => FINISH_LABELS[finish] ?? finish).join(', ');
 
-export const cardLegalitiesSchema = z.record(z.string(), z.string());
-
-export type CardLegalities = z.infer<typeof cardLegalitiesSchema>;
-
 /** MTGJSON leadershipSkills. Extra provider keys are stripped at the wire. */
 export const leadershipSkillsSchema = z.object({
   brawl: z.boolean(),
@@ -151,14 +161,51 @@ export const cardSuggestionsResponseSchema = z.object({
 
 export type CardSuggestionsResponse = z.infer<typeof cardSuggestionsResponseSchema>;
 
+export const CARD_TYPE_SUGGESTIONS_DEFAULT_LIMIT = 15;
+export const CARD_TYPE_SUGGESTIONS_MAX_LIMIT = 30;
+
+export const cardTypeSuggestionsQuerySchema = z.object({
+  q: z.string().optional(),
+  limit: queryIntSchema(1, CARD_TYPE_SUGGESTIONS_MAX_LIMIT),
+});
+
+export type CardTypeSuggestionsQuery = z.infer<typeof cardTypeSuggestionsQuerySchema>;
+
+export const cardTypeSuggestionsResponseSchema = z.object({
+  suggestions: z.array(z.string()),
+});
+
+export type CardTypeSuggestionsResponse = z.infer<typeof cardTypeSuggestionsResponseSchema>;
+
 export const CARD_SEARCH_DEFAULT_LIMIT = 60;
 export const CARD_SEARCH_MAX_LIMIT = 100;
 export const CARD_SEARCH_EXCLUDE_IDS_MAX = 400;
 
-export const CARD_SEARCH_SORTS = ['name', 'edhrecRank'] as const;
+export const CARD_SEARCH_SORTS = ['name', 'edhrecRank', 'manaValue'] as const;
 export const cardSearchSortSchema = z.enum(CARD_SEARCH_SORTS);
 export type CardSearchSort = z.infer<typeof cardSearchSortSchema>;
 export const CARD_SEARCH_DEFAULT_SORT: CardSearchSort = 'name';
+
+/** Default direction when `dir` is omitted. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const defaultCardSortDir = (_sort: CardSearchSort): SortDir => 'asc';
+
+/** Admin/browse color filter tokens — `C` means colorless (empty identity). */
+export const CARD_SEARCH_COLOR_FILTERS = ['W', 'U', 'B', 'R', 'G', 'C'] as const;
+export const cardSearchColorFilterSchema = z.enum(CARD_SEARCH_COLOR_FILTERS);
+export type CardSearchColorFilter = z.infer<typeof cardSearchColorFilterSchema>;
+
+/** Printing rarities used for card search filters (Scryfall vocabulary). */
+export const CARD_SEARCH_RARITIES = [
+  'common',
+  'uncommon',
+  'rare',
+  'mythic',
+  'special',
+  'bonus',
+] as const;
+export const cardSearchRaritySchema = z.enum(CARD_SEARCH_RARITIES);
+export type CardSearchRarity = z.infer<typeof cardSearchRaritySchema>;
 
 const optionalQueryString = <S extends z.ZodType>(schema: S) =>
   z.preprocess((value: unknown) => {
@@ -176,7 +223,51 @@ const colorIdentityQuerySchema = z.preprocess((value: unknown) => {
       .filter(Boolean);
   }
   return value;
-}, colorIdentitySchema.optional());
+}, z.array(cardSearchColorFilterSchema).optional());
+
+const legalInQuerySchema = z.preprocess((value: unknown) => {
+  if (value === undefined || value === '' || value === null) return undefined;
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+  return value;
+}, z.array(deckFormatSchema).min(1).optional());
+
+/** Comma-separated type-line substrings; all must match (AND). */
+export const CARD_SEARCH_TYPE_CONTAINS_MAX = 8;
+
+const typeContainsQuerySchema = z.preprocess(
+  (value: unknown) => {
+    if (value === undefined || value === '' || value === null) return undefined;
+    if (Array.isArray(value)) {
+      return value.map((part) => String(part).trim()).filter(Boolean);
+    }
+    if (typeof value === 'string') {
+      return value
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean);
+    }
+    return value;
+  },
+  z.array(z.string().min(1).max(80)).min(1).max(CARD_SEARCH_TYPE_CONTAINS_MAX).optional(),
+);
+
+const rarityQuerySchema = z.preprocess((value: unknown) => {
+  if (value === undefined || value === '' || value === null) return undefined;
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+  return value;
+}, z.array(cardSearchRaritySchema).min(1).optional());
 
 const uuidListQuerySchema = z.preprocess((value: unknown) => {
   if (value === undefined || value === '' || value === null) return undefined;
@@ -192,13 +283,17 @@ const uuidListQuerySchema = z.preprocess((value: unknown) => {
 
 export const cardSearchQuerySchema = z.object({
   q: z.string().optional(),
-  legalIn: optionalQueryString(deckFormatSchema),
+  legalIn: legalInQuerySchema,
   colorIdentity: colorIdentityQuerySchema,
+  /** When false, empty identity is excluded from color filters (admin browse). Default true for deck building. */
+  includeColorless: queryBoolSchema,
   commanderEligible: queryBoolSchema,
-  typeContains: optionalQueryString(z.string().trim().min(1).max(80)),
+  typeContains: typeContainsQuerySchema,
+  rarity: rarityQuerySchema,
   maxManaValue: queryIntSchema(0, 20),
   excludeCardIds: uuidListQuerySchema,
   sort: optionalQueryString(cardSearchSortSchema),
+  dir: optionalQueryString(sortDirSchema),
   limit: queryIntSchema(1, CARD_SEARCH_MAX_LIMIT),
   page: queryIntSchema(1, 10_000),
 });
@@ -207,7 +302,7 @@ export type CardSearchQuery = z.infer<typeof cardSearchQuerySchema>;
 
 export const cardSuggestionsQuerySchema = z.object({
   q: z.string().optional(),
-  legalIn: optionalQueryString(deckFormatSchema),
+  legalIn: legalInQuerySchema,
   colorIdentity: colorIdentityQuerySchema,
   commanderEligible: queryBoolSchema,
   limit: queryIntSchema(1, 30),

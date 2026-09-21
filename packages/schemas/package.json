@@ -23,6 +23,12 @@
       "require": "./dist/cards.js",
       "default": "./dist/cards.js"
     },
+    "./sets": {
+      "types": "./dist/sets.d.ts",
+      "import": "./src/sets.ts",
+      "require": "./dist/sets.js",
+      "default": "./dist/sets.js"
+    },
     "./etl-sync": {
       "types": "./dist/etl-sync.d.ts",
       "import": "./src/etl-sync.ts",
@@ -64,6 +70,9 @@
       ],
       "cards": [
         "./dist/cards.d.ts"
+      ],
+      "sets": [
+        "./dist/sets.d.ts"
       ],
       "etl-sync": [
         "./dist/etl-sync.d.ts"

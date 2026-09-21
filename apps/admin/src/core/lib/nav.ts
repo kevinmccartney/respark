@@ -16,8 +16,16 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   {
     label: 'Catalog',
     items: [
-      { label: 'Cards', to: '/catalog/cards', comingSoon: true },
-      { label: 'Sets', to: '/catalog/sets', comingSoon: true },
+      {
+        label: 'Cards',
+        to: '/catalog/cards',
+        match: (pathname) => pathname.startsWith('/catalog/cards'),
+      },
+      {
+        label: 'Sets',
+        to: '/catalog/sets',
+        match: (pathname) => pathname.startsWith('/catalog/sets'),
+      },
       {
         label: 'ETL Syncs',
         to: '/',

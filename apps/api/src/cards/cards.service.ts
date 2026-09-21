@@ -5,16 +5,21 @@ import { DATABASE, type Database } from '../db/database.module';
 import {
   CARD_SEARCH_DEFAULT_LIMIT,
   CARD_SEARCH_DEFAULT_SORT,
+  CARD_TYPE_SUGGESTIONS_DEFAULT_LIMIT,
+  defaultCardSortDir,
   leadershipSkillsSchema,
   type CardDetail,
   type CardLegalities,
   type CardNameSuggestion,
   type CardPrintingSummary,
+  type CardSearchColorFilter,
   type CardSearchPage,
+  type CardSearchRarity,
   type CardSearchResult,
   type CardSearchSort,
   type LeadershipSkills,
 } from 'schemas/cards';
+import type { SortDir } from 'schemas/primitives';
 import { goodstuffTagSchema, type RecommendationGoodstuffFlag } from 'schemas/recommendations';
 import { parseCardFaces, uuidSchema } from 'schemas/primitives';
 import type { ColorIdentityPip, DeckFormat } from 'schemas/decks';
@@ -30,7 +35,9 @@ type SearchRow = {
   oracle_text: string | null;
   keywords: string[] | null;
   color_identity: string[] | null;
+  legalities: CardLegalities | null;
   image_normal: string | null;
+  rarity: string | null;
   edhrec_rank: number | null;
   edhrec_saltiness: string | number | null;
   is_game_changer: boolean | null;
@@ -93,13 +100,16 @@ export class CardsService {
 
   async search(opts: {
     q?: string;
-    legalIn?: DeckFormat;
-    colorIdentity?: ColorIdentityPip[];
+    legalIn?: DeckFormat | DeckFormat[];
+    colorIdentity?: CardSearchColorFilter[];
+    includeColorless?: boolean;
     commanderEligible?: boolean;
-    typeContains?: string;
+    typeContains?: string | string[];
+    rarity?: CardSearchRarity[];
     maxManaValue?: number;
     excludeCardIds?: string[];
     sort?: CardSearchSort;
+    dir?: SortDir;
     limit?: number;
     page?: number;
   }): Promise<CardSearchPage> {
@@ -107,13 +117,15 @@ export class CardsService {
     const pageSize = opts.limit ?? CARD_SEARCH_DEFAULT_LIMIT;
     const requestedPage = opts.page ?? 1;
     const sort = opts.sort ?? CARD_SEARCH_DEFAULT_SORT;
+    const dir = opts.dir ?? defaultCardSortDir(sort);
 
     const pattern = q.length > 0 ? `%${escapeIlike(q)}%` : null;
     const matchPredicate = matchSql(pattern);
     const legalPredicate = legalInSql(opts.legalIn);
-    const identityPredicate = colorIdentitySql(opts.colorIdentity);
+    const identityPredicate = colorIdentitySql(opts.colorIdentity, opts.includeColorless);
     const commanderPredicate = commanderEligibleSql(opts.commanderEligible);
     const typePredicate = typeContainsSql(opts.typeContains);
+    const rarityPredicate = raritySql(opts.rarity);
     const manaPredicate = maxManaValueSql(opts.maxManaValue);
     const excludePredicate = excludeCardIdsSql(opts.excludeCardIds);
 
@@ -125,6 +137,7 @@ export class CardsService {
         AND ${identityPredicate}
         AND ${commanderPredicate}
         AND ${typePredicate}
+        AND ${rarityPredicate}
         AND ${manaPredicate}
         AND ${excludePredicate}
     `);
@@ -136,6 +149,7 @@ export class CardsService {
     const orderSql = searchOrderSql({
       namePattern: pattern,
       sort,
+      dir,
     });
 
     const pageResult = await this.db.execute<SearchRow>(sql`
@@ -150,6 +164,7 @@ export class CardsService {
           c.oracle_text,
           c.keywords,
           c.color_identity,
+          c.legalities,
           c.edhrec_rank,
           c.edhrec_saltiness,
           c.is_game_changer,
@@ -167,6 +182,7 @@ export class CardsService {
           AND ${identityPredicate}
           AND ${commanderPredicate}
           AND ${typePredicate}
+          AND ${rarityPredicate}
           AND ${manaPredicate}
           AND ${excludePredicate}
         ORDER BY ${orderSql}
@@ -183,16 +199,19 @@ export class CardsService {
         m.oracle_text,
         m.keywords,
         m.color_identity,
+        m.legalities,
         m.edhrec_rank,
         m.edhrec_saltiness,
         m.is_game_changer,
         m.goodstuff_tags,
         m.goodstuff_note,
-        COALESCE(img.image_normal, img.face_image_normal) AS image_normal
+        COALESCE(img.image_normal, img.face_image_normal) AS image_normal,
+        img.rarity
       FROM matched m
       LEFT JOIN LATERAL (
         SELECT
           p.image_normal,
+          p.rarity,
           f.image_normal AS face_image_normal
         FROM catalog.printing p
         LEFT JOIN catalog.card_face f
@@ -204,6 +223,7 @@ export class CardsService {
       ORDER BY ${searchOrderSql({
         namePattern: pattern,
         sort,
+        dir,
         tableAlias: 'm',
       })}
     `);
@@ -219,6 +239,7 @@ export class CardsService {
         colorIdentity: opts.colorIdentity?.join('') ?? null,
         commanderEligible: opts.commanderEligible ?? null,
         sort,
+        dir,
         typeContains: opts.typeContains ?? null,
         maxManaValue: opts.maxManaValue ?? null,
         excludeCount: opts.excludeCardIds?.length ?? 0,
@@ -241,8 +262,9 @@ export class CardsService {
     qRaw: string | undefined,
     opts?: {
       limit?: number;
-      legalIn?: DeckFormat;
-      colorIdentity?: ColorIdentityPip[];
+      legalIn?: DeckFormat | DeckFormat[];
+      colorIdentity?: CardSearchColorFilter[];
+      includeColorless?: boolean;
       commanderEligible?: boolean;
     },
   ): Promise<CardNameSuggestion[]> {
@@ -252,7 +274,7 @@ export class CardsService {
     const limit = opts?.limit ?? 15;
     const pattern = `%${escapeIlike(q)}%`;
     const legalPredicate = legalInSql(opts?.legalIn);
-    const identityPredicate = colorIdentitySql(opts?.colorIdentity);
+    const identityPredicate = colorIdentitySql(opts?.colorIdentity, opts?.includeColorless);
     const commanderPredicate = commanderEligibleSql(opts?.commanderEligible);
 
     const result = await this.db.execute<{ id: string; name: string }>(sql`
@@ -267,6 +289,42 @@ export class CardsService {
     `);
 
     return result.rows.map((row) => ({ id: row.id, name: row.name }));
+  }
+
+  /**
+   * Type-filter autocomplete: distinct tokens from catalog type lines.
+   */
+  async suggestTypes(qRaw: string | undefined, opts?: { limit?: number }): Promise<string[]> {
+    const q = (qRaw ?? '').trim();
+    if (q.length < 1) return [];
+
+    const limit = opts?.limit ?? CARD_TYPE_SUGGESTIONS_DEFAULT_LIMIT;
+    const prefixPattern = `${escapeIlike(q)}%`;
+    const containsPattern = `%${escapeIlike(q)}%`;
+
+    // Split on whitespace after turning em/en dashes, slashes, and hyphens into spaces.
+    // Use [[:space:]]+ (not \s) so the pattern survives JS template-literal cooking.
+    const result = await this.db.execute<{ token: string }>(sql`
+      SELECT DISTINCT token
+      FROM (
+        SELECT trim(both FROM unnest(
+          regexp_split_to_array(
+            regexp_replace(c.type_line, '[—–/-]+', ' ', 'g'),
+            '[[:space:]]+'
+          )
+        )) AS token
+        FROM catalog.card c
+        WHERE c.type_line IS NOT NULL
+          AND c.type_line ILIKE ${containsPattern} ESCAPE '\\'
+      ) tokens
+      WHERE token <> ''
+        AND token !~ '^[[:punct:]]+$'
+        AND token ILIKE ${prefixPattern} ESCAPE '\\'
+      ORDER BY token ASC
+      LIMIT ${limit}
+    `);
+
+    return result.rows.map((row) => row.token);
   }
 
   async findIdByExactName(name: string): Promise<{ id: string; name: string } | null> {
@@ -431,9 +489,13 @@ export class CardsService {
   }
 }
 
-const legalInSql = (legalIn: DeckFormat | undefined): SQL => {
-  if (!legalIn) return sql`TRUE`;
-  return sql`(c.legalities ->> ${legalIn}) = 'legal'`;
+const legalInSql = (legalIn: DeckFormat | DeckFormat[] | undefined): SQL => {
+  const formats = !legalIn ? [] : Array.isArray(legalIn) ? legalIn : [legalIn];
+  if (formats.length === 0) return sql`TRUE`;
+  return sql`(${sql.join(
+    formats.map((format) => sql`(c.legalities ->> ${format}) = 'legal'`),
+    sql` AND `,
+  )})`;
 };
 
 const commanderEligibleSql = (enabled: boolean | undefined): SQL => {
@@ -441,22 +503,62 @@ const commanderEligibleSql = (enabled: boolean | undefined): SQL => {
   return sql`(c.leadership_skills ->> 'commander') = 'true'`;
 };
 
-const colorIdentitySql = (colorIdentity: ColorIdentityPip[] | undefined): SQL => {
-  if (!colorIdentity) return sql`TRUE`;
-  if (colorIdentity.length === 0) {
+const colorIdentitySql = (
+  colorIdentity: CardSearchColorFilter[] | undefined,
+  includeColorless = true,
+): SQL => {
+  if (!colorIdentity || colorIdentity.length === 0) return sql`TRUE`;
+
+  const wantColorless = colorIdentity.includes('C');
+  const colors = colorIdentity.filter((pip): pip is ColorIdentityPip => pip !== 'C');
+
+  if (colors.length === 0) {
     return sql`coalesce(cardinality(c.color_identity), 0) = 0`;
   }
-  return sql`coalesce(c.color_identity, ARRAY[]::text[]) <@ ARRAY[${sql.join(
-    colorIdentity.map((pip) => sql`${pip}`),
+
+  const subset = sql`coalesce(c.color_identity, ARRAY[]::text[]) <@ ARRAY[${sql.join(
+    colors.map((pip) => sql`${pip}`),
     sql`, `,
   )}]::text[]`;
+
+  // Deck building (default): colorless is legal in any color identity.
+  // Admin browse with colored pips and no C: require at least one color pip.
+  if (includeColorless || wantColorless) return subset;
+  return sql`(${subset}) AND coalesce(cardinality(c.color_identity), 0) > 0`;
 };
 
-const typeContainsSql = (typeContains: string | undefined): SQL => {
-  const q = typeContains?.trim();
-  if (!q) return sql`TRUE`;
-  const pattern = `%${escapeIlike(q)}%`;
-  return sql`c.type_line ILIKE ${pattern} ESCAPE '\\'`;
+const typeContainsSql = (typeContains: string | string[] | undefined): SQL => {
+  const raw = !typeContains ? [] : Array.isArray(typeContains) ? typeContains : [typeContains];
+  const tokens = raw.map((token) => token.trim()).filter(Boolean);
+  if (tokens.length === 0) return sql`TRUE`;
+  return sql`(${sql.join(
+    tokens.map((token) => {
+      const pattern = `%${escapeIlike(token)}%`;
+      return sql`c.type_line ILIKE ${pattern} ESCAPE '\\'`;
+    }),
+    sql` AND `,
+  )})`;
+};
+
+/** Match the representative (best) printing rarity — same printing used for list image/rarity. */
+const raritySql = (rarities: CardSearchRarity[] | undefined): SQL => {
+  if (!rarities || rarities.length === 0) return sql`TRUE`;
+  return sql`EXISTS (
+    SELECT 1
+    FROM (
+      SELECT p.rarity
+      FROM catalog.printing p
+      LEFT JOIN catalog.card_face f
+        ON f.printing_id = p.id AND f.face_index = 0
+      WHERE p.card_id = c.id
+      ORDER BY ${bestPrintingOrderSql}
+      LIMIT 1
+    ) best
+    WHERE best.rarity IN (${sql.join(
+      rarities.map((rarity) => sql`${rarity}`),
+      sql`, `,
+    )})
+  )`;
 };
 
 const maxManaValueSql = (maxManaValue: number | undefined): SQL => {
@@ -485,18 +587,28 @@ const parseLeadershipSkills = (raw: LeadershipSkills | null): LeadershipSkills |
 const searchOrderSql = (opts: {
   namePattern: string | null;
   sort: CardSearchSort;
+  dir: SortDir;
   tableAlias?: 'c' | 'm';
 }): SQL => {
   const nameCol = opts.tableAlias === 'm' ? sql`m.name` : sql`c.name`;
   const rankCol = opts.tableAlias === 'm' ? sql`m.edhrec_rank` : sql`c.edhrec_rank`;
+  // Matched CTE exposes mana_value as text for the response; cast back for numeric order.
+  const manaCol = opts.tableAlias === 'm' ? sql`m.mana_value::numeric` : sql`c.mana_value`;
   const idCol = opts.tableAlias === 'm' ? sql`m.id` : sql`c.id`;
   const nameMatch = opts.namePattern
     ? sql`(${nameCol} ILIKE ${opts.namePattern} ESCAPE '\\') DESC,`
     : sql``;
+  const nameOrder = opts.dir === 'asc' ? sql`${nameCol} ASC` : sql`${nameCol} DESC`;
+  const rankOrder =
+    opts.dir === 'asc' ? sql`${rankCol} ASC NULLS LAST` : sql`${rankCol} DESC NULLS LAST`;
+  const manaOrder =
+    opts.dir === 'asc' ? sql`${manaCol} ASC NULLS LAST` : sql`${manaCol} DESC NULLS LAST`;
   const requested =
     opts.sort === 'edhrecRank'
-      ? sql`${rankCol} ASC NULLS LAST, ${nameCol} ASC,`
-      : sql`${nameCol} ASC,`;
+      ? sql`${rankOrder}, ${nameCol} ASC,`
+      : opts.sort === 'manaValue'
+        ? sql`${manaOrder}, ${nameCol} ASC,`
+        : sql`${nameOrder},`;
   return sql`${nameMatch} ${requested} ${idCol} ASC`;
 };
 
@@ -557,7 +669,9 @@ const toCard = (row: SearchRow): CardSearchResult => ({
   oracleText: row.oracle_text,
   keywords: row.keywords,
   colorIdentity: row.color_identity,
+  legalities: parseLegalities(row.legalities),
   imageNormal: row.image_normal,
+  rarity: row.rarity,
   edhrecRank: row.edhrec_rank,
   edhrecSaltiness: parseNullableNumber(row.edhrec_saltiness),
   isGameChanger: row.is_game_changer,

@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 import { GuestOnly, RequireAuth, SignInPage } from '@/auth';
+import { CardDetailPage, CardsListPage, SetDetailPage, SetsListPage } from '@/catalog';
 import { AppShell, ComingSoonPage, NotFoundPage } from '@/core';
 import { SyncDetailPage, SyncsListPage } from '@/etl-syncs';
 import { GoodstuffsPage } from '@/recommendations';
@@ -36,10 +37,15 @@ export default function App() {
           path="/catalog/cards"
           element={
             <RequireAuth>
-              <ComingSoonPage
-                title="Cards"
-                description="A table of catalog cards will live here."
-              />
+              <CardsListPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/catalog/cards/:id"
+          element={
+            <RequireAuth>
+              <CardDetailPage />
             </RequireAuth>
           }
         />
@@ -47,7 +53,15 @@ export default function App() {
           path="/catalog/sets"
           element={
             <RequireAuth>
-              <ComingSoonPage title="Sets" description="A table of catalog sets will live here." />
+              <SetsListPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/catalog/sets/:id"
+          element={
+            <RequireAuth>
+              <SetDetailPage />
             </RequireAuth>
           }
         />

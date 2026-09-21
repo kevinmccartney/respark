@@ -3,6 +3,7 @@
 | Doc                                   | Description                                                        |
 | ------------------------------------- | ------------------------------------------------------------------ |
 | [Domain model](domain.md)             | Business objects, system diagram, Mermaid ERDs                     |
+| [Admin catalog](admin-catalog.md)     | Read-only Cards/Sets browse (printings via drilldown)              |
 | [AI chat](ai-chat.md)                 | Global assistant: sticky context, tools, Bedrock, WebSocket        |
 | [Commander stats](commander-stats.md) | Layer A rank/salt vs future per-commander inclusion (Option B)     |
 | [CI / CD](ci-cd.md)                   | GitHub Actions, Task isomorphism, OIDC, change detection, releases |

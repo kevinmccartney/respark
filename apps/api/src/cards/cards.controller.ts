@@ -2,10 +2,13 @@ import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import {
   CARD_SEARCH_DEFAULT_LIMIT,
   CARD_SEARCH_DEFAULT_SORT,
+  CARD_TYPE_SUGGESTIONS_DEFAULT_LIMIT,
   cardSearchQuerySchema,
   cardSuggestionsQuerySchema,
+  cardTypeSuggestionsQuerySchema,
   type CardSearchQuery,
   type CardSuggestionsQuery,
+  type CardTypeSuggestionsQuery,
 } from 'schemas/cards';
 import { uuidSchema } from 'schemas/primitives';
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard';
@@ -23,11 +26,14 @@ export class CardsController {
       q: query.q,
       legalIn: query.legalIn,
       colorIdentity: query.colorIdentity,
+      includeColorless: query.includeColorless,
       commanderEligible: query.commanderEligible,
       typeContains: query.typeContains,
+      rarity: query.rarity,
       maxManaValue: query.maxManaValue,
       excludeCardIds: query.excludeCardIds,
       sort: query.sort ?? CARD_SEARCH_DEFAULT_SORT,
+      dir: query.dir,
       limit: query.limit ?? CARD_SEARCH_DEFAULT_LIMIT,
       page: query.page ?? 1,
     });
@@ -42,6 +48,18 @@ export class CardsController {
         legalIn: query.legalIn,
         colorIdentity: query.colorIdentity,
         commanderEligible: query.commanderEligible,
+      }),
+    };
+  }
+
+  /** Distinct type-line tokens from the catalog for typeContains autocomplete. */
+  @Get('type-suggestions')
+  async typeSuggestions(
+    @Query(zodPipe(cardTypeSuggestionsQuerySchema)) query: CardTypeSuggestionsQuery,
+  ) {
+    return {
+      suggestions: await this.cardsService.suggestTypes(query.q, {
+        limit: query.limit ?? CARD_TYPE_SUGGESTIONS_DEFAULT_LIMIT,
       }),
     };
   }

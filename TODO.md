@@ -4,7 +4,8 @@ Writing down ideas for the future
 
 ## Stuff to do
 
-- (admin) Table of cards/sets/etc
+- remove/filter non-paper cards
+- collection
 - (admin) User management
 - (admin) ai cost management
 - bracket estimator
