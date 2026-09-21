@@ -25,6 +25,8 @@ export type CanonicalCard = {
   colors: string[] | null;
   colorIdentity: string[] | null;
   keywords: string[] | null;
+  producedMana: string[] | null;
+  hasColorIndicator: boolean;
   legalities: Record<string, string>;
   layout: string | null;
   reserved: boolean | null;
@@ -61,6 +63,8 @@ export type CanonicalPrinting = {
   oversized: boolean | null;
   promo: boolean | null;
   reprint: boolean | null;
+  booster: boolean | null;
+  promoTypes: string[];
   finishes: string[];
   imageSmall: string | null;
   imageNormal: string | null;
@@ -113,6 +117,12 @@ const pushProviderId = (
   if (typeof value === 'number' || typeof value === 'string') {
     identifiers.push({ provider, externalId: String(value) });
   }
+};
+
+/** Scryfall `color_indicator` is a color array on the card and/or faces. */
+const hasColorIndicator = (card: ScryfallCard): boolean => {
+  if ((card.color_indicator?.length ?? 0) > 0) return true;
+  return Boolean(card.card_faces?.some((face) => (face.color_indicator?.length ?? 0) > 0));
 };
 
 /**
@@ -191,6 +201,8 @@ export const transformScryfallCard = (card: ScryfallCard): CanonicalRecord | nul
       colors: card.colors ?? null,
       colorIdentity: card.color_identity ?? null,
       keywords: card.keywords ?? null,
+      producedMana: card.produced_mana ?? null,
+      hasColorIndicator: hasColorIndicator(card),
       legalities: card.legalities,
       layout: nonempty(card.layout),
       reserved: card.reserved ?? null,
@@ -211,6 +223,8 @@ export const transformScryfallCard = (card: ScryfallCard): CanonicalRecord | nul
       oversized: card.oversized ?? null,
       promo: card.promo ?? null,
       reprint: card.reprint ?? null,
+      booster: card.booster ?? null,
+      promoTypes: card.promo_types ?? [],
       finishes: card.finishes ?? [],
       imageSmall: imageField(imageUris, 'small'),
       imageNormal: imageField(imageUris, 'normal'),

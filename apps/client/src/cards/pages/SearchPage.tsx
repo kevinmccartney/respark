@@ -28,10 +28,12 @@ export const SearchPage = () => {
   const { getToken } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const qParam = searchParams.get('q') ?? '';
+  const scryfallParam = searchParams.get('scryfall') ?? '';
   const pageSize = parsePageSize(searchParams.get('pageSize'));
   const pageParam = parsePage(searchParams.get('page'));
 
   const [input, setInput] = useState(qParam);
+  const [scryfallInput, setScryfallInput] = useState(scryfallParam);
   const [cards, setCards] = useState<CardSearchResult[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(pageParam);
@@ -39,25 +41,31 @@ export const SearchPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Keep local input in sync when the URL changes (back/forward).
   useEffect(() => {
     setInput(qParam);
   }, [qParam]);
 
-  // Debounce URL updates from typing; reset to page 1 on query change.
+  useEffect(() => {
+    setScryfallInput(scryfallParam);
+  }, [scryfallParam]);
+
   useEffect(() => {
     const handle = window.setTimeout(() => {
-      const trimmed = input.trim();
-      const current = (searchParams.get('q') ?? '').trim();
-      if (trimmed === current) return;
+      const trimmedQ = input.trim();
+      const trimmedScryfall = scryfallInput.trim();
+      const currentQ = (searchParams.get('q') ?? '').trim();
+      const currentScryfall = (searchParams.get('scryfall') ?? '').trim();
+      if (trimmedQ === currentQ && trimmedScryfall === currentScryfall) return;
       const next = new URLSearchParams(searchParams);
-      if (trimmed) next.set('q', trimmed);
+      if (trimmedQ) next.set('q', trimmedQ);
       else next.delete('q');
+      if (trimmedScryfall) next.set('scryfall', trimmedScryfall);
+      else next.delete('scryfall');
       next.delete('page');
       setSearchParams(next, { replace: true });
     }, DEBOUNCE_MS);
     return () => window.clearTimeout(handle);
-  }, [input, searchParams, setSearchParams]);
+  }, [input, scryfallInput, searchParams, setSearchParams]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -69,7 +77,8 @@ export const SearchPage = () => {
         const result = await searchCards(
           getToken,
           {
-            q: qParam,
+            q: qParam || undefined,
+            scryfall: scryfallParam || undefined,
             limit: pageSize,
             page: pageParam,
           },
@@ -80,7 +89,6 @@ export const SearchPage = () => {
         setTotal(result.total);
         setPage(result.page);
         setTotalPages(result.totalPages);
-        // If the API clamped the page (e.g. past end), sync the URL.
         if (result.page !== pageParam && result.totalPages > 0) {
           const next = new URLSearchParams(searchParams);
           if (result.page <= 1) next.delete('page');
@@ -101,9 +109,8 @@ export const SearchPage = () => {
 
     void load();
     return () => controller.abort();
-    // searchParams / setSearchParams omitted: only refetch on q/page/pageSize.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
-  }, [getToken, qParam, pageSize, pageParam]);
+  }, [getToken, qParam, scryfallParam, pageSize, pageParam]);
 
   const updateParams = (mutate: (next: URLSearchParams) => void) => {
     const next = new URLSearchParams(searchParams);
@@ -128,40 +135,64 @@ export const SearchPage = () => {
 
   const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const rangeEnd = Math.min(page * pageSize, total);
+  const hasQuery = Boolean(qParam.trim() || scryfallParam.trim());
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-8">
       <header className="space-y-3 text-left">
         <h1 className="font-heading text-3xl tracking-tight">Card search</h1>
         <p className="max-w-2xl text-muted-foreground">
-          Keyword search across names, type lines, oracle text, and keywords.
+          Keyword search across names, type lines, and oracle text — or use{' '}
+          <a
+            href="https://scryfall.com/docs/syntax"
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-2"
+          >
+            Scryfall syntax
+          </a>{' '}
+          (colors, types, oracle, mana, rarity, sets). Both combine with AND when set.
         </p>
-        <div className="flex max-w-xl flex-wrap items-end gap-3">
-          <div className="min-w-0 flex-1 space-y-1.5">
-            <Label htmlFor="card-search">Search</Label>
-            <Input
-              id="card-search"
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              placeholder="Search cards (e.g. urza)"
-              aria-label="Search cards"
-              autoFocus
-            />
+        <div className="flex max-w-2xl flex-col gap-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Label htmlFor="card-search">Keyword</Label>
+              <Input
+                id="card-search"
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                placeholder="Name / text contains (e.g. urza)"
+                aria-label="Keyword search"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="page-size">Page size</Label>
+              <select
+                id="page-size"
+                value={pageSize}
+                onChange={(event) => setPageSize(Number(event.target.value) as PageSize)}
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="page-size">Page size</Label>
-            <select
-              id="page-size"
-              value={pageSize}
-              onChange={(event) => setPageSize(Number(event.target.value) as PageSize)}
-              className="border-input bg-background h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-            >
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
+            <Label htmlFor="scryfall-search">Scryfall query</Label>
+            <Input
+              id="scryfall-search"
+              value={scryfallInput}
+              onChange={(event) => setScryfallInput(event.target.value)}
+              placeholder="t:creature c:g mv<=3"
+              aria-label="Scryfall syntax search"
+              spellCheck={false}
+              className="font-mono text-[0.9em]"
+              autoFocus
+            />
           </div>
         </div>
       </header>
@@ -180,7 +211,7 @@ export const SearchPage = () => {
 
       {!loading && !error && cards.length === 0 ? (
         <p className="text-muted-foreground">
-          {qParam.trim() ? `No cards match “${qParam.trim()}”.` : 'No cards in the catalog yet.'}
+          {hasQuery ? 'No cards match this search.' : 'No cards in the catalog yet.'}
         </p>
       ) : null}
 
@@ -189,8 +220,7 @@ export const SearchPage = () => {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-muted-foreground" aria-live="polite">
               Showing {rangeStart}-{rangeEnd} of {total} card
-              {total === 1 ? '' : 's'}
-              {qParam.trim() ? ` for "${qParam.trim()}"` : ''}.
+              {total === 1 ? '' : 's'}.
             </p>
             <PaginationControls
               page={page}

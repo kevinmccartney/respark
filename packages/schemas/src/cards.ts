@@ -181,6 +181,9 @@ export const CARD_SEARCH_DEFAULT_LIMIT = 60;
 export const CARD_SEARCH_MAX_LIMIT = 100;
 export const CARD_SEARCH_EXCLUDE_IDS_MAX = 400;
 
+/** Max length for a Scryfall-syntax query string. */
+export const CARD_SEARCH_SCRYFALL_QUERY_MAX = 500;
+
 export const CARD_SEARCH_SORTS = ['name', 'edhrecRank', 'manaValue'] as const;
 export const cardSearchSortSchema = z.enum(CARD_SEARCH_SORTS);
 export type CardSearchSort = z.infer<typeof cardSearchSortSchema>;
@@ -283,6 +286,8 @@ const uuidListQuerySchema = z.preprocess((value: unknown) => {
 
 export const cardSearchQuerySchema = z.object({
   q: z.string().optional(),
+  /** Scryfall search syntax; parsed locally and compiled to SQL. */
+  scryfall: optionalQueryString(z.string().trim().min(1).max(CARD_SEARCH_SCRYFALL_QUERY_MAX)),
   legalIn: legalInQuerySchema,
   colorIdentity: colorIdentityQuerySchema,
   /** When false, empty identity is excluded from color filters (admin browse). Default true for deck building. */

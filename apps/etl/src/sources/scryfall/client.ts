@@ -1,7 +1,15 @@
 import type { Logger } from '../../core/logger';
-import { bulkByteSize, bulkDataListSchema, bulkDownloadUri, type BulkDataItem } from './schema';
+import {
+  bulkByteSize,
+  bulkDataListSchema,
+  bulkDownloadUri,
+  scryfallSetListSchema,
+  type BulkDataItem,
+  type ScryfallSet,
+} from './schema';
 
 const BULK_DATA_URL = 'https://api.scryfall.com/bulk-data';
+const SETS_URL = 'https://api.scryfall.com/sets';
 
 /** Scryfall asks for a descriptive User-Agent on automated requests. */
 const DEFAULT_HEADERS = {
@@ -45,6 +53,35 @@ export const selectBulkDataset = (
     throw new Error(`Scryfall bulk type "${type}" not found. Available: ${available}`);
   }
   return match;
+};
+
+/**
+ * Fetch all Scryfall sets (follows next_page). Used for block / parent_set_code metadata.
+ */
+export const fetchAllScryfallSets = async (logger: Logger): Promise<ScryfallSet[]> => {
+  const sets: ScryfallSet[] = [];
+  let url: string | null = SETS_URL;
+
+  while (url) {
+    logger.info({ event: 'scryfall.sets.fetch', url }, 'Fetching Scryfall sets page');
+    const response = await fetch(url, { headers: DEFAULT_HEADERS });
+    if (!response.ok) {
+      throw new Error(`Scryfall sets HTTP ${response.status}: ${await response.text()}`);
+    }
+    const json: unknown = await response.json();
+    const parsed = scryfallSetListSchema.safeParse(json);
+    if (!parsed.success) {
+      throw new Error(`Unexpected Scryfall sets document: ${parsed.error.message}`);
+    }
+    sets.push(...parsed.data.data);
+    url = parsed.data.has_more && parsed.data.next_page ? parsed.data.next_page : null;
+    if (url) {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+  }
+
+  logger.info({ event: 'scryfall.sets.ok', count: sets.length }, 'Fetched Scryfall sets');
+  return sets;
 };
 
 export const openBulkDownload = async (

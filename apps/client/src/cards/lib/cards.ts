@@ -24,6 +24,7 @@ export const searchCards = (
   getToken: GetToken,
   opts: {
     q?: string;
+    scryfall?: string;
     legalIn?: DeckFormat;
     colorIdentity?: ColorIdentityPip[];
     commanderEligible?: boolean;
@@ -35,6 +36,7 @@ export const searchCards = (
 ): Promise<CardSearchPage> => {
   const params = new URLSearchParams();
   if (opts.q) params.set('q', opts.q);
+  if (opts.scryfall) params.set('scryfall', opts.scryfall);
   if (opts.legalIn) params.set('legalIn', opts.legalIn);
   if (opts.colorIdentity) params.set('colorIdentity', opts.colorIdentity.join(','));
   if (opts.commanderEligible) params.set('commanderEligible', 'true');

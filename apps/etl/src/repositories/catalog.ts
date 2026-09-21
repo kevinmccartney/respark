@@ -1,10 +1,81 @@
 import type { PoolClient } from 'pg';
 import type { CanonicalRecord } from '../sources/scryfall/transformer';
+import type { ScryfallSet } from '../sources/scryfall/schema';
 
 export type CatalogUpsertResult = {
   inserted: number;
   updated: number;
   unchanged: number;
+};
+
+const asDateOnly = (value: string | null | undefined): string | null => {
+  if (!value || value.length === 0) return null;
+  return value.slice(0, 10);
+};
+
+/**
+ * Upsert set metadata from Scryfall /sets (block, parent, card_count, icon).
+ * Safe to run before or after card import; does not delete unknown codes.
+ */
+export const upsertScryfallSetMeta = async (
+  client: PoolClient,
+  set: ScryfallSet,
+): Promise<boolean> => {
+  const scryfallId = set.id;
+  const code = set.code.toLowerCase();
+  const name = set.name;
+  const setType = set.set_type ?? null;
+  const block = set.block ?? null;
+  const blockCode = set.block_code ? set.block_code.toLowerCase() : null;
+  const releasedAt = asDateOnly(set.released_at);
+  const cardCount = set.card_count ?? null;
+  const digital = set.digital ?? null;
+  const parentSetCode = set.parent_set_code ? set.parent_set_code.toLowerCase() : null;
+  const iconSvgUri = set.icon_svg_uri ?? null;
+
+  const result = await client.query(
+    `insert into catalog.set as t
+       (scryfall_id, code, name, set_type, block, block_code, released_at, card_count,
+        digital, parent_set_code, icon_svg_uri, updated_at)
+     values ($1, $2, $3, $4, $5, $6, $7::date, $8, $9, $10, $11, now())
+     on conflict (code) do update set
+       scryfall_id = coalesce(excluded.scryfall_id, t.scryfall_id),
+       name = excluded.name,
+       set_type = coalesce(excluded.set_type, t.set_type),
+       block = coalesce(excluded.block, t.block),
+       block_code = coalesce(excluded.block_code, t.block_code),
+       released_at = coalesce(excluded.released_at, t.released_at),
+       card_count = coalesce(excluded.card_count, t.card_count),
+       digital = coalesce(excluded.digital, t.digital),
+       parent_set_code = coalesce(excluded.parent_set_code, t.parent_set_code),
+       icon_svg_uri = coalesce(excluded.icon_svg_uri, t.icon_svg_uri),
+       updated_at = now()
+     where t.name is distinct from excluded.name
+        or t.scryfall_id is distinct from excluded.scryfall_id
+        or t.set_type is distinct from excluded.set_type
+        or t.block is distinct from excluded.block
+        or t.block_code is distinct from excluded.block_code
+        or t.released_at is distinct from excluded.released_at
+        or t.card_count is distinct from excluded.card_count
+        or t.digital is distinct from excluded.digital
+        or t.parent_set_code is distinct from excluded.parent_set_code
+        or t.icon_svg_uri is distinct from excluded.icon_svg_uri
+     returning id`,
+    [
+      scryfallId,
+      code,
+      name,
+      setType,
+      block,
+      blockCode,
+      releasedAt,
+      cardCount,
+      digital,
+      parentSetCode,
+      iconSvgUri,
+    ],
+  );
+  return (result.rowCount ?? 0) > 0;
 };
 
 const upsertSet = async (client: PoolClient, record: CanonicalRecord): Promise<string> => {
@@ -43,9 +114,10 @@ const upsertCard = async (client: PoolClient, record: CanonicalRecord): Promise<
   const result = await client.query<{ id: string }>(
     `insert into catalog.card as t
        (oracle_id, name, mana_cost, mana_value, type_line, oracle_text,
-        colors, color_identity, keywords, legalities, layout, reserved,
+        colors, color_identity, keywords, produced_mana, has_color_indicator,
+        legalities, layout, reserved,
         edhrec_rank, is_game_changer, updated_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14, now())
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14, $15, $16, now())
      on conflict (oracle_id) do update set
        name = excluded.name,
        mana_cost = excluded.mana_cost,
@@ -55,6 +127,8 @@ const upsertCard = async (client: PoolClient, record: CanonicalRecord): Promise<
        colors = excluded.colors,
        color_identity = excluded.color_identity,
        keywords = excluded.keywords,
+       produced_mana = excluded.produced_mana,
+       has_color_indicator = excluded.has_color_indicator,
        legalities = excluded.legalities,
        layout = excluded.layout,
        reserved = excluded.reserved,
@@ -69,6 +143,8 @@ const upsertCard = async (client: PoolClient, record: CanonicalRecord): Promise<
         or t.colors is distinct from excluded.colors
         or t.color_identity is distinct from excluded.color_identity
         or t.keywords is distinct from excluded.keywords
+        or t.produced_mana is distinct from excluded.produced_mana
+        or t.has_color_indicator is distinct from excluded.has_color_indicator
         or t.legalities is distinct from excluded.legalities
         or t.layout is distinct from excluded.layout
         or t.reserved is distinct from excluded.reserved
@@ -85,6 +161,8 @@ const upsertCard = async (client: PoolClient, record: CanonicalRecord): Promise<
       c.colors,
       c.colorIdentity,
       c.keywords,
+      c.producedMana,
+      c.hasColorIndicator,
       JSON.stringify(c.legalities),
       c.layout,
       c.reserved,
@@ -121,8 +199,9 @@ const upsertPrinting = async (
       `insert into catalog.printing
          (card_id, set_id, scryfall_id, collector_number, language, rarity, artist,
           released_at, border_color, frame, full_art, textless, oversized, promo, reprint,
-          finishes, image_small, image_normal, image_large, image_png, updated_at)
-       values ($1,$2,$3,$4,$5,$6,$7,$8::date,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20, now())
+          booster, promo_types, finishes, image_small, image_normal, image_large, image_png,
+          updated_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8::date,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22, now())
        returning id`,
       [
         cardId,
@@ -140,6 +219,8 @@ const upsertPrinting = async (
         p.oversized,
         p.promo,
         p.reprint,
+        p.booster,
+        p.promoTypes,
         p.finishes,
         p.imageSmall,
         p.imageNormal,
@@ -167,11 +248,13 @@ const upsertPrinting = async (
        oversized = $13,
        promo = $14,
        reprint = $15,
-       finishes = $16,
-       image_small = $17,
-       image_normal = $18,
-       image_large = $19,
-       image_png = $20,
+       booster = $16,
+       promo_types = $17,
+       finishes = $18,
+       image_small = $19,
+       image_normal = $20,
+       image_large = $21,
+       image_png = $22,
        updated_at = now()
      where id = $1
        and (
@@ -189,11 +272,13 @@ const upsertPrinting = async (
          or oversized is distinct from $13
          or promo is distinct from $14
          or reprint is distinct from $15
-         or finishes is distinct from $16
-         or image_small is distinct from $17
-         or image_normal is distinct from $18
-         or image_large is distinct from $19
-         or image_png is distinct from $20
+         or booster is distinct from $16
+         or promo_types is distinct from $17
+         or finishes is distinct from $18
+         or image_small is distinct from $19
+         or image_normal is distinct from $20
+         or image_large is distinct from $21
+         or image_png is distinct from $22
        )
      returning id`,
     [
@@ -212,6 +297,8 @@ const upsertPrinting = async (
       p.oversized,
       p.promo,
       p.reprint,
+      p.booster,
+      p.promoTypes,
       p.finishes,
       p.imageSmall,
       p.imageNormal,

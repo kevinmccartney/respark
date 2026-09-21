@@ -30,6 +30,10 @@ export const cards = catalogSchema.table('card', {
   colors: text('colors').array(),
   colorIdentity: text('color_identity').array(),
   keywords: text('keywords').array(),
+  /** Scryfall `produced_mana` — colors of mana this permanent can produce. */
+  producedMana: text('produced_mana').array(),
+  /** Scryfall `color_indicator` — card has a color indicator. */
+  hasColorIndicator: boolean('has_color_indicator'),
   legalities: jsonb('legalities').$type<Record<string, string>>(),
   /** MTGJSON `leadershipSkills` (`brawl`, `commander`, `oathbreaker`). */
   leadershipSkills: jsonb('leadership_skills').$type<{
@@ -55,6 +59,10 @@ export const sets = catalogSchema.table('set', {
   code: text('code').notNull().unique(),
   name: text('name').notNull(),
   setType: text('set_type'),
+  /** Scryfall set `block` display name (e.g. Zendikar). */
+  block: text('block'),
+  /** Scryfall set `block_code` (e.g. zen). */
+  blockCode: text('block_code'),
   releasedAt: date('released_at'),
   cardCount: integer('card_count'),
   digital: boolean('digital'),
@@ -85,6 +93,10 @@ export const printings = catalogSchema.table('printing', {
   oversized: boolean('oversized'),
   promo: boolean('promo'),
   reprint: boolean('reprint'),
+  /** Scryfall `booster` — available in boosters. */
+  booster: boolean('booster'),
+  /** Scryfall `promo_types` (league, fnm, prerelease, …). */
+  promoTypes: text('promo_types').array().notNull().default([]),
   finishes: text('finishes').array().notNull().default([]),
   imageSmall: text('image_small'),
   imageNormal: text('image_normal'),

@@ -83,6 +83,8 @@ export type SetPrintingSummary = z.infer<typeof setPrintingSummarySchema>;
 
 export const setDetailSchema = setListItemSchema.extend({
   parentSetCode: z.string().nullable(),
+  block: z.string().nullable(),
+  blockCode: z.string().nullable(),
   iconSvgUri: z.string().nullable(),
   printings: z.array(setPrintingSummarySchema),
   printingsTotal: z.number(),

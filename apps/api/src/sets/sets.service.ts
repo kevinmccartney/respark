@@ -28,6 +28,8 @@ type SetRow = {
   code: string;
   name: string;
   set_type: string | null;
+  block: string | null;
+  block_code: string | null;
   released_at: string | null;
   card_count: number | null;
   digital: boolean | null;
@@ -182,6 +184,8 @@ export class SetsService {
         s.code,
         s.name,
         s.set_type,
+        s.block,
+        s.block_code,
         s.released_at::text AS released_at,
         s.card_count,
         s.digital,
@@ -242,6 +246,8 @@ export class SetsService {
       ...toListItem(setRow),
       cardCount: printingsTotal,
       parentSetCode: setRow.parent_set_code,
+      block: setRow.block,
+      blockCode: setRow.block_code,
       iconSvgUri: setRow.icon_svg_uri,
       printings: printingsResult.rows.map((row) => ({
         id: row.id,

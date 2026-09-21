@@ -7,10 +7,15 @@ import { ProgressBar, tapByteStream } from '../../core/progress';
 import { emitSyncEvent } from '../../core/stream-events';
 import { isCatalogExtra } from '../../core/catalogSkip';
 import type { GlobalFlags, JobContext } from '../../core/types';
-import { upsertCatalogRecords } from '../../repositories/catalog';
+import { upsertCatalogRecords, upsertScryfallSetMeta } from '../../repositories/catalog';
 import { finishJobRun, insertIngestionError, startJobRun } from '../../repositories/ingestionRuns';
 import { upsertScryfallCards, type RawScryfallUpsert } from '../../repositories/rawScryfall';
-import { fetchBulkMetadata, openBulkDownload, selectBulkDataset } from './client';
+import {
+  fetchAllScryfallSets,
+  fetchBulkMetadata,
+  openBulkDownload,
+  selectBulkDataset,
+} from './client';
 import { bulkByteSize, bulkDownloadUri, scryfallCardSchema } from './schema';
 import { streamJsonlGzip } from './stream';
 import { transformScryfallCard, type CanonicalRecord } from './transformer';
@@ -318,6 +323,40 @@ export const runScryfallImport = async (
 
     await flush();
     progress.done(snapshot());
+
+    // Enrich sets with block / parent / card_count from Scryfall /sets (cards bulk lacks these).
+    if (!options.dryRun) {
+      try {
+        const scryfallSets = await fetchAllScryfallSets(logger);
+        const client = await pool.connect();
+        let setsUpdated = 0;
+        try {
+          await client.query('begin');
+          for (const set of scryfallSets) {
+            if (await upsertScryfallSetMeta(client, set)) setsUpdated += 1;
+          }
+          await client.query('commit');
+        } catch (err) {
+          await client.query('rollback');
+          throw err;
+        } finally {
+          client.release();
+        }
+        logger.info(
+          { event: 'scryfall.sets.enrich', count: scryfallSets.length, updated: setsUpdated },
+          'Enriched catalog sets from Scryfall /sets',
+        );
+      } catch (err) {
+        // Non-fatal: card catalog is already written; block/parent queries need a re-sync.
+        logger.warn(
+          {
+            event: 'scryfall.sets.enrich_failed',
+            err: err instanceof Error ? err.message : String(err),
+          },
+          'Failed to enrich sets metadata; continuing',
+        );
+      }
+    }
 
     const status =
       recordsFailed > 0 && recordsSeen > recordsFailed

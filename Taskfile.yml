@@ -72,11 +72,13 @@ tasks:
       - npm run eslint
 
   test:
-    desc: Run unit tests (etl node:test + api Vitest / chat evals)
+    desc: Run unit tests (etl node:test + api Vitest / chat evals + scryfall-query)
     deps:
       - schemas:build
+      - scryfall-query:build
     cmds:
       - npm test -w etl
+      - npm test -w scryfall-query
       - npm test -w api
 
   precommit:
@@ -136,9 +138,10 @@ tasks:
       - npm run build:admin
 
   api:build:
-    desc: Compile the NestJS API (depends on schemas:build and etl:build)
+    desc: Compile the NestJS API (depends on schemas:build, scryfall-query:build, and etl:build)
     deps:
       - schemas:build
+      - scryfall-query:build
       - etl:build
     cmds:
       - npm run build -w api
@@ -147,6 +150,7 @@ tasks:
     desc: Start local app stack via Docker Compose
     deps:
       - schemas:build
+      - scryfall-query:build
       - ui:build
       - etl:build
     cmds:
@@ -216,6 +220,16 @@ tasks:
     cmds:
       - npm run build -w schemas
 
+  scryfall-query:build:
+    desc: Compile packages/scryfall-query
+    cmds:
+      - npm run build -w scryfall-query
+
+  scryfall-query:test:
+    desc: Run scryfall-query unit tests
+    cmds:
+      - npm run test -w scryfall-query
+
   ui:build:
     desc: Compile shared UI package to packages/ui/dist
     cmds:
@@ -250,6 +264,8 @@ tasks:
       - npx prettier --check apps/api scripts/redeploy-api-ec2.sh scripts/push-api-secrets.sh
       - npx eslint apps/api
       - task: schemas:build
+      - task: scryfall-query:build
+      - npm test -w scryfall-query
       - npm test -w api
       - task: api:build
 
@@ -335,6 +351,7 @@ tasks:
     desc: Run the API in watch mode on PORT (default {{.API_PORT}})
     deps:
       - schemas:build
+      - scryfall-query:build
       - etl:build
     env:
       PORT: '{{.API_PORT}}'
@@ -350,6 +367,7 @@ tasks:
     desc: Run the API with Node inspector on 9229 (or use VS Code "API debug (launch)")
     deps:
       - schemas:build
+      - scryfall-query:build
       - etl:build
     env:
       PORT: '{{.API_PORT}}'

@@ -91,6 +91,7 @@ export const CardsListPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const qParam = searchParams.get('q') ?? '';
+  const scryfallParam = searchParams.get('scryfall') ?? '';
   const legalInParam = searchParams.get('legalIn') ?? '';
   const colorIdentityParam = searchParams.get('colorIdentity') ?? '';
   const typeContainsParam = searchParams.get('typeContains') ?? '';
@@ -102,6 +103,7 @@ export const CardsListPage = () => {
   const pageParam = Math.max(1, Number(searchParams.get('page') ?? '1') || 1);
 
   const [draftQ, setDraftQ] = useState(qParam);
+  const [draftScryfall, setDraftScryfall] = useState(scryfallParam);
   const [draftLegalIn, setDraftLegalIn] = useState<DeckFormat[]>(() => parseLegalIn(legalInParam));
   const [draftColorIdentity, setDraftColorIdentity] = useState<CardSearchColorFilter[]>(() =>
     parseColorIdentity(colorIdentityParam),
@@ -122,11 +124,12 @@ export const CardsListPage = () => {
 
   useEffect(() => {
     setDraftQ(qParam);
+    setDraftScryfall(scryfallParam);
     setDraftLegalIn(parseLegalIn(legalInParam));
     setDraftColorIdentity(parseColorIdentity(colorIdentityParam));
     setDraftTypeContains(parseTypeContains(typeContainsParam));
     setDraftRarity(parseRarity(rarityParam));
-  }, [qParam, legalInParam, colorIdentityParam, typeContainsParam, rarityParam]);
+  }, [qParam, scryfallParam, legalInParam, colorIdentityParam, typeContainsParam, rarityParam]);
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
@@ -142,6 +145,7 @@ export const CardsListPage = () => {
           getToken,
           {
             q: qParam || undefined,
+            scryfall: scryfallParam || undefined,
             legalIn: legalIn.length > 0 ? legalIn : undefined,
             colorIdentity: colorIdentity.length > 0 ? colorIdentity : undefined,
             // Colored pips without C exclude empty identity; C opts colorless back in.
@@ -175,6 +179,7 @@ export const CardsListPage = () => {
     [
       getToken,
       qParam,
+      scryfallParam,
       legalInParam,
       colorIdentityParam,
       typeContainsParam,
@@ -198,6 +203,8 @@ export const CardsListPage = () => {
     const next = new URLSearchParams();
     const q = draftQ.trim();
     if (q) next.set('q', q);
+    const scryfall = draftScryfall.trim();
+    if (scryfall) next.set('scryfall', scryfall);
     if (draftLegalIn.length > 0) {
       next.set('legalIn', DECK_FORMATS.filter((format) => draftLegalIn.includes(format)).join(','));
     }
@@ -265,12 +272,32 @@ export const CardsListPage = () => {
         onSubmit={applyFilters}
       >
         <label className="grid gap-1 text-sm">
-          <span className="text-muted-foreground">Search</span>
+          <span className="text-muted-foreground">Name contains</span>
           <input
             className="rounded-md border bg-background px-3 py-2"
             value={draftQ}
             onChange={(event) => setDraftQ(event.target.value)}
             placeholder="Name contains…"
+          />
+        </label>
+        <label className="grid gap-1 text-sm md:col-span-2 lg:col-span-2">
+          <span className="text-muted-foreground">
+            Scryfall query{' '}
+            <a
+              href="https://scryfall.com/docs/syntax"
+              target="_blank"
+              rel="noreferrer"
+              className="text-foreground underline-offset-2 hover:underline"
+            >
+              syntax
+            </a>
+          </span>
+          <input
+            className="rounded-md border bg-background px-3 py-2 font-mono text-[0.9em]"
+            value={draftScryfall}
+            onChange={(event) => setDraftScryfall(event.target.value)}
+            placeholder="t:creature c:g mv<=3"
+            spellCheck={false}
           />
         </label>
         <div className="grid gap-1 text-sm">

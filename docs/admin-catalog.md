@@ -38,7 +38,7 @@ Match existing admin chrome: table + filter form, pagination ([`OffsetPagination
 
 **Columns:** optional thumb, name, type line, mana cost, rarity (representative printing), legal formats, game-changer / goodstuff badges.
 
-**Filters:** `q`, `legalIn`, `colorIdentity`, `typeContains` (comma-separated tokens, AND), `rarity` (comma-separated, OR; matches representative printing), `sort` (`name` \| `edhrecRank` \| `manaValue`) — same shape as player [`GET /cards`](../apps/api/src/cards/cards.controller.ts).
+**Filters:** `q` (local name/text ILIKE), `scryfall` (local Scryfall-syntax parser → SQL; colors / types / oracle / mana / rarity / sets), `legalIn`, `colorIdentity`, `typeContains` (comma-separated tokens, AND), `rarity` (comma-separated, OR; matches representative printing), `sort` (`name` \| `edhrecRank` \| `manaValue`) — same shape as player [`GET /cards`](../apps/api/src/cards/cards.controller.ts). Scryfall and structured filters combine with **AND**. Unsupported Scryfall keywords return **400**. After adding catalog columns for `produced_mana` / `has_color_indicator` / `booster` / `promo_types` / set `block`, re-run a catalog sync so those fields populate. Syntax reference: [scryfall.com/docs/syntax](https://scryfall.com/docs/syntax).
 
 Row click → card detail.
 
@@ -69,7 +69,7 @@ Set metadata (code, name, type, released, card count, digital, Scryfall id).
 
 ### Cards (reuse)
 
-- `GET /cards` — list/search (existing).
+- `GET /cards` — list/search (existing). Optional `scryfall` is parsed locally (`packages/scryfall-query`) and compiled to SQL; invalid/unsupported syntax → 400.
 - `GET /cards/:id` — detail including `printings[]` (existing).
 
 Admin is already Clerk-authenticated. No catalog write routes.

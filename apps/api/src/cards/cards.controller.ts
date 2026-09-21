@@ -24,6 +24,7 @@ export class CardsController {
   async search(@Query(zodPipe(cardSearchQuerySchema)) query: CardSearchQuery) {
     return this.cardsService.search({
       q: query.q,
+      scryfall: query.scryfall,
       legalIn: query.legalIn,
       colorIdentity: query.colorIdentity,
       includeColorless: query.includeColorless,

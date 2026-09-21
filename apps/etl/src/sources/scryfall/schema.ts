@@ -12,6 +12,7 @@ const scryfallFaceSchema = z.looseObject({
   type_line: z.string().optional(),
   oracle_text: optionalText,
   colors: optionalStringList,
+  color_indicator: optionalStringList,
   power: optionalText,
   toughness: optionalText,
   loyalty: optionalText,
@@ -44,6 +45,9 @@ export const scryfallCardSchema = z.looseObject({
   colors: optionalStringList,
   color_identity: optionalStringList,
   keywords: optionalStringList,
+  produced_mana: optionalStringList,
+  /** Scryfall color pip list when the card has a color indicator (not a boolean). */
+  color_indicator: optionalStringList,
   reserved: z.boolean().optional(),
   artist: optionalText,
   border_color: z.string().optional(),
@@ -53,6 +57,8 @@ export const scryfallCardSchema = z.looseObject({
   oversized: z.boolean().optional(),
   promo: z.boolean().optional(),
   reprint: z.boolean().optional(),
+  booster: z.boolean().optional().nullable(),
+  promo_types: optionalStringList,
   finishes: optionalStringList,
   legalities: z.record(z.string(), z.string()),
   image_uris: imageUrisSchema,
@@ -93,6 +99,32 @@ export const bulkDataListSchema = z.object({
 });
 
 export type BulkDataItem = z.infer<typeof bulkDataItemSchema>;
+
+/** One row from GET https://api.scryfall.com/sets (paginated list). */
+export const scryfallSetSchema = z.looseObject({
+  id: z.uuid(),
+  code: z.string().min(1),
+  name: z.string().min(1),
+  set_type: z.string().optional().nullable(),
+  released_at: optionalText,
+  card_count: z.number().int().optional().nullable(),
+  digital: z.boolean().optional().nullable(),
+  block: optionalText,
+  block_code: optionalText,
+  parent_set_code: optionalText,
+  icon_svg_uri: optionalText,
+});
+
+export type ScryfallSet = z.infer<typeof scryfallSetSchema>;
+
+export const scryfallSetListSchema = z.object({
+  object: z.literal('list'),
+  has_more: z.boolean().optional(),
+  next_page: z.string().nullable().optional(),
+  data: z.array(scryfallSetSchema),
+});
+
+export type ScryfallSetList = z.infer<typeof scryfallSetListSchema>;
 
 export const bulkDownloadUri = (item: BulkDataItem): string => {
   const uri = item.jsonl_download_uri ?? item.download_uri;

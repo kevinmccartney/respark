@@ -1,6 +1,7 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { sql, type SQL } from 'drizzle-orm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { parseScryfallQuery, ScryfallQueryError } from 'scryfall-query';
 import { DATABASE, type Database } from '../db/database.module';
 import {
   CARD_SEARCH_DEFAULT_LIMIT,
@@ -24,6 +25,7 @@ import { goodstuffTagSchema, type RecommendationGoodstuffFlag } from 'schemas/re
 import { parseCardFaces, uuidSchema } from 'schemas/primitives';
 import type { ColorIdentityPip, DeckFormat } from 'schemas/decks';
 import { bestPrintingOrderSql, printingFacesJsonSql } from '../catalog/printings';
+import { compileScryfallAst } from './scryfall-sql';
 
 type SearchRow = {
   id: string;
@@ -100,6 +102,7 @@ export class CardsService {
 
   async search(opts: {
     q?: string;
+    scryfall?: string;
     legalIn?: DeckFormat | DeckFormat[];
     colorIdentity?: CardSearchColorFilter[];
     includeColorless?: boolean;
@@ -114,10 +117,23 @@ export class CardsService {
     page?: number;
   }): Promise<CardSearchPage> {
     const q = (opts.q ?? '').trim();
+    const scryfallQ = (opts.scryfall ?? '').trim();
     const pageSize = opts.limit ?? CARD_SEARCH_DEFAULT_LIMIT;
     const requestedPage = opts.page ?? 1;
     const sort = opts.sort ?? CARD_SEARCH_DEFAULT_SORT;
     const dir = opts.dir ?? defaultCardSortDir(sort);
+
+    let scryfallPredicate: SQL = sql`TRUE`;
+    if (scryfallQ) {
+      try {
+        scryfallPredicate = compileScryfallAst(parseScryfallQuery(scryfallQ));
+      } catch (err) {
+        if (err instanceof ScryfallQueryError) {
+          throw new BadRequestException(err.message);
+        }
+        throw err;
+      }
+    }
 
     const pattern = q.length > 0 ? `%${escapeIlike(q)}%` : null;
     const matchPredicate = matchSql(pattern);
@@ -140,6 +156,7 @@ export class CardsService {
         AND ${rarityPredicate}
         AND ${manaPredicate}
         AND ${excludePredicate}
+        AND ${scryfallPredicate}
     `);
     const total = Number(countResult.rows[0]?.total ?? 0);
     const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
@@ -185,6 +202,7 @@ export class CardsService {
           AND ${rarityPredicate}
           AND ${manaPredicate}
           AND ${excludePredicate}
+          AND ${scryfallPredicate}
         ORDER BY ${orderSql}
         LIMIT ${pageSize}
         OFFSET ${offset}
@@ -235,6 +253,7 @@ export class CardsService {
         event: 'cards.search',
         q: q || null,
         qLength: q.length,
+        scryfall: scryfallQ || null,
         legalIn: opts.legalIn ?? null,
         colorIdentity: opts.colorIdentity?.join('') ?? null,
         commanderEligible: opts.commanderEligible ?? null,

@@ -211,6 +211,13 @@
       "when": 1789952000000,
       "tag": "0029_recommendation_goodstuff",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1790018661839,
+      "tag": "0030_happy_kang",
+      "breakpoints": true
     }
   ]
 }

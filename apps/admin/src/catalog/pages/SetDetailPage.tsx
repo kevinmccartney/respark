@@ -178,6 +178,19 @@ export const SetDetailPage = () => {
                   <dd className="font-mono uppercase">{set.parentSetCode}</dd>
                 </>
               ) : null}
+              {set.block || set.blockCode ? (
+                <>
+                  <dt className="text-muted-foreground">Block</dt>
+                  <dd>
+                    {set.block ?? '—'}
+                    {set.blockCode ? (
+                      <span className="ml-2 font-mono text-xs uppercase text-muted-foreground">
+                        {set.blockCode}
+                      </span>
+                    ) : null}
+                  </dd>
+                </>
+              ) : null}
             </dl>
           </header>
 

@@ -60,6 +60,7 @@ services:
       - ./apps/api/drizzle:/repo/apps/api/drizzle
       - ./apps/etl:/repo/apps/etl
       - ./packages/schemas:/repo/packages/schemas
+      - ./packages/scryfall-query:/repo/packages/scryfall-query
     depends_on:
       db:
         condition: service_healthy
