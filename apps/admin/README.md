@@ -55,6 +55,6 @@ Signed-in chrome is a left nav (header only when signed out):
 - **Catalog** — `/catalog/cards`, `/catalog/sets` (coming soon)
 - **ETL Syncs** — `/` list + **Start sync** (catalog / enrichment → `POST /admin/etl-syncs`); live via WebSocket. `/syncs/:id` is sync detail (stages/jobs, live log, reconciliation, failed rows)
 - **Users** — `/users/management` (coming soon)
-- **Recommendations** — `/recommendations/downweights` (staples / tutors). `/overperformers` redirects here.
+- **Recommendations** — `/recommendations/goodstuff` (multi-tag format goodstuff)
 
 WebSocket: `ws://<api>/admin/etl-syncs/ws?token=<clerk_jwt>` (admin role required). Subscribe with `{ "event": "subscribe", "data": { "channel": "list" } }` or `{ "channel": "sync", "syncId": "…" }`.

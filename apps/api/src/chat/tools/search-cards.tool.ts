@@ -23,7 +23,7 @@ export type SearchCardsToolResult = {
     edhrecRank: number | null;
     edhrecSaltiness: number | null;
     isGameChanger: boolean | null;
-    downweight: { kind: string; note: string | null } | null;
+    goodstuff: { tags: string[]; note: string | null } | null;
   }>;
   total: number;
 };
@@ -82,7 +82,7 @@ export const searchCardsTool = (
           edhrecRank: card.edhrecRank,
           edhrecSaltiness: card.edhrecSaltiness,
           isGameChanger: card.isGameChanger,
-          downweight: card.downweight,
+          goodstuff: card.goodstuff,
         })),
       },
     };

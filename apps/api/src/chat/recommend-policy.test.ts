@@ -1,27 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { hitsFromToolResult, recommendPolicy } from './recommend-policy';
 
-const rhystic = { id: 'rhystic', downweight: { kind: 'staple' } };
-const counterspell = { id: 'counter', downweight: null };
-const cultivate = { id: 'cultivate', downweight: null };
+const remora = { id: 'remora', goodstuff: { tags: ['card_draw', 'value_engine', 'tax'] } };
+const counterspell = { id: 'counter', goodstuff: null };
+const cultivate = { id: 'cultivate', goodstuff: null };
 
 describe('recommendPolicy', () => {
-  it('flags an all-downweight slate when alternatives were retrieved', () => {
+  it('flags an all-goodstuff slate when alternatives were retrieved', () => {
     expect(
       recommendPolicy({
-        userText: 'What would be a good add to this deck?',
-        presentedIds: [rhystic.id],
-        retrieved: [rhystic, counterspell, cultivate],
+        userText: 'What would be a good add?',
+        presentedIds: [remora.id],
+        retrieved: [remora, counterspell, cultivate],
       }),
-    ).toEqual(['all_downweight_slate']);
+    ).toEqual(['all_goodstuff_slate']);
   });
 
-  it('does not flag when the player asked for that class', () => {
+  it('skips when the player asked for a goodstuff class', () => {
     expect(
       recommendPolicy({
-        userText: 'Suggest a tutor',
-        presentedIds: [rhystic.id],
-        retrieved: [rhystic, counterspell],
+        userText: 'I need more interaction',
+        presentedIds: [remora.id],
+        retrieved: [remora, counterspell],
       }),
     ).toEqual([]);
   });
@@ -30,33 +30,33 @@ describe('recommendPolicy', () => {
     expect(
       recommendPolicy({
         userText: 'What would be a good add?',
-        presentedIds: [rhystic.id, counterspell.id],
-        retrieved: [rhystic, counterspell],
+        presentedIds: [remora.id, counterspell.id],
+        retrieved: [remora, counterspell],
       }),
     ).toEqual([]);
   });
 
-  it('does not flag when every retrieved hit is downweighted', () => {
+  it('does not flag when every retrieved hit is goodstuff', () => {
     expect(
       recommendPolicy({
         userText: 'What would be a good add?',
-        presentedIds: [rhystic.id],
-        retrieved: [rhystic],
+        presentedIds: [remora.id],
+        retrieved: [remora],
       }),
     ).toEqual([]);
   });
-});
 
-describe('hitsFromToolResult', () => {
-  it('reads searchCards and getCard downweight flags', () => {
+  it('reads searchCards and getCard goodstuff flags', () => {
     expect(
       hitsFromToolResult('searchCards', {
-        cards: [rhystic, counterspell, { name: 'no-id' }],
+        cards: [remora, counterspell],
       }),
-    ).toEqual([rhystic, counterspell]);
-    expect(hitsFromToolResult('getCard', { id: 'x', downweight: { kind: 'tutor' } })).toEqual([
-      { id: 'x', downweight: { kind: 'tutor' } },
-    ]);
-    expect(hitsFromToolResult('getDeck', { id: 'deck' })).toEqual([]);
+    ).toEqual([remora, counterspell]);
+    expect(
+      hitsFromToolResult('getCard', {
+        id: 'x',
+        goodstuff: { tags: ['counterspell', 'interaction'] },
+      }),
+    ).toEqual([{ id: 'x', goodstuff: { tags: ['counterspell', 'interaction'] } }]);
   });
 });

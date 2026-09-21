@@ -1,19 +1,19 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, inArray } from 'drizzle-orm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import {
-  recommendationDownweightKindSchema,
-  type CreateRecommendationDownweightBody,
-  type RecommendationDownweight,
-  type RecommendationDownweightKind,
+  goodstuffTagSchema,
+  type CreateRecommendationGoodstuffBody,
+  type GoodstuffTag,
+  type RecommendationGoodstuff,
 } from 'schemas/recommendations';
 import { CardsService } from '../cards/cards.service';
 import { DATABASE, type Database } from '../db/database.module';
-import { cards, recommendationDownweights } from '../db/schema';
+import { cards, recommendationGoodstuffTags, recommendationGoodstuffs } from '../db/schema';
 
-export type DownweightPromptLine = {
+export type GoodstuffPromptLine = {
   name: string;
-  kind: RecommendationDownweightKind;
+  tags: GoodstuffTag[];
 };
 
 @Injectable()
@@ -26,48 +26,58 @@ export class RecommendationsService {
     private readonly logger: PinoLogger,
   ) {}
 
-  async list(): Promise<RecommendationDownweight[]> {
+  async list(): Promise<RecommendationGoodstuff[]> {
     const rows = await this.db
       .select({
-        cardId: recommendationDownweights.cardId,
-        kind: recommendationDownweights.kind,
-        note: recommendationDownweights.note,
-        createdAt: recommendationDownweights.createdAt,
+        cardId: recommendationGoodstuffs.cardId,
+        note: recommendationGoodstuffs.note,
+        createdAt: recommendationGoodstuffs.createdAt,
         name: cards.name,
       })
-      .from(recommendationDownweights)
-      .innerJoin(cards, eq(cards.id, recommendationDownweights.cardId))
-      .orderBy(asc(recommendationDownweights.kind), asc(cards.name));
+      .from(recommendationGoodstuffs)
+      .innerJoin(cards, eq(cards.id, recommendationGoodstuffs.cardId))
+      .orderBy(asc(cards.name));
 
-    return rows.map(toDownweight);
+    const tagsByCard = await this.tagsForCardIds(rows.map((row) => row.cardId));
+    return rows
+      .map((row) => toGoodstuff(row, tagsByCard.get(row.cardId) ?? []))
+      .filter((row) => row.tags.length > 0);
   }
 
-  async listForPrompt(cap: number): Promise<DownweightPromptLine[]> {
+  async listForPrompt(cap: number): Promise<GoodstuffPromptLine[]> {
     const rows = await this.list();
-    return rows.slice(0, cap).map((row) => ({ name: row.name, kind: row.kind }));
+    return rows.slice(0, cap).map((row) => ({ name: row.name, tags: row.tags }));
   }
 
-  async create(body: CreateRecommendationDownweightBody): Promise<RecommendationDownweight> {
+  async create(body: CreateRecommendationGoodstuffBody): Promise<RecommendationGoodstuff> {
     const card = body.cardId
       ? await this.cardsService.getById(body.cardId)
       : await this.requireExactName(body.name ?? '');
+    const tags = [...new Set(body.tags)];
 
     try {
-      await this.db.insert(recommendationDownweights).values({
-        cardId: card.id,
-        kind: body.kind,
-        note: body.note ?? null,
+      await this.db.transaction(async (tx) => {
+        await tx.insert(recommendationGoodstuffs).values({
+          cardId: card.id,
+          note: body.note ?? null,
+        });
+        await tx.insert(recommendationGoodstuffTags).values(
+          tags.map((tag) => ({
+            cardId: card.id,
+            tag,
+          })),
+        );
       });
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('That card is already on the downweight list');
+        throw new ConflictException('That card is already on the goodstuff list');
       }
       throw err;
     }
 
     this.logger.info(
-      { event: 'recommendations.downweight.create', cardId: card.id, kind: body.kind },
-      'Added recommendation downweight',
+      { event: 'recommendations.goodstuff.create', cardId: card.id, tags },
+      'Added recommendation goodstuff',
     );
 
     return this.requireRow(card.id);
@@ -75,17 +85,17 @@ export class RecommendationsService {
 
   async remove(cardId: string): Promise<void> {
     const deleted = await this.db
-      .delete(recommendationDownweights)
-      .where(eq(recommendationDownweights.cardId, cardId))
-      .returning({ cardId: recommendationDownweights.cardId });
+      .delete(recommendationGoodstuffs)
+      .where(eq(recommendationGoodstuffs.cardId, cardId))
+      .returning({ cardId: recommendationGoodstuffs.cardId });
 
     if (deleted.length === 0) {
-      throw new NotFoundException('Downweight not found');
+      throw new NotFoundException('Goodstuff entry not found');
     }
 
     this.logger.info(
-      { event: 'recommendations.downweight.delete', cardId },
-      'Removed recommendation downweight',
+      { event: 'recommendations.goodstuff.delete', cardId },
+      'Removed recommendation goodstuff',
     );
   }
 
@@ -97,38 +107,62 @@ export class RecommendationsService {
     return match;
   }
 
-  private async requireRow(cardId: string): Promise<RecommendationDownweight> {
+  private async requireRow(cardId: string): Promise<RecommendationGoodstuff> {
     const rows = await this.db
       .select({
-        cardId: recommendationDownweights.cardId,
-        kind: recommendationDownweights.kind,
-        note: recommendationDownweights.note,
-        createdAt: recommendationDownweights.createdAt,
+        cardId: recommendationGoodstuffs.cardId,
+        note: recommendationGoodstuffs.note,
+        createdAt: recommendationGoodstuffs.createdAt,
         name: cards.name,
       })
-      .from(recommendationDownweights)
-      .innerJoin(cards, eq(cards.id, recommendationDownweights.cardId))
-      .where(eq(recommendationDownweights.cardId, cardId))
+      .from(recommendationGoodstuffs)
+      .innerJoin(cards, eq(cards.id, recommendationGoodstuffs.cardId))
+      .where(eq(recommendationGoodstuffs.cardId, cardId))
       .limit(1);
 
     const row = rows[0];
     if (!row) {
-      throw new NotFoundException('Downweight not found');
+      throw new NotFoundException('Goodstuff entry not found');
     }
-    return toDownweight(row);
+    const tagsByCard = await this.tagsForCardIds([cardId]);
+    return toGoodstuff(row, tagsByCard.get(cardId) ?? []);
+  }
+
+  private async tagsForCardIds(cardIds: string[]): Promise<Map<string, GoodstuffTag[]>> {
+    const out = new Map<string, GoodstuffTag[]>();
+    if (cardIds.length === 0) return out;
+    const rows = await this.db
+      .select({
+        cardId: recommendationGoodstuffTags.cardId,
+        tag: recommendationGoodstuffTags.tag,
+      })
+      .from(recommendationGoodstuffTags)
+      .where(inArray(recommendationGoodstuffTags.cardId, cardIds))
+      .orderBy(asc(recommendationGoodstuffTags.tag));
+
+    for (const row of rows) {
+      const parsed = goodstuffTagSchema.safeParse(row.tag);
+      if (!parsed.success) continue;
+      const existing = out.get(row.cardId) ?? [];
+      existing.push(parsed.data);
+      out.set(row.cardId, existing);
+    }
+    return out;
   }
 }
 
-const toDownweight = (row: {
-  cardId: string;
-  name: string;
-  kind: string;
-  note: string | null;
-  createdAt: Date;
-}): RecommendationDownweight => ({
+const toGoodstuff = (
+  row: {
+    cardId: string;
+    name: string;
+    note: string | null;
+    createdAt: Date;
+  },
+  tags: GoodstuffTag[],
+): RecommendationGoodstuff => ({
   cardId: row.cardId,
   name: row.name,
-  kind: recommendationDownweightKindSchema.parse(row.kind),
+  tags,
   note: row.note,
   createdAt: row.createdAt.toISOString(),
 });

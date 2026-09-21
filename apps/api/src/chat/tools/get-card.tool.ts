@@ -33,7 +33,7 @@ export const getCardTool = (cards: CardsService): ChatTool<GetCardInput, GetCard
         edhrecRank: card.edhrecRank,
         edhrecSaltiness: card.edhrecSaltiness,
         isGameChanger: card.isGameChanger,
-        downweight: card.downweight,
+        goodstuff: card.goodstuff,
       },
     };
   },

@@ -6,7 +6,7 @@ import { DecksService } from '../decks/decks.service';
 import { RecommendationsService } from '../recommendations/recommendations.service';
 import { catalogCardsFromLookupCombos, collectLinkableCards, rewriteCardLinks } from './card-links';
 import {
-  CHAT_DOWNWEIGHT_PROMPT_CAP,
+  CHAT_GOODSTUFF_PROMPT_CAP,
   CHAT_MAX_ROUNDS,
   CHAT_MAX_TOOL_CALLS,
   CHAT_PROVIDER_TOKEN,
@@ -99,7 +99,7 @@ export class ChatOrchestrator {
     const userText =
       textFromParts([...history].reverse().find((row) => row.role === 'user')?.parts ?? []) || '';
     const linkableCards = await this.chat.loadLinkableCards(opts.conversationId);
-    const downweights = await this.recommendations.listForPrompt(CHAT_DOWNWEIGHT_PROMPT_CAP);
+    const goodstuffs = await this.recommendations.listForPrompt(CHAT_GOODSTUFF_PROMPT_CAP);
     const ctx: ToolContext = {
       clerkUserId: opts.clerkUserId,
       deckId: opts.deckId ?? null,
@@ -132,7 +132,7 @@ export class ChatOrchestrator {
           stickyCardId: ctx.cardId,
           view: opts.view,
           groundedCards: linkableCards,
-          downweights,
+          goodstuffs,
         });
         opts.emit({ type: 'status', code: 'thinking' });
         const pending: PendingCall[] = [];
@@ -254,7 +254,7 @@ export class ChatOrchestrator {
                     conversationId: opts.conversationId,
                     violations,
                   },
-                  'Recommendation slate is all downweights',
+                  'Recommendation slate is all goodstuff',
                 );
               }
             }

@@ -15,10 +15,7 @@ import {
   type CardSearchSort,
   type LeadershipSkills,
 } from 'schemas/cards';
-import {
-  recommendationDownweightKindSchema,
-  type RecommendationDownweightFlag,
-} from 'schemas/recommendations';
+import { goodstuffTagSchema, type RecommendationGoodstuffFlag } from 'schemas/recommendations';
 import { parseCardFaces, uuidSchema } from 'schemas/primitives';
 import type { ColorIdentityPip, DeckFormat } from 'schemas/decks';
 import { bestPrintingOrderSql, printingFacesJsonSql } from '../catalog/printings';
@@ -37,8 +34,8 @@ type SearchRow = {
   edhrec_rank: number | null;
   edhrec_saltiness: string | number | null;
   is_game_changer: boolean | null;
-  downweight_kind: string | null;
-  downweight_note: string | null;
+  goodstuff_tags: string[] | null;
+  goodstuff_note: string | null;
 };
 
 type CountRow = {
@@ -63,8 +60,8 @@ type CardDetailRow = {
   edhrec_rank: number | null;
   edhrec_saltiness: string | number | null;
   is_game_changer: boolean | null;
-  downweight_kind: string | null;
-  downweight_note: string | null;
+  goodstuff_tags: string[] | null;
+  goodstuff_note: string | null;
 };
 
 type PrintingDetailRow = {
@@ -156,10 +153,15 @@ export class CardsService {
           c.edhrec_rank,
           c.edhrec_saltiness,
           c.is_game_changer,
-          dw.kind AS downweight_kind,
-          dw.note AS downweight_note
+          CASE WHEN g.card_id IS NULL THEN NULL ELSE gt.tags END AS goodstuff_tags,
+          g.note AS goodstuff_note
         FROM catalog.card c
-        LEFT JOIN app.recommendation_downweight dw ON dw.card_id = c.id
+        LEFT JOIN app.recommendation_goodstuff g ON g.card_id = c.id
+        LEFT JOIN LATERAL (
+          SELECT COALESCE(array_agg(t.tag ORDER BY t.tag), ARRAY[]::text[]) AS tags
+          FROM app.recommendation_goodstuff_tag t
+          WHERE t.card_id = c.id
+        ) gt ON g.card_id IS NOT NULL
         WHERE ${matchPredicate}
           AND ${legalPredicate}
           AND ${identityPredicate}
@@ -184,8 +186,8 @@ export class CardsService {
         m.edhrec_rank,
         m.edhrec_saltiness,
         m.is_game_changer,
-        m.downweight_kind,
-        m.downweight_note,
+        m.goodstuff_tags,
+        m.goodstuff_note,
         COALESCE(img.image_normal, img.face_image_normal) AS image_normal
       FROM matched m
       LEFT JOIN LATERAL (
@@ -351,10 +353,15 @@ export class CardsService {
         c.edhrec_rank,
         c.edhrec_saltiness,
         c.is_game_changer,
-        dw.kind AS downweight_kind,
-        dw.note AS downweight_note
+        CASE WHEN g.card_id IS NULL THEN NULL ELSE gt.tags END AS goodstuff_tags,
+        g.note AS goodstuff_note
       FROM catalog.card c
-      LEFT JOIN app.recommendation_downweight dw ON dw.card_id = c.id
+      LEFT JOIN app.recommendation_goodstuff g ON g.card_id = c.id
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(array_agg(t.tag ORDER BY t.tag), ARRAY[]::text[]) AS tags
+        FROM app.recommendation_goodstuff_tag t
+        WHERE t.card_id = c.id
+      ) gt ON g.card_id IS NOT NULL
       WHERE c.id = ${id}::uuid
       LIMIT 1
     `);
@@ -418,7 +425,7 @@ export class CardsService {
       edhrecRank: cardRow.edhrec_rank,
       edhrecSaltiness: parseNullableNumber(cardRow.edhrec_saltiness),
       isGameChanger: cardRow.is_game_changer,
-      downweight: toDownweight(cardRow.downweight_kind, cardRow.downweight_note),
+      goodstuff: toGoodstuff(cardRow.goodstuff_tags, cardRow.goodstuff_note),
       printings,
     };
   }
@@ -502,13 +509,17 @@ const parseNullableNumber = (value: string | number | null): number | null => {
   return null;
 };
 
-const toDownweight = (
-  kind: string | null,
+const toGoodstuff = (
+  tags: string[] | null,
   note: string | null,
-): RecommendationDownweightFlag | null => {
-  const parsed = recommendationDownweightKindSchema.safeParse(kind);
-  if (!parsed.success) return null;
-  return { kind: parsed.data, note };
+): RecommendationGoodstuffFlag | null => {
+  if (!tags || tags.length === 0) return null;
+  const parsed = tags
+    .map((tag) => goodstuffTagSchema.safeParse(tag))
+    .filter((result) => result.success)
+    .map((result) => result.data);
+  if (parsed.length === 0) return null;
+  return { tags: parsed, note };
 };
 
 const matchSql = (pattern: string | null): SQL => sql`
@@ -550,7 +561,7 @@ const toCard = (row: SearchRow): CardSearchResult => ({
   edhrecRank: row.edhrec_rank,
   edhrecSaltiness: parseNullableNumber(row.edhrec_saltiness),
   isGameChanger: row.is_game_changer,
-  downweight: toDownweight(row.downweight_kind, row.downweight_note),
+  goodstuff: toGoodstuff(row.goodstuff_tags, row.goodstuff_note),
 });
 
 const toPrinting = (row: PrintingDetailRow): CardPrintingSummary => ({

@@ -58,12 +58,13 @@ Identifiers-job summary and sampled unmatched MTGJSON rows (keyed by job-run id)
 
 ## App
 
-| Table                           | Role                                                                                                                                                                    |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `app.users`                     | Local identity + Clerk profile cache (`clerk_user_id`)                                                                                                                  |
-| `app.decks`                     | User decks (`user_id` → `app.users`; optional `description`; `format`: `standard` \| `commander` \| `modern`; `commander_printing_id` required iff format is commander) |
-| `app.deck_card`                 | Deck lines (`printing_id` → `catalog.printing`, `foil`, `sideboard`, quantity; unique per deck + printing + foil + board)                                               |
-| `app.recommendation_downweight` | Admin policy list of format staples / tutors (`card_id` → `catalog.card`, `kind`, optional `note`). Soft chat downweight, not a search ban                              |
+| Table                              | Role                                                                                                                                                                    |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app.users`                        | Local identity + Clerk profile cache (`clerk_user_id`)                                                                                                                  |
+| `app.decks`                        | User decks (`user_id` → `app.users`; optional `description`; `format`: `standard` \| `commander` \| `modern`; `commander_printing_id` required iff format is commander) |
+| `app.deck_card`                    | Deck lines (`printing_id` → `catalog.printing`, `foil`, `sideboard`, quantity; unique per deck + printing + foil + board)                                               |
+| `app.recommendation_goodstuff`     | Admin policy list of format goodstuff (`card_id` → `catalog.card`, optional `note`). Soft chat flag, not a search ban                                                   |
+| `app.recommendation_goodstuff_tag` | Tags for a goodstuff card (`card_id`, `tag`); many tags per card                                                                                                        |
 
 Keeping identity in `app` (not a separate `users` schema) matches the other domain boundaries: one schema per product surface, not per table.
 

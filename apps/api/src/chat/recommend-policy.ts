@@ -1,6 +1,6 @@
 export type RecommendPolicyHit = {
   id: string;
-  downweight: { kind: string } | null;
+  goodstuff: { tags: string[] } | null;
 };
 
 export type RecommendPolicyInput = {
@@ -9,12 +9,13 @@ export type RecommendPolicyInput = {
   retrieved: readonly RecommendPolicyHit[];
 };
 
-export type RecommendPolicyViolation = 'all_downweight_slate';
+export type RecommendPolicyViolation = 'all_goodstuff_slate';
 
-const CLASS_ASK_RE = /\b(tutors?|stax|extra turns?|staples?)\b/i;
+const CLASS_ASK_RE =
+  /\b(goodstuff|interaction|ramp|removal|counterspells?|board\s*wipes?|stax|tutors?|fast\s*mana)\b/i;
 
 export const recommendPolicy = (input: RecommendPolicyInput): RecommendPolicyViolation[] => {
-  if (isAllDownweightSlate(input)) return ['all_downweight_slate'];
+  if (isAllGoodstuffSlate(input)) return ['all_goodstuff_slate'];
   return [];
 };
 
@@ -34,26 +35,28 @@ export const hitsFromToolResult = (name: string, data: unknown): RecommendPolicy
   return [];
 };
 
-const isAllDownweightSlate = (input: RecommendPolicyInput): boolean => {
+const isAllGoodstuffSlate = (input: RecommendPolicyInput): boolean => {
   if (input.presentedIds.length === 0) return false;
   if (CLASS_ASK_RE.test(input.userText)) return false;
   const byId = new Map(input.retrieved.map((hit) => [hit.id, hit]));
   const presented = input.presentedIds.map((id) => byId.get(id));
   if (presented.some((hit) => hit === undefined)) return false;
-  if (!presented.every((hit) => hit?.downweight !== null)) return false;
-  return input.retrieved.some((hit) => hit.downweight === null);
+  if (!presented.every((hit) => hit?.goodstuff !== null)) return false;
+  return input.retrieved.some((hit) => hit.goodstuff === null);
 };
 
 const hitFromUnknown = (value: unknown): RecommendPolicyHit | null => {
   if (!value || typeof value !== 'object' || !('id' in value)) return null;
   const id = (value as { id?: unknown }).id;
   if (typeof id !== 'string' || id.length === 0) return null;
-  return { id, downweight: downweightFromUnknown((value as { downweight?: unknown }).downweight) };
+  return { id, goodstuff: goodstuffFromUnknown((value as { goodstuff?: unknown }).goodstuff) };
 };
 
-const downweightFromUnknown = (value: unknown): { kind: string } | null => {
-  if (!value || typeof value !== 'object' || !('kind' in value)) return null;
-  const kind = (value as { kind?: unknown }).kind;
-  if (typeof kind !== 'string' || kind.length === 0) return null;
-  return { kind };
+const goodstuffFromUnknown = (value: unknown): { tags: string[] } | null => {
+  if (!value || typeof value !== 'object' || !('tags' in value)) return null;
+  const tags = (value as { tags?: unknown }).tags;
+  if (!Array.isArray(tags) || tags.length === 0) return null;
+  const parsed = tags.filter((tag): tag is string => typeof tag === 'string' && tag.length > 0);
+  if (parsed.length === 0) return null;
+  return { tags: parsed };
 };

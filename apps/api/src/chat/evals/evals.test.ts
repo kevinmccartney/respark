@@ -110,7 +110,7 @@ const toSearchCard = (card: FixtureCard) => ({
   edhrecRank: null,
   edhrecSaltiness: null,
   isGameChanger: null,
-  downweight: card.downweight ?? null,
+  goodstuff: card.goodstuff ?? null,
 });
 
 const stubCards = (): CardsService =>
@@ -143,7 +143,7 @@ const stubCards = (): CardsService =>
         edhrecRank: null,
         edhrecSaltiness: null,
         isGameChanger: null,
-        downweight: card.downweight ?? null,
+        goodstuff: card.goodstuff ?? null,
         printings: [],
       };
     },
@@ -280,7 +280,7 @@ describe('chat fixture evals', () => {
     if (fixture.expect.policyViolations) {
       const retrieved = retrievedIds.map((id) => {
         const card = FIXTURE_CARDS.find((entry) => entry.id === id);
-        return { id, downweight: card?.downweight ?? null };
+        return { id, goodstuff: card?.goodstuff ?? null };
       });
       expect(
         recommendPolicy({

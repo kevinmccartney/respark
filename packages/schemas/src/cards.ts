@@ -1,6 +1,6 @@
 import { cardFaceSchema, queryBoolSchema, queryIntSchema, uuidSchema } from './primitives.js';
 import { colorIdentitySchema, deckFormatSchema, type DeckFormat } from './decks.js';
-import { recommendationDownweightFlagSchema } from './recommendations.js';
+import { recommendationGoodstuffFlagSchema } from './recommendations.js';
 import { z } from 'zod';
 
 export const cardSearchResultSchema = z.object({
@@ -17,7 +17,7 @@ export const cardSearchResultSchema = z.object({
   edhrecRank: z.number().int().nullable(),
   edhrecSaltiness: z.number().nullable(),
   isGameChanger: z.boolean().nullable(),
-  downweight: recommendationDownweightFlagSchema.nullable(),
+  goodstuff: recommendationGoodstuffFlagSchema.nullable(),
 });
 
 export type CardSearchResult = z.infer<typeof cardSearchResultSchema>;
@@ -132,7 +132,7 @@ export const cardDetailSchema = z.object({
   edhrecRank: z.number().int().nullable(),
   edhrecSaltiness: z.number().nullable(),
   isGameChanger: z.boolean().nullable(),
-  downweight: recommendationDownweightFlagSchema.nullable(),
+  goodstuff: recommendationGoodstuffFlagSchema.nullable(),
   printings: z.array(cardPrintingSummarySchema),
 });
 

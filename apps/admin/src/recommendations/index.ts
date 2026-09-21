@@ -1,1 +1,1 @@
-export { DownweightsPage } from './pages/DownweightsPage.tsx';
+export { GoodstuffsPage } from './pages/GoodstuffsPage.tsx';

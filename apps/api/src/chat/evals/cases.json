@@ -233,7 +233,7 @@
     }
   },
   {
-    "id": "staple-only-slate",
+    "id": "goodstuff-only-slate",
     "user": "What would be a good add to this deck?",
     "rounds": [
       { "toolCalls": [{ "name": "getDeck", "input": {} }] },
@@ -248,12 +248,12 @@
           }
         ]
       },
-      { "text": "Rhystic Study is a format staple; the scorer flags an all-downweight slate." }
+      { "text": "Rhystic Study is format goodstuff; the scorer flags an all-goodstuff slate." }
     ],
     "expect": {
       "tools": ["getDeck", "searchCards", "presentRecommendations"],
       "recommendationIds": ["00000000-0000-4000-8000-000000000007"],
-      "policyViolations": ["all_downweight_slate"]
+      "policyViolations": ["all_goodstuff_slate"]
     }
   },
   {

@@ -31,7 +31,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     label: 'Recommendations',
-    items: [{ label: 'Downweights', to: '/recommendations/downweights' }],
+    items: [{ label: 'Goodstuff', to: '/recommendations/goodstuff' }],
   },
 ];
 

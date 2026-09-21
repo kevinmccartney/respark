@@ -1,8 +1,8 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { GuestOnly, RequireAuth, SignInPage } from '@/auth';
 import { AppShell, ComingSoonPage, NotFoundPage } from '@/core';
 import { SyncDetailPage, SyncsListPage } from '@/etl-syncs';
-import { DownweightsPage } from '@/recommendations';
+import { GoodstuffsPage } from '@/recommendations';
 
 export default function App() {
   return (
@@ -63,16 +63,12 @@ export default function App() {
           }
         />
         <Route
-          path="/recommendations/downweights"
+          path="/recommendations/goodstuff"
           element={
             <RequireAuth>
-              <DownweightsPage />
+              <GoodstuffsPage />
             </RequireAuth>
           }
-        />
-        <Route
-          path="/overperformers"
-          element={<Navigate to="/recommendations/downweights" replace />}
         />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

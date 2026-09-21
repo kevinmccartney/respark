@@ -44,7 +44,7 @@ const searchPage = (): CardSearchPage => ({
       edhrecRank: null,
       edhrecSaltiness: null,
       isGameChanger: null,
-      downweight: null,
+      goodstuff: null,
     },
   ],
   total: 1,

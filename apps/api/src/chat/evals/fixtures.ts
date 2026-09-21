@@ -20,7 +20,7 @@ export type FixtureCard = {
   keywords?: string[] | null;
   colorIdentity: string[];
   legalities: Record<string, string>;
-  downweight?: { kind: string; note: string | null } | null;
+  goodstuff?: { tags: string[]; note: string | null } | null;
 };
 
 export const FIXTURE_CARDS: FixtureCard[] = [
@@ -63,7 +63,7 @@ export const FIXTURE_CARDS: FixtureCard[] = [
     oracleText: 'Draw whenever a spell is cast unless they pay {1}.',
     colorIdentity: ['U'],
     legalities: { commander: 'legal', standard: 'not_legal', modern: 'not_legal' },
-    downweight: { kind: 'staple', note: 'Format-wide extra-mana tax' },
+    goodstuff: { tags: ['tax', 'value_engine', 'card_draw'], note: 'Format-wide tax draw' },
   },
   {
     id: IDS.bolt,

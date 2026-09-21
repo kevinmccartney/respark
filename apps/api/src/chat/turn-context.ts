@@ -1,7 +1,7 @@
 import type { ChatView } from 'schemas/chat';
-import type { DownweightPromptLine } from '../recommendations/recommendations.service';
+import type { GoodstuffPromptLine } from '../recommendations/recommendations.service';
 import type { LinkableCard } from './card-links';
-import { CHAT_DOWNWEIGHT_PROMPT_CAP, CHAT_GROUNDED_CARD_PROMPT_CAP } from './chat.constants';
+import { CHAT_GOODSTUFF_PROMPT_CAP, CHAT_GROUNDED_CARD_PROMPT_CAP } from './chat.constants';
 import { SYSTEM_PROMPT } from './prompts';
 
 export const formatTurnContext = (opts: {
@@ -9,11 +9,11 @@ export const formatTurnContext = (opts: {
   stickyCardId: string | null;
   view?: ChatView;
   groundedCards?: readonly LinkableCard[];
-  downweights?: readonly DownweightPromptLine[];
+  goodstuffs?: readonly GoodstuffPromptLine[];
 }): string => {
   const viewLines = formatView(opts.view);
   const groundedLines = formatGroundedCards(opts.groundedCards ?? []);
-  const downweightLines = formatDownweights(opts.downweights ?? []);
+  const goodstuffLines = formatGoodstuffs(opts.goodstuffs ?? []);
   return `${SYSTEM_PROMPT}
 
 Sticky discussion context (attached by the player or getDeck / getCard; survives navigation):
@@ -26,18 +26,18 @@ ${viewLines}
 Catalog-grounded cards already retrieved in this conversation (name → id). Only mention these or new tool results. If you need another card, call searchCards or getCard.
 ${groundedLines}
 
-Admin downweight list (format staples / generic tutors). Prefer other cards unless the player asked for that class or the attached deck already plays that pattern. Tool-result downweight flags are the source of truth.
-${downweightLines}`;
+Admin goodstuff list (generically strong cards, tagged). Prefer other cards unless the player asked for that class or the attached deck already plays that pattern. Tool-result goodstuff flags are the source of truth.
+${goodstuffLines}`;
 };
 
-export const formatDownweights = (
-  rows: readonly DownweightPromptLine[],
-  cap = CHAT_DOWNWEIGHT_PROMPT_CAP,
+export const formatGoodstuffs = (
+  rows: readonly GoodstuffPromptLine[],
+  cap = CHAT_GOODSTUFF_PROMPT_CAP,
 ): string => {
   if (rows.length === 0) return '- none configured';
   const shown = rows.slice(0, cap);
   const omitted = Math.max(0, rows.length - shown.length);
-  const lines = shown.map((row) => `- ${row.name} (${row.kind})`);
+  const lines = shown.map((row) => `- ${row.name} (${row.tags.join(', ')})`);
   if (omitted > 0) lines.push(`- (${omitted} more omitted)`);
   return lines.join('\n');
 };

@@ -60,9 +60,9 @@ The line points at `catalog.printing`, not `catalog.card`, so the player can cho
 
 One thread per user, not per page. Optional sticky **`deck_id`** and **`card_id`** are last-picked discussion context (`getDeck` / `getCard` or an explicit send), not conversation identity. Follow-ups keep those values unless the client sets or clears them. Deleting a deck or catalog card sets the matching column to null; the thread remains. The open page is sent per turn as view metadata and is not stored on this row.
 
-### Recommendation downweight (`app.recommendation_downweight`)
+### Recommendation goodstuff (`app.recommendation_goodstuff`)
 
-Admin-maintained policy list of cards that win global EDHREC % without implying a play pattern (Rhystic Study, generic tutors, extra turns, stax). Soft flag on search / getCard and a short chat prompt appendix. Not a catalog fact and not a search ban. Starter rows are inserted by migration; list/add/remove is on `/admin/recommendation-downweights`.
+Admin-maintained policy list of generically strong cards (multi-tag: interaction, ramp, counterspell, etc.). Soft flag on search / getCard and a short chat prompt appendix. Not a catalog fact and not a search ban. Tags live on `app.recommendation_goodstuff_tag`. Starter rows are inserted by migration; list/add/remove is on `/admin/recommendation-goodstuffs`.
 
 ### Chat message (`app.chat_message`)
 

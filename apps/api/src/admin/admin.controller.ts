@@ -18,8 +18,8 @@ import {
   type StartEtlSyncBody,
 } from 'schemas/etl-sync';
 import {
-  createRecommendationDownweightBodySchema,
-  type CreateRecommendationDownweightBody,
+  createRecommendationGoodstuffBodySchema,
+  type CreateRecommendationGoodstuffBody,
 } from 'schemas/recommendations';
 import { uuidSchema } from 'schemas/primitives';
 import { AdminRoleGuard } from '../auth/admin-role.guard';
@@ -121,22 +121,22 @@ export class AdminController {
     };
   }
 
-  @Get('recommendation-downweights')
-  async listRecommendationDownweights() {
-    return { downweights: await this.recommendations.list() };
+  @Get('recommendation-goodstuffs')
+  async listRecommendationGoodstuffs() {
+    return { goodstuffs: await this.recommendations.list() };
   }
 
-  @Post('recommendation-downweights')
-  async createRecommendationDownweight(
-    @Body(zodPipe(createRecommendationDownweightBodySchema))
-    body: CreateRecommendationDownweightBody,
+  @Post('recommendation-goodstuffs')
+  async createRecommendationGoodstuff(
+    @Body(zodPipe(createRecommendationGoodstuffBodySchema))
+    body: CreateRecommendationGoodstuffBody,
   ) {
-    return { downweight: await this.recommendations.create(body) };
+    return { goodstuff: await this.recommendations.create(body) };
   }
 
-  @Delete('recommendation-downweights/:cardId')
+  @Delete('recommendation-goodstuffs/:cardId')
   @HttpCode(204)
-  async deleteRecommendationDownweight(@Param('cardId', zodPipe(uuidSchema)) cardId: string) {
+  async deleteRecommendationGoodstuff(@Param('cardId', zodPipe(uuidSchema)) cardId: string) {
     await this.recommendations.remove(cardId);
   }
 }

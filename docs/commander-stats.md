@@ -1,6 +1,6 @@
 # Commander inclusion stats (future)
 
-Respark today stores **global** Commander popularity (`catalog.card.edhrec_rank`, salt, game-changer) and an admin **overperformers** list. That is Layer A. This page is the design for **Layer B** — per-commander inclusion — if we revisit it. Do not implement these tables, HTTP clients, or a `getCommanderSuggestions` tool unless that work is explicitly scoped.
+Respark today stores **global** Commander popularity (`catalog.card.edhrec_rank`, salt, game-changer) and an admin **goodstuff** list (multi-tag). That is Layer A. This page is the design for **Layer B** — per-commander inclusion — if we revisit it. Do not implement these tables, HTTP clients, or a `getCommanderSuggestions` tool unless that work is explicitly scoped.
 
 ## Why Layer A is not enough
 
@@ -11,7 +11,7 @@ EDHREC’s commander pages publish a different pair of numbers:
 - **Inclusion** = (decks _with this commander_ that contain card X) / (all decks with this commander).
 - **Synergy** = (inclusion for this commander) − (inclusion for this **color identity** across the format). Sol Ring is in most decks of every identity, so synergy is near zero. High Synergy exists to hide generic goodstuff.
 
-Layer A plus `app.recommendation_downweight` is a policy workaround for staple bias. Layer B would make synergy a first-class signal; the downweight list would still be useful as a “player asked for spicy, not goodstuff” filter.
+Layer A plus `app.recommendation_goodstuff` is a policy workaround for goodstuff bias. Layer B would make synergy a first-class signal; the goodstuff list would still be useful as a “player asked for spicy, not goodstuff” filter.
 
 ## Sources (if we revisit)
 
@@ -57,4 +57,4 @@ Chat would add `getCommanderSuggestions` and extend this-turn `retrievedCardIds`
 - Scryfall `edhrec_rank` and `game_changer` on `catalog.card` (catalog job).
 - MTGJSON `edhrecSaltiness` on `catalog.card` (identifiers job). Fills `is_game_changer` only when Scryfall left it null.
 - `GET /cards?sort=edhrecRank` (and chat `searchCards`, which defaults to that) orders by global rank. Name match still wins when `q` is set. HTTP default is `sort=name`.
-- `app.recommendation_downweight` — admin-maintained soft flags on search/getCard and a short system-prompt appendix.
+- `app.recommendation_goodstuff` / `app.recommendation_goodstuff_tag` — admin-maintained soft flags on search/getCard and a short system-prompt appendix.

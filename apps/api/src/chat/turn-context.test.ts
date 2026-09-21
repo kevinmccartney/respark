@@ -37,13 +37,13 @@ describe('formatTurnContext', () => {
     expect(text).toContain('none configured');
   });
 
-  it('lists admin downweights in the system appendix', () => {
+  it('lists admin goodstuff in the system appendix', () => {
     const text = formatTurnContext({
       stickyDeckId: null,
       stickyCardId: null,
-      downweights: [{ name: 'Rhystic Study', kind: 'staple' }],
+      goodstuffs: [{ name: 'Mystic Remora', tags: ['card_draw', 'value_engine', 'tax'] }],
     });
-    expect(text).toContain('Rhystic Study (staple)');
+    expect(text).toContain('Mystic Remora (card_draw, value_engine, tax)');
   });
 
   it('includes grounded names in the system appendix', () => {

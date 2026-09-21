@@ -137,7 +137,7 @@ searchCards({
 
 Without a sticky deck, skip `getDeck` unless the player named a list; do not inject format/identity/excludes.
 
-Do **not** send the catalog. Do **not** require pgvector. Keyword `q` is still weak for "interaction"; identity + legality + exclude + a 25-hit search is the MVP bet. `GET /cards` defaults to `sort=name`. Chat `searchCards` defaults to `sort=edhrecRank` (most played in Commander first); pass `sort=name` for A–Z. Name match still wins when `q` is set. Hits include `keywords` and may include a `downweight` flag from the admin overperformers list — staples/tutors the model should skip unless the player asked for that class or the attached deck already plays that pattern. After `presentRecommendations`, if the slate is only downweights while the same search had other hits, the API logs `chat.recommend_policy` (soft warn; the player still sees the slate). Offline evals include a `staple-only-slate` scorer for that helper — they do not grade Haiku. Per-commander inclusion (what people put in _this_ commander) is not ingested; see [commander-stats.md](commander-stats.md).
+Do **not** send the catalog. Do **not** require pgvector. Keyword `q` is still weak for "interaction"; identity + legality + exclude + a 25-hit search is the MVP bet. `GET /cards` defaults to `sort=name`. Chat `searchCards` defaults to `sort=edhrecRank` (most played in Commander first); pass `sort=name` for A–Z. Name match still wins when `q` is set. Hits include `keywords` and may include a `goodstuff` flag (with tags) from the admin goodstuff list — generically strong cards the model should skip unless the player asked for that class or the attached deck already plays that pattern. After `presentRecommendations`, if the slate is only goodstuff while the same search had other hits, the API logs `chat.recommend_policy` (soft warn; the player still sees the slate). Offline evals include a `goodstuff-only-slate` scorer for that helper — they do not grade Haiku. Per-commander inclusion (what people put in _this_ commander) is not ingested; see [commander-stats.md](commander-stats.md).
 
 ## Structured parts
 
@@ -156,7 +156,7 @@ System prompt (versioned in [`prompts.ts`](../apps/api/src/chat/prompts.ts), not
 - If they ask about what is on screen, use viewingDeckId / viewingCardId with getDeck / getCard.
 - Never name a card unless it is in this conversation’s tool results. If you need another card, call searchCards or getCard first. Do not use training-data names. Combo cards must appear in this turn’s `lookupCombos` result (or another catalog tool). Credit Commander Spellbook.
 - Do not claim a card is in a deck unless `getDeck` listed it.
-- presentRecommendations commits this-turn search/getCard/lookupCombos ids for prose; the UI does not attach images. Prefer commander / keywordCounts fits; do not present an all-downweight slate when the same search had other hits.
+- presentRecommendations commits this-turn search/getCard/lookupCombos ids for prose; the UI does not attach images. Prefer commander / keywordCounts fits; do not present an all-goodstuff slate when the same search had other hits.
 - Link a retrieved card as `[Name](/cards/<id>)` only the first time it appears, or when citing a ruling or specific detail; later mentions stay plain text. Do not invent ids.
 - If tools fail, say so; do not fill from model memory.
 - Application data wins over model knowledge.
@@ -233,7 +233,7 @@ Vitest in `apps/api`. CI runs fixture evals **without Bedrock**:
 1. Unit: Zod schemas, compact mappers, allowlist, history window.
 2. Tool tests: mocked services — ownership 404, search limit, injected filters.
 3. Orchestrator: scripted provider — "good add" must call `getDeck` then `searchCards`.
-4. Offline fixtures under `apps/api/src/chat/evals/` — score tools and allowlisted `presentRecommendations` ids against that turn’s `searchCards` / `getCard` / `lookupCombos` hits, not thumbs. A `staple-only-slate` case asserts the `recommendPolicy` helper flags an all-downweight present when alternatives were retrieved. A `lookup-combos-in-list` case scripts `getDeck` then `lookupCombos` against a **mocked** Spellbook client (no live HTTP in CI).
+4. Offline fixtures under `apps/api/src/chat/evals/` — score tools and allowlisted `presentRecommendations` ids against that turn’s `searchCards` / `getCard` / `lookupCombos` hits, not thumbs. A `goodstuff-only-slate` case asserts the `recommendPolicy` helper flags an all-goodstuff present when alternatives were retrieved. A `lookup-combos-in-list` case scripts `getDeck` then `lookupCombos` against a **mocked** Spellbook client (no live HTTP in CI).
 5. Live Bedrock eval: optional, gated by env, not CI.
 
 ## Out of MVP
