@@ -6,23 +6,28 @@ import { ThemeToggle } from './ThemeToggle.tsx';
 export const AdminHeader = () => (
   <header className="flex items-center justify-between gap-4 border-b bg-card px-5 py-3">
     <div className="flex items-center gap-4">
-      <Link to="/" className="font-heading text-base font-semibold tracking-tight">
-        respark admin
-      </Link>
-      <nav className="flex items-center gap-3" aria-label="Primary">
-        <Link
-          to="/"
-          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          ETL
+      <Show when="signed-in">
+        <Link to="/" className="font-heading text-base font-semibold tracking-tight">
+          respark admin
         </Link>
-        <Link
-          to="/overperformers"
-          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Overperformers
-        </Link>
-      </nav>
+        <nav className="flex items-center gap-3" aria-label="Primary">
+          <Link
+            to="/"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            ETL
+          </Link>
+          <Link
+            to="/overperformers"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Overperformers
+          </Link>
+        </nav>
+      </Show>
+      <Show when="signed-out">
+        <span className="font-heading text-base font-semibold tracking-tight">respark admin</span>
+      </Show>
     </div>
     <div className="flex items-center gap-2">
       <ThemeToggle />
