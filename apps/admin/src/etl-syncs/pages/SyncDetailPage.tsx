@@ -52,7 +52,7 @@ export const SyncDetailPage = () => {
       <Breadcrumb className="mb-4">
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink render={<Link to="/" />}>Syncs</BreadcrumbLink>
+            <BreadcrumbLink render={<Link to="/" />}>ETL Syncs</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>

@@ -4,18 +4,6 @@ Writing down ideas for the future
 
 ## Stuff to do
 
-- admin UI update
-  - Menus
-    - High-level items
-      -Catalog
-      - Cards (coming soon)
-      - Sets (coming soon)
-      - ETL Syncs
-      - Users
-        - Management (coming soon)
-      - Recommendations
-        - Downweights
-- (etl) set imports
 - (admin) Table of cards/sets/etc
 - (admin) User management
 - (admin) ai cost management

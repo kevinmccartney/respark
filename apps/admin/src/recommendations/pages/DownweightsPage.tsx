@@ -119,7 +119,7 @@ export const DownweightsPage = () => {
   return (
     <main className="mx-auto max-w-6xl px-5 py-5">
       <header className="mb-4">
-        <h1 className="font-heading text-xl font-semibold">Overperformers</h1>
+        <h1 className="font-heading text-xl font-semibold">Downweights</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
           Soft downweight for chat recommendations. These cards still appear in search; the model
           should skip them unless the player asked for that class or the deck already plays that

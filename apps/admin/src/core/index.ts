@@ -17,4 +17,5 @@ export {
   applyAdminLoadError,
   isForbidden,
 } from './lib/errors.ts';
+export { ComingSoonPage } from './pages/ComingSoonPage.tsx';
 export { NotFoundPage } from './pages/NotFoundPage.tsx';
