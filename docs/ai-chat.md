@@ -13,7 +13,7 @@ WebSocket (Clerk token) → ChatGateway → orchestrator (tool loop) → domain 
 ```
 
 - One Nest module [`apps/api/src/chat/`](../apps/api/src/chat/), not a new package.
-- One model, five tools: `listDecks`, `getDeck`, `searchCards`, `getCard`, plus server-side `presentRecommendations` for grounding (not UI). Optional compact **stats** ride on `getDeck` (no `getDeckStats` tool).
+- One model, six tools: `listDecks`, `getDeck`, `searchCards`, `getCard`, `lookupCombos`, plus server-side `presentRecommendations` for grounding (not UI). Optional compact **stats** ride on `getDeck` (no `getDeckStats` tool).
 - Tools call [`DecksService`](../apps/api/src/decks/decks.service.ts) / [`CardsService`](../apps/api/src/cards/cards.service.ts). **No SQL in the AI layer.**
 - Provider is an interface; Bedrock is the production implementation. Tools never import the AWS SDK.
 - Player UI: header chat toggle (left of theme), AppShell right drawer, WebSocket events, **prose card links** from this conversation’s catalog tool results. Recommendation thumbs are not shown.
@@ -102,7 +102,16 @@ type ToolContext = {
 
 **`getCard`** — `{ cardId }`. Reuse `getById`; include legalities and color identity; omit bulky printing lists (the client hydrates by id). A successful load persists sticky `card_id` the same way `getDeck` persists `deck_id`.
 
-**`presentRecommendations`** — `{ cardIds, notes? }`. Cap 25 ids. If the player asked for a count, present that many (capped). Otherwise present the strong fits from this turn’s catalog results — no default of 3. Ids must be in **this turn’s** `searchCards` / `getCard` results. Drop unknown ids; log `chat.ungrounded_id`. This tool **grounds** the turn for the model and evals; it does **not** attach card images. The model must not emit HTML or invent ids. Prose may use `[Name](/cards/<id>)` the first time a card appears, or when citing a ruling or other specific detail; later casual mentions stay plain text. Before persist, the server allowlists those hrefs against this **conversation’s** `searchCards` / `getCard` / `getDeck` tool results (reconstructed from persisted tool messages, plus this turn) and does **not** auto-link remaining names. `getDeck` ids are **not** added to the `presentRecommendations` allowlist.
+**`lookupCombos`** — Optional, lazy Commander Spellbook lookup ([backend.commanderspellbook.com](https://backend.commanderspellbook.com/), [about](https://commanderspellbook.com/about/), MIT, public). Call when the player asks about combos, infinites, wincons, missing pieces for a combo, or whether a line is a 2-card combo — or when `getDeck` description / commander oracle / `keywordCounts` look combo-shaped. **Do not** call on a generic “good add,” interaction, or ramp ask. Need `q` or a sticky / explicit deck.
+
+| Mode  | HTTP                       | Use                                                           |
+| ----- | -------------------------- | ------------------------------------------------------------- |
+| Deck  | `POST /find-my-combos/`    | Combos **in** this list + almost-included (missing 1–2 cards) |
+| Query | `GET /variants/?q=&limit=` | Combos for a commander/card (`card:"Name"`). Cap 8            |
+
+Thin `fetch` + Zod of the slice we keep (User-Agent `respark-api`, ~8s timeout, one `429` retry). No ETL, no snapshot tables, no player HTTP route. Fail-soft `{ ok: false, code: 'upstream' }`. Compact result: up to 8 included + 8 almost-included (deck) or 8 variants (query); per combo `id`, `produces`, `uses` / `missing` with catalog ids, truncated description, `url` on commanderspellbook.com. Resolve Spellbook `oracleId` via `catalog.card`, then exact name; unmatched names omit `catalogId`. Credit and link [commanderspellbook.com](https://commanderspellbook.com). Sparse unauthenticated use: a few HTTP calls per user action; handle `429`.
+
+**`presentRecommendations`** — `{ cardIds, notes? }`. Cap 25 ids. If the player asked for a count, present that many (capped). Otherwise present the strong fits from this turn’s catalog results — no default of 3. Ids must be in **this turn’s** `searchCards` / `getCard` / `lookupCombos` results (including combo missing pieces). Drop unknown ids; log `chat.ungrounded_id`. This tool **grounds** the turn for the model and evals; it does **not** attach card images. The model must not emit HTML or invent ids. Prose may use `[Name](/cards/<id>)` the first time a card appears, or when citing a ruling or other specific detail; later casual mentions stay plain text. Before persist, the server allowlists those hrefs against this **conversation’s** `searchCards` / `getCard` / `getDeck` / `lookupCombos` tool results (reconstructed from persisted tool messages, plus this turn) and does **not** auto-link remaining names. `getDeck` ids are **not** added to the `presentRecommendations` allowlist.
 
 **Errors:** tools return `{ ok: false, code, message }` JSON, not thrown provider exceptions. HTTP 404 from `requireOwnedDeck` becomes `code: 'not_found'`.
 
@@ -145,9 +154,9 @@ System prompt (versioned in [`prompts.ts`](../apps/api/src/chat/prompts.ts), not
 
 - Sticky deck/card is discussion context. App view is the open page; it does not attach or clear sticky ids.
 - If they ask about what is on screen, use viewingDeckId / viewingCardId with getDeck / getCard.
-- Never name a card unless it is in this conversation’s tool results. If you need another card, call searchCards or getCard first. Do not use training-data names.
+- Never name a card unless it is in this conversation’s tool results. If you need another card, call searchCards or getCard first. Do not use training-data names. Combo cards must appear in this turn’s `lookupCombos` result (or another catalog tool). Credit Commander Spellbook.
 - Do not claim a card is in a deck unless `getDeck` listed it.
-- presentRecommendations commits this-turn search/getCard ids for prose; the UI does not attach images. Prefer commander / keywordCounts fits; do not present an all-downweight slate when the same search had other hits.
+- presentRecommendations commits this-turn search/getCard/lookupCombos ids for prose; the UI does not attach images. Prefer commander / keywordCounts fits; do not present an all-downweight slate when the same search had other hits.
 - Link a retrieved card as `[Name](/cards/<id>)` only the first time it appears, or when citing a ruling or specific detail; later mentions stay plain text. Do not invent ids.
 - If tools fail, say so; do not fill from model memory.
 - Application data wins over model knowledge.
@@ -224,7 +233,7 @@ Vitest in `apps/api`. CI runs fixture evals **without Bedrock**:
 1. Unit: Zod schemas, compact mappers, allowlist, history window.
 2. Tool tests: mocked services — ownership 404, search limit, injected filters.
 3. Orchestrator: scripted provider — "good add" must call `getDeck` then `searchCards`.
-4. Offline fixtures under `apps/api/src/chat/evals/` — score tools and allowlisted `presentRecommendations` ids against that turn’s `searchCards` / `getCard` hits, not thumbs. A `staple-only-slate` case asserts the `recommendPolicy` helper flags an all-downweight present when alternatives were retrieved.
+4. Offline fixtures under `apps/api/src/chat/evals/` — score tools and allowlisted `presentRecommendations` ids against that turn’s `searchCards` / `getCard` / `lookupCombos` hits, not thumbs. A `staple-only-slate` case asserts the `recommendPolicy` helper flags an all-downweight present when alternatives were retrieved. A `lookup-combos-in-list` case scripts `getDeck` then `lookupCombos` against a **mocked** Spellbook client (no live HTTP in CI).
 5. Live Bedrock eval: optional, gated by env, not CI.
 
 ## Out of MVP

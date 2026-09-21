@@ -10,7 +10,7 @@ export type ToolContext = {
 };
 
 export type ChatToolName =
-  'listDecks' | 'getDeck' | 'searchCards' | 'getCard' | 'presentRecommendations';
+  'listDecks' | 'getDeck' | 'searchCards' | 'getCard' | 'lookupCombos' | 'presentRecommendations';
 
 export type ChatTool<I, O> = {
   name: ChatToolName;

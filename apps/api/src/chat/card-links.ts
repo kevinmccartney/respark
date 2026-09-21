@@ -48,6 +48,11 @@ export const collectLinkableCards = (
   if (toolName === 'getCard' && hasIdName(data)) {
     addLinkable(into, data.id, data.name);
   }
+  if (toolName === 'lookupCombos') {
+    for (const card of catalogCardsFromLookupCombos(data)) {
+      addLinkable(into, card.id, card.name);
+    }
+  }
   if (toolName !== 'getDeck') return;
   const deck = data as { commander?: unknown; lines?: unknown[] };
   if (hasCardIdName(deck.commander)) addLinkable(into, deck.commander.cardId, deck.commander.name);
@@ -67,6 +72,37 @@ export const collectLinkableFromToolMessage = (
   const data = dataFromToolPayload(text);
   if (data === undefined) return;
   collectLinkableCards(toolName, data, into);
+};
+
+const hasCatalogIdName = (row: unknown): row is { catalogId: string; name: string } =>
+  Boolean(
+    row &&
+    typeof row === 'object' &&
+    typeof (row as { catalogId?: unknown }).catalogId === 'string' &&
+    typeof (row as { name?: unknown }).name === 'string',
+  );
+
+export const catalogCardsFromLookupCombos = (data: unknown): LinkableCard[] => {
+  if (!data || typeof data !== 'object') return [];
+  const out: LinkableCard[] = [];
+  const row = data as {
+    included?: unknown[];
+    almostIncluded?: unknown[];
+    variants?: unknown[];
+  };
+  const visit = (combos: unknown[] | undefined) => {
+    for (const combo of combos ?? []) {
+      if (!combo || typeof combo !== 'object') continue;
+      const entry = combo as { uses?: unknown[]; missing?: unknown[] };
+      for (const card of [...(entry.uses ?? []), ...(entry.missing ?? [])]) {
+        if (hasCatalogIdName(card)) out.push({ id: card.catalogId, name: card.name });
+      }
+    }
+  };
+  visit(row.included);
+  visit(row.almostIncluded);
+  visit(row.variants);
+  return out;
 };
 
 const dataFromToolPayload = (text: string): unknown => {

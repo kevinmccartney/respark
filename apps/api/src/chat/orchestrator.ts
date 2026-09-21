@@ -1,18 +1,21 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import type { ChatPart, ChatServerEvent, ChatStatusCode, ChatView, ToolResult } from 'schemas/chat';
 import { CardsService } from '../cards/cards.service';
 import { DecksService } from '../decks/decks.service';
 import { RecommendationsService } from '../recommendations/recommendations.service';
-import { collectLinkableCards, rewriteCardLinks } from './card-links';
+import { catalogCardsFromLookupCombos, collectLinkableCards, rewriteCardLinks } from './card-links';
 import {
   CHAT_DOWNWEIGHT_PROMPT_CAP,
   CHAT_MAX_ROUNDS,
   CHAT_MAX_TOOL_CALLS,
   CHAT_PROVIDER_TOKEN,
   CHAT_ROUND_TIMEOUT_MS,
+  SPELLBOOK_CLIENT,
   type ChatTurnStopReason,
 } from './chat.constants';
+import { createSpellbookClient } from './spellbook/client';
+import type { SpellbookClient } from './spellbook/types';
 import { ChatService } from './chat.service';
 import { textFromParts } from './history';
 import { toToolJsonSchema } from './json-schema';
@@ -35,6 +38,7 @@ const STATUS_CODES = new Set<ChatStatusCode>([
   'getDeck',
   'searchCards',
   'getCard',
+  'lookupCombos',
   'presentRecommendations',
 ]);
 
@@ -55,6 +59,8 @@ type ToolMetric = {
 
 @Injectable()
 export class ChatOrchestrator {
+  private readonly spellbook: SpellbookClient;
+
   constructor(
     @Inject(CHAT_PROVIDER_TOKEN)
     private readonly provider: ChatProvider,
@@ -64,7 +70,12 @@ export class ChatOrchestrator {
     private readonly recommendations: RecommendationsService,
     @InjectPinoLogger(ChatOrchestrator.name)
     private readonly logger: PinoLogger,
-  ) {}
+    @Optional()
+    @Inject(SPELLBOOK_CLIENT)
+    spellbook?: SpellbookClient,
+  ) {
+    this.spellbook = spellbook ?? createSpellbookClient();
+  }
 
   async runTurn(opts: {
     clerkUserId: string;
@@ -75,7 +86,7 @@ export class ChatOrchestrator {
     emit: (event: ChatServerEvent) => void;
   }): Promise<{ messageId: string; parts: ChatPart[] }> {
     const started = Date.now();
-    const tools = buildChatTools(this.decks, this.cards);
+    const tools = buildChatTools(this.decks, this.cards, this.spellbook);
     const toolDefs = tools.map(toProviderToolDef);
     const history = await this.chat.loadHistory(opts.conversationId);
     const messages: ProviderMessage[] = history.map((row) => ({
@@ -489,6 +500,11 @@ const recordRetrievedIds = (name: string, data: unknown, retrieved: Set<string>)
   if (name === 'getCard' && data && typeof data === 'object' && 'id' in data) {
     const id = (data as { id?: string }).id;
     if (id) retrieved.add(id);
+  }
+  if (name === 'lookupCombos') {
+    for (const card of catalogCardsFromLookupCombos(data)) {
+      retrieved.add(card.id);
+    }
   }
 };
 

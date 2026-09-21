@@ -19,7 +19,7 @@ import {
   recommendationDownweightKindSchema,
   type RecommendationDownweightFlag,
 } from 'schemas/recommendations';
-import { parseCardFaces } from 'schemas/primitives';
+import { parseCardFaces, uuidSchema } from 'schemas/primitives';
 import type { ColorIdentityPip, DeckFormat } from 'schemas/decks';
 import { bestPrintingOrderSql, printingFacesJsonSql } from '../catalog/printings';
 
@@ -276,6 +276,59 @@ export class CardsService {
     `);
     if (result.rows.length !== 1) return null;
     return result.rows[0];
+  }
+
+  async findByOracleIds(oracleIds: string[]): Promise<Map<string, { id: string; name: string }>> {
+    const unique = [
+      ...new Set(oracleIds.map((id) => id.trim()).filter((id) => uuidSchema.safeParse(id).success)),
+    ];
+    const out = new Map<string, { id: string; name: string }>();
+    if (unique.length === 0) return out;
+    const result = await this.db.execute<{ id: string; name: string; oracle_id: string }>(sql`
+      SELECT c.id, c.name, c.oracle_id::text AS oracle_id
+      FROM catalog.card c
+      WHERE c.oracle_id IN (${sql.join(
+        unique.map((id) => sql`${id}::uuid`),
+        sql`, `,
+      )})
+    `);
+    for (const row of result.rows) {
+      const key = row.oracle_id.toLowerCase();
+      if (!out.has(key)) {
+        out.set(key, { id: row.id, name: row.name });
+      }
+    }
+    return out;
+  }
+
+  async findIdsByExactNames(names: string[]): Promise<Map<string, string>> {
+    const unique = [
+      ...new Set(names.map((name) => name.trim().toLowerCase()).filter((name) => name.length > 0)),
+    ];
+    const out = new Map<string, string>();
+    if (unique.length === 0) return out;
+    const result = await this.db.execute<{ id: string; name: string }>(sql`
+      SELECT c.id, c.name
+      FROM catalog.card c
+      WHERE lower(c.name) IN (${sql.join(
+        unique.map((name) => sql`${name}`),
+        sql`, `,
+      )})
+    `);
+    const counts = new Map<string, { id: string; count: number }>();
+    for (const row of result.rows) {
+      const key = row.name.toLowerCase();
+      const existing = counts.get(key);
+      if (existing) {
+        existing.count += 1;
+        continue;
+      }
+      counts.set(key, { id: row.id, count: 1 });
+    }
+    for (const [key, value] of counts) {
+      if (value.count === 1) out.set(key, value.id);
+    }
+    return out;
   }
 
   async getById(id: string): Promise<CardDetail> {

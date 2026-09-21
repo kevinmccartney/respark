@@ -8,6 +8,11 @@ export const SEARCH_CARDS_TOOL_DEFAULT_SORT = 'edhrecRank' as const;
 export const SEARCH_CARDS_TOOL_MAX_LIMIT = 50;
 export const EXCLUDE_CARD_IDS_MAX = 400;
 export const PRESENT_RECOMMENDATIONS_MAX = 25;
+export const LOOKUP_COMBOS_INCLUDED_CAP = 8;
+export const LOOKUP_COMBOS_ALMOST_CAP = 8;
+export const LOOKUP_COMBOS_QUERY_CAP = 8;
+export const LOOKUP_COMBOS_DESCRIPTION_MAX = 400;
+export const LOOKUP_COMBOS_QUERY_MAX = 200;
 
 export const chatViewAreaSchema = z.enum(['home', 'search', 'card', 'deck', 'new-deck', 'other']);
 
@@ -90,6 +95,7 @@ export const chatStatusCodeSchema = z.enum([
   'getDeck',
   'searchCards',
   'getCard',
+  'lookupCombos',
   'presentRecommendations',
 ]);
 
@@ -278,6 +284,46 @@ export const getCardInputSchema = z
   .strict();
 
 export type GetCardInput = z.infer<typeof getCardInputSchema>;
+
+export const lookupCombosInputSchema = z
+  .object({
+    q: z.string().trim().max(LOOKUP_COMBOS_QUERY_MAX).optional(),
+    deckId: uuidSchema.optional(),
+  })
+  .strict();
+
+export type LookupCombosInput = z.infer<typeof lookupCombosInputSchema>;
+
+export const lookupCombosCardSchema = z.object({
+  name: z.string(),
+  catalogId: uuidSchema.nullable(),
+  inDeck: z.boolean(),
+});
+
+export const lookupCombosComboSchema = z.object({
+  id: z.string(),
+  produces: z.array(z.string()),
+  uses: z.array(lookupCombosCardSchema),
+  missing: z.array(lookupCombosCardSchema),
+  manaNeeded: z.string().nullable(),
+  description: z.string().nullable(),
+  popularity: z.number().nullable(),
+  bracketTag: z.string().nullable(),
+  url: z.string(),
+});
+
+export const lookupCombosResultSchema = z.object({
+  mode: z.enum(['deck', 'query']),
+  included: z.array(lookupCombosComboSchema).optional(),
+  almostIncluded: z.array(lookupCombosComboSchema).optional(),
+  variants: z.array(lookupCombosComboSchema).optional(),
+  source: z.object({
+    name: z.literal('Commander Spellbook'),
+    url: z.string(),
+  }),
+});
+
+export type LookupCombosResult = z.infer<typeof lookupCombosResultSchema>;
 
 export const presentRecommendationsInputSchema = z
   .object({

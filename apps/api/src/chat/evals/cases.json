@@ -255,5 +255,20 @@
       "recommendationIds": ["00000000-0000-4000-8000-000000000007"],
       "policyViolations": ["all_downweight_slate"]
     }
+  },
+  {
+    "id": "lookup-combos-in-list",
+    "user": "What combos are in this list?",
+    "rounds": [
+      { "toolCalls": [{ "name": "getDeck", "input": {} }] },
+      { "toolCalls": [{ "name": "lookupCombos", "input": {} }] },
+      {
+        "text": "This list includes a Sol Ring combo that produces infinite card draw. Details from [Commander Spellbook](https://commanderspellbook.com)."
+      }
+    ],
+    "expect": {
+      "tools": ["getDeck", "lookupCombos"],
+      "noCardParts": true
+    }
   }
 ]

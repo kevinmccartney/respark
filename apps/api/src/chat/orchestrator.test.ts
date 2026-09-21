@@ -10,6 +10,7 @@ import { CHAT_MAX_TOOL_CALLS } from './chat.constants';
 import { ChatOrchestrator } from './orchestrator';
 import { ScriptedChatProvider } from './provider/scripted.provider';
 import type { ChatService } from './chat.service';
+import type { SpellbookClient } from './spellbook/types';
 
 const CARD_ID = '00000000-0000-4000-8000-000000000005';
 const CONV_ID = '00000000-0000-4000-8000-0000000000bb';
@@ -58,6 +59,8 @@ const stubCards = (): CardsService =>
     getById: async () => {
       throw new Error('getById unused');
     },
+    findByOracleIds: async () => new Map(),
+    findIdsByExactNames: async () => new Map(),
   }) as unknown as CardsService;
 
 const stubDecks = (): DecksService =>
@@ -131,16 +134,23 @@ const stubChat = (): ChatService =>
 const runTurn = async (
   provider: ScriptedChatProvider,
   logger: PinoLogger,
-  opts?: { decks?: DecksService; deckId?: string | null; chat?: ChatService },
+  opts?: {
+    decks?: DecksService;
+    deckId?: string | null;
+    chat?: ChatService;
+    cards?: CardsService;
+    spellbook?: SpellbookClient;
+  },
 ) => {
   const events: ChatServerEvent[] = [];
   const orchestrator = new ChatOrchestrator(
     provider,
     opts?.decks ?? stubDecks(),
-    stubCards(),
+    opts?.cards ?? stubCards(),
     opts?.chat ?? stubChat(),
     { listForPrompt: async () => [] } as unknown as RecommendationsService,
     logger,
+    opts?.spellbook,
   );
   const result = await orchestrator.runTurn({
     clerkUserId: 'user_1',
@@ -280,6 +290,51 @@ describe('ChatOrchestrator prose card links', () => {
       ]),
     );
     expect(lines.some((line) => line.obj.event === 'chat.ungrounded_id')).toBe(true);
+  });
+
+  it('lets presentRecommendations commit lookupCombos catalog ids', async () => {
+    const lines: LogLine[] = [];
+    const spellbook: SpellbookClient = {
+      findMyCombos: async () => ({
+        included: [],
+        almostIncluded: [
+          {
+            id: 'almost-1',
+            uses: [
+              { name: 'Braids, Conjurer Adept', oracleId: DECK_CARD_ID },
+              { name: 'Growth Spiral', oracleId: CARD_ID },
+            ],
+            produces: ['Infinite draw'],
+            manaNeeded: null,
+            description: null,
+            popularity: null,
+            bracketTag: null,
+          },
+        ],
+      }),
+      searchVariants: async () => [],
+    };
+    const cards = {
+      ...stubCards(),
+      findByOracleIds: async (oracleIds: string[]) => {
+        const map = new Map<string, { id: string; name: string }>();
+        if (oracleIds.includes(CARD_ID)) map.set(CARD_ID, { id: CARD_ID, name: 'Growth Spiral' });
+        if (oracleIds.includes(DECK_CARD_ID)) {
+          map.set(DECK_CARD_ID, { id: DECK_CARD_ID, name: 'Braids, Conjurer Adept' });
+        }
+        return map;
+      },
+    } as unknown as CardsService;
+    await runTurn(
+      new ScriptedChatProvider([
+        { toolCalls: [{ name: 'lookupCombos', input: {} }] },
+        { toolCalls: [{ name: 'presentRecommendations', input: { cardIds: [CARD_ID] } }] },
+        { text: 'Add Growth Spiral to finish the combo.' },
+      ]),
+      capturingLogger(lines),
+      { decks: stubOwnedDecks(), deckId: DECK_ID, cards, spellbook },
+    );
+    expect(lines.some((line) => line.obj.event === 'chat.ungrounded_id')).toBe(false);
   });
 
   it('allowlists a follow-up markdown link from the conversation cache without calling getDeck again', async () => {

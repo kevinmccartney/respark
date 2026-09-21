@@ -26,6 +26,14 @@ export default tseslint.config(
     },
     rules: {
       'prefer-arrow-callback': 'error',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.property.name='passthrough']",
+          message:
+            'Zod .passthrough() is deprecated. Use z.looseObject({ ... }) to keep unknown keys.',
+        },
+      ],
       'prefer-arrow-functions/prefer-arrow-functions': [
         'error',
         {

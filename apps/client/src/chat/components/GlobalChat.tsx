@@ -26,6 +26,7 @@ const STATUS_LABEL: Record<ChatStatusCode, string> = {
   getDeck: 'Reading deck',
   searchCards: 'Searching catalog',
   getCard: 'Looking up card',
+  lookupCombos: 'Checking combos',
   presentRecommendations: 'Picking cards',
 };
 

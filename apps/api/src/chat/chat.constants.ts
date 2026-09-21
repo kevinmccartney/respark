@@ -14,6 +14,7 @@ export const CHAT_WS_PATH = '/chat/ws';
 export const CHAT_WS_PING_MS = 25_000;
 export const CHAT_MAX_CONNECTIONS = 32;
 export const CHAT_PROVIDER_TOKEN = Symbol('CHAT_PROVIDER');
+export const SPELLBOOK_CLIENT = Symbol('SPELLBOOK_CLIENT');
 
 export const WS_CLOSE = {
   unauthorized: 4401,

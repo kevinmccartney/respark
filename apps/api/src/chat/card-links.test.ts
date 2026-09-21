@@ -86,6 +86,26 @@ describe('collectLinkableCards', () => {
     ]);
   });
 
+  it('collects lookupCombos catalog ids and skips unresolved names', () => {
+    const into: LinkableCard[] = [];
+    collectLinkableCards(
+      'lookupCombos',
+      {
+        included: [
+          {
+            uses: [
+              { name: 'Sol Ring', catalogId: SOL, inDeck: true },
+              { name: 'Unknown', catalogId: null, inDeck: false },
+            ],
+            missing: [],
+          },
+        ],
+      },
+      into,
+    );
+    expect(into).toEqual([{ id: SOL, name: 'Sol Ring' }]);
+  });
+
   it('ignores other tools', () => {
     const into: LinkableCard[] = [];
     collectLinkableCards('listDecks', { decks: [{ id: SOL, name: 'Braids' }] }, into);

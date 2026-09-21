@@ -6,11 +6,12 @@ import { UsersModule } from '../users/users.module';
 import { ChatController } from './chat.controller';
 import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
-import { CHAT_PROVIDER_TOKEN } from './chat.constants';
+import { CHAT_PROVIDER_TOKEN, SPELLBOOK_CLIENT } from './chat.constants';
 import { ChatOrchestrator } from './orchestrator';
 import { BedrockChatProvider } from './provider/bedrock.provider';
 import type { ChatProvider } from './provider/chat-provider';
 import { MockChatProvider } from './provider/mock.provider';
+import { createSpellbookClient } from './spellbook/client';
 
 const resolveChatProvider = (
   bedrock: BedrockChatProvider,
@@ -33,6 +34,10 @@ const resolveChatProvider = (
       provide: CHAT_PROVIDER_TOKEN,
       useFactory: resolveChatProvider,
       inject: [BedrockChatProvider, MockChatProvider],
+    },
+    {
+      provide: SPELLBOOK_CLIENT,
+      useFactory: createSpellbookClient,
     },
   ],
 })

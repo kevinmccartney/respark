@@ -14,6 +14,7 @@ import type { ChatService } from '../chat.service';
 import { ChatOrchestrator } from '../orchestrator';
 import { ScriptedChatProvider, type ScriptedRound } from '../provider/scripted.provider';
 import { recommendPolicy } from '../recommend-policy';
+import type { SpellbookClient } from '../spellbook/types';
 import { cardMatchesSearchFilters, FIXTURE_CARDS, IDS, type FixtureCard } from './fixtures';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -146,7 +147,44 @@ const stubCards = (): CardsService =>
         printings: [],
       };
     },
+    findByOracleIds: async (oracleIds: string[]) => {
+      const map = new Map<string, { id: string; name: string }>();
+      for (const oracleId of oracleIds) {
+        const card = FIXTURE_CARDS.find((entry) => entry.id === oracleId);
+        if (card) map.set(oracleId, { id: card.id, name: card.name });
+      }
+      return map;
+    },
+    findIdsByExactNames: async (names: string[]) => {
+      const map = new Map<string, string>();
+      for (const name of names) {
+        const card = FIXTURE_CARDS.find((entry) => entry.name.toLowerCase() === name.toLowerCase());
+        if (card) map.set(name.toLowerCase(), card.id);
+      }
+      return map;
+    },
   }) as unknown as CardsService;
+
+const stubSpellbook = (): SpellbookClient => ({
+  findMyCombos: async () => ({
+    included: [
+      {
+        id: 'eval-combo',
+        uses: [
+          { name: 'Sol Ring', oracleId: IDS.solRing },
+          { name: 'Tatyova, Benthic Druid', oracleId: IDS.commanderCard },
+        ],
+        produces: ['Infinite card draw'],
+        manaNeeded: null,
+        description: 'Whenever a land enters, draw a card.',
+        popularity: 1,
+        bracketTag: null,
+      },
+    ],
+    almostIncluded: [],
+  }),
+  searchVariants: async () => [],
+});
 
 const loadCases = (): EvalCase[] => {
   const raw = JSON.parse(readFileSync(join(here, 'cases.json'), 'utf8')) as EvalCase[];
@@ -206,6 +244,7 @@ describe('chat fixture evals', () => {
       chat as unknown as ChatService,
       { listForPrompt: async () => [] } as unknown as RecommendationsService,
       silentLogger,
+      stubSpellbook(),
     );
 
     const events: ChatServerEvent[] = [];
