@@ -42,20 +42,20 @@ const collect = async (messages: ProviderMessage[], system = ''): Promise<Provid
 const toolEnd = (events: ProviderEvent[]) => events.find((event) => event.type === 'tool-call-end');
 
 describe('catalogSearchInput', () => {
-  it('omits q for conversational deck-add prompts', () => {
+  it('omits scryfall for conversational deck-add prompts', () => {
     expect(catalogSearchInput('What would be a good add to this deck?')).toEqual({
       limit: SEARCH_CARDS_TOOL_DEFAULT_LIMIT,
     });
   });
 
-  it('keeps short keyword queries and type filters', () => {
+  it('keeps short queries and type filters as scryfall', () => {
     expect(catalogSearchInput('counterspell')).toEqual({
-      q: 'counterspell',
+      scryfall: 'counterspell',
       limit: SEARCH_CARDS_TOOL_DEFAULT_LIMIT,
     });
     expect(catalogSearchInput('Suggest three creatures')).toEqual({
       limit: SEARCH_CARDS_TOOL_DEFAULT_LIMIT,
-      typeContains: 'Creature',
+      scryfall: 't:creature',
     });
   });
 });

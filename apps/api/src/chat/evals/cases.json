@@ -36,7 +36,7 @@
     "rounds": [
       { "toolCalls": [{ "name": "getDeck", "input": {} }] },
       {
-        "toolCalls": [{ "name": "searchCards", "input": { "typeContains": "Creature" } }]
+        "toolCalls": [{ "name": "searchCards", "input": { "scryfall": "t:creature" } }]
       },
       {
         "toolCalls": [
@@ -60,7 +60,7 @@
     "user": "Give me interaction",
     "rounds": [
       { "toolCalls": [{ "name": "getDeck", "input": {} }] },
-      { "toolCalls": [{ "name": "searchCards", "input": { "q": "counter" } }] },
+      { "toolCalls": [{ "name": "searchCards", "input": { "scryfall": "counter" } }] },
       {
         "toolCalls": [
           {
@@ -86,7 +86,7 @@
     "user": "More rocks",
     "rounds": [
       { "toolCalls": [{ "name": "getDeck", "input": {} }] },
-      { "toolCalls": [{ "name": "searchCards", "input": { "typeContains": "Artifact" } }] },
+      { "toolCalls": [{ "name": "searchCards", "input": { "scryfall": "t:artifact" } }] },
       {
         "toolCalls": [
           {
@@ -133,9 +133,7 @@
     "rounds": [
       { "toolCalls": [{ "name": "getDeck", "input": {} }] },
       {
-        "toolCalls": [
-          { "name": "searchCards", "input": { "q": "counter", "typeContains": "Instant" } }
-        ]
+        "toolCalls": [{ "name": "searchCards", "input": { "scryfall": "t:instant counter" } }]
       },
       {
         "toolCalls": [
@@ -182,7 +180,7 @@
     "deckId": null,
     "user": "Show me some counterspells",
     "rounds": [
-      { "toolCalls": [{ "name": "searchCards", "input": { "q": "counter" } }] },
+      { "toolCalls": [{ "name": "searchCards", "input": { "scryfall": "counter" } }] },
       {
         "toolCalls": [
           {
@@ -269,6 +267,31 @@
     "expect": {
       "tools": ["getDeck", "lookupCombos"],
       "noCardParts": true
+    }
+  },
+  {
+    "id": "scryfall-creature-search",
+    "user": "Find green creatures with Scryfall syntax",
+    "rounds": [
+      { "toolCalls": [{ "name": "getDeck", "input": {} }] },
+      {
+        "toolCalls": [{ "name": "searchCards", "input": { "scryfall": "t:creature id:g" } }]
+      },
+      {
+        "toolCalls": [
+          {
+            "name": "presentRecommendations",
+            "input": {
+              "cardIds": ["00000000-0000-4000-8000-000000000009"]
+            }
+          }
+        ]
+      },
+      { "text": "Birds of Paradise matches t:creature id:g." }
+    ],
+    "expect": {
+      "tools": ["getDeck", "searchCards", "presentRecommendations"],
+      "recommendationIds": ["00000000-0000-4000-8000-000000000009"]
     }
   }
 ]

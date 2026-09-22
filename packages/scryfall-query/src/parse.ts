@@ -245,6 +245,16 @@ const parseClauseValue = (field: Field, op: CompareOp, raw: string): ClauseValue
     case 'group':
     case 'setType':
       return { kind: 'text', text: value };
+    case 'format': {
+      if (op !== ':' && op !== '=' && op !== '!=') {
+        throw new ScryfallQueryError(`format does not support operator “${op}”`);
+      }
+      const format = value.toLowerCase();
+      if (!/^[a-z][a-z0-9]*$/.test(format)) {
+        throw new ScryfallQueryError(`Invalid format “${value}”`);
+      }
+      return { kind: 'text', text: format };
+    }
     case 'mana':
     case 'devotion':
     case 'produces':

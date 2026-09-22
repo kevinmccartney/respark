@@ -285,17 +285,28 @@ const uuidListQuerySchema = z.preprocess((value: unknown) => {
 }, z.array(uuidSchema).max(CARD_SEARCH_EXCLUDE_IDS_MAX).optional());
 
 export const cardSearchQuerySchema = z.object({
+  /**
+   * Legacy keyword ILIKE across name/type/oracle/…. Prefer `scryfall` (bare name or field
+   * clauses). Still accepted for old bookmarks and chat until callers finish migrating.
+   */
   q: z.string().optional(),
-  /** Scryfall search syntax; parsed locally and compiled to SQL. */
+  /** Primary match language: Scryfall syntax parsed locally and compiled to SQL. */
   scryfall: optionalQueryString(z.string().trim().min(1).max(CARD_SEARCH_SCRYFALL_QUERY_MAX)),
+  /** Legacy — prefer `f:` / `format:` in `scryfall`. Still used by chat deck inject. */
   legalIn: legalInQuerySchema,
+  /** Legacy — prefer `id:` / `identity:` in `scryfall`. Still used by chat deck inject. */
   colorIdentity: colorIdentityQuerySchema,
-  /** When false, empty identity is excluded from color filters (admin browse). Default true for deck building. */
+  /** When false, empty identity is excluded from color filters. Only applies with `colorIdentity`. */
   includeColorless: queryBoolSchema,
+  /** Leadership-skills filter for commander pickers (not Scryfall syntax). */
   commanderEligible: queryBoolSchema,
+  /** Legacy — prefer `t:` / `type:` in `scryfall`. */
   typeContains: typeContainsQuerySchema,
+  /** Legacy — prefer `r:` / `rarity:` in `scryfall`. */
   rarity: rarityQuerySchema,
+  /** Legacy — prefer `mv<=N` in `scryfall`. */
   maxManaValue: queryIntSchema(0, 20),
+  /** Chat / tooling: exclude known card ids from results. */
   excludeCardIds: uuidListQuerySchema,
   sort: optionalQueryString(cardSearchSortSchema),
   dir: optionalQueryString(sortDirSchema),

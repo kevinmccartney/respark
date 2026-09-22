@@ -248,12 +248,37 @@ export class CardsService {
 
     const cards = pageResult.rows.map(toCard);
 
+    const legacyMatch =
+      q.length > 0 ||
+      Boolean(opts.legalIn) ||
+      Boolean(opts.colorIdentity?.length) ||
+      Boolean(opts.typeContains) ||
+      Boolean(opts.rarity?.length) ||
+      opts.maxManaValue !== undefined;
+
+    if (legacyMatch) {
+      this.logger.debug(
+        {
+          event: 'cards.search.legacy_filters',
+          q: q || null,
+          legalIn: opts.legalIn ?? null,
+          colorIdentity: opts.colorIdentity?.join('') ?? null,
+          typeContains: opts.typeContains ?? null,
+          rarity: opts.rarity ?? null,
+          maxManaValue: opts.maxManaValue ?? null,
+          hasScryfall: Boolean(scryfallQ),
+        },
+        'GET /cards used legacy match filters; prefer scryfall',
+      );
+    }
+
     this.logger.info(
       {
         event: 'cards.search',
         q: q || null,
         qLength: q.length,
         scryfall: scryfallQ || null,
+        legacyMatch,
         legalIn: opts.legalIn ?? null,
         colorIdentity: opts.colorIdentity?.join('') ?? null,
         commanderEligible: opts.commanderEligible ?? null,

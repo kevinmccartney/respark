@@ -464,6 +464,7 @@ const toolLogFields = (
     inputKeys: Object.keys(input),
   };
   if (typeof input.q === 'string') fields.q = input.q;
+  if (typeof input.scryfall === 'string') fields.scryfall = input.scryfall;
   if (typeof input.typeContains === 'string') fields.typeContains = input.typeContains;
   if (typeof input.cardId === 'string') fields.cardId = input.cardId;
   if (typeof input.limit === 'number') fields.limit = input.limit;

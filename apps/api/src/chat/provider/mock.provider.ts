@@ -114,18 +114,17 @@ export const isDeckAddAsk = (text: string): boolean =>
   /\b(good add|add to this deck|recommend\w* (?:for|to) (?:this )?deck)\b/i.test(text);
 
 /**
- * Keyword `q` only when the utterance looks like a catalog query.
- * Conversational sentences ("what would be a good add…") must not be ILIKE'd.
+ * Prefer scryfall for catalog angles. Conversational sentences must not become a query.
  */
 export const catalogSearchInput = (text: string): Record<string, unknown> => {
   const input: Record<string, unknown> = { limit: SEARCH_CARDS_TOOL_DEFAULT_LIMIT };
   const lower = text.toLowerCase();
-  if (/\bcreatures?\b/.test(lower)) input.typeContains = 'Creature';
-  else if (/\binstants?\b/.test(lower)) input.typeContains = 'Instant';
-  else if (/\bsorcer(?:y|ies)\b/.test(lower)) input.typeContains = 'Sorcery';
-  else if (/\bartifacts?\b/.test(lower) || /\brocks?\b/.test(lower))
-    input.typeContains = 'Artifact';
-  if (/\bcheap\b/.test(lower) || /\bone[- ]mana\b/.test(lower)) input.maxManaValue = 1;
+  const clauses: string[] = [];
+  if (/\bcreatures?\b/.test(lower)) clauses.push('t:creature');
+  else if (/\binstants?\b/.test(lower)) clauses.push('t:instant');
+  else if (/\bsorcer(?:y|ies)\b/.test(lower)) clauses.push('t:sorcery');
+  else if (/\bartifacts?\b/.test(lower) || /\brocks?\b/.test(lower)) clauses.push('t:artifact');
+  if (/\bcheap\b/.test(lower) || /\bone[- ]mana\b/.test(lower)) clauses.push('mv<=1');
 
   const trimmed = text.trim().replace(/[?!.]+$/g, '');
   const words = trimmed.split(/\s+/).filter(Boolean);
@@ -134,7 +133,8 @@ export const catalogSearchInput = (text: string): Record<string, unknown> => {
     /^(what|who|how|why|where|suggest|recommend|give|show|tell|can|could|please|i|a|an|the)$/.test(
       first,
     );
-  if (trimmed && words.length <= 3 && !skipFirst) input.q = trimmed;
+  if (trimmed && words.length <= 3 && !skipFirst) clauses.push(trimmed);
+  if (clauses.length > 0) input.scryfall = clauses.join(' ');
   return input;
 };
 

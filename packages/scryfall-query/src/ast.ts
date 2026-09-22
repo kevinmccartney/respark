@@ -23,6 +23,7 @@ export type Field =
   | 'group'
   | 'setType'
   | 'in'
+  | 'format'
   | 'is'
   | 'has'
   | 'new';

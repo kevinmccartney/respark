@@ -38,7 +38,7 @@ Match existing admin chrome: table + filter form, pagination ([`OffsetPagination
 
 **Columns:** optional thumb, name, type line, mana cost, rarity (representative printing), legal formats, game-changer / goodstuff badges.
 
-**Filters:** `q` (local name/text ILIKE), `scryfall` (local Scryfall-syntax parser → SQL; colors / types / oracle / mana / rarity / sets), `legalIn`, `colorIdentity`, `typeContains` (comma-separated tokens, AND), `rarity` (comma-separated, OR; matches representative printing), `sort` (`name` \| `edhrecRank` \| `manaValue`) — same shape as player [`GET /cards`](../apps/api/src/cards/cards.controller.ts). Scryfall and structured filters combine with **AND**. Unsupported Scryfall keywords return **400**. After adding catalog columns for `produced_mana` / `has_color_indicator` / `booster` / `promo_types` / set `block`, re-run a catalog sync so those fields populate. Syntax reference: [scryfall.com/docs/syntax](https://scryfall.com/docs/syntax).
+**Filters:** `scryfall` (local Scryfall-syntax → SQL; colors / types / oracle / mana / rarity / sets / format `f:`), `sort` (`name` \| `edhrecRank` \| `manaValue`), `dir`, pagination. Column headers control sort. Unsupported Scryfall keywords return **400**. In-app **syntax** help documents the supported subset ([`packages/scryfall-query/SYNTAX.md`](../packages/scryfall-query/SYNTAX.md)); full public reference: [scryfall.com/docs/syntax](https://scryfall.com/docs/syntax).
 
 Row click → card detail.
 
@@ -69,8 +69,10 @@ Set metadata (code, name, type, released, card count, digital, Scryfall id).
 
 ### Cards (reuse)
 
-- `GET /cards` — list/search (existing). Optional `scryfall` is parsed locally (`packages/scryfall-query`) and compiled to SQL; invalid/unsupported syntax → 400.
+- `GET /cards` — catalog search. Primary: `scryfall` (+ `sort` / `dir` / pagination). Legacy structured match params (`q`, `legalIn`, `colorIdentity`, `typeContains`, `rarity`, …) still work but catalog UIs no longer send them — prefer Scryfall clauses. Invalid/unsupported `scryfall` → 400.
 - `GET /cards/:id` — detail including `printings[]` (existing).
+- `GET /cards/suggestions` — name autocomplete for pickers (not full search).
+- `GET /cards/type-suggestions` — legacy; unused by current admin UI.
 
 Admin is already Clerk-authenticated. No catalog write routes.
 

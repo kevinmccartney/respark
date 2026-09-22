@@ -87,6 +87,7 @@ services:
       - ./apps/client/vite.config.ts:/repo/apps/client/vite.config.ts
       - ./packages/schemas:/repo/packages/schemas
       - ./packages/ui:/repo/packages/ui
+      - ./packages/scryfall-query:/repo/packages/scryfall-query
     depends_on:
       - api
 
@@ -111,6 +112,7 @@ services:
       - ./apps/admin/vite.config.ts:/repo/apps/admin/vite.config.ts
       - ./packages/schemas:/repo/packages/schemas
       - ./packages/ui:/repo/packages/ui
+      - ./packages/scryfall-query:/repo/packages/scryfall-query
     depends_on:
       - api
 

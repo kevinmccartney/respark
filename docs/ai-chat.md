@@ -29,7 +29,7 @@ HTTP is for CRUD only: `GET /chat/conversations` (latest for the user) and `GET 
 **Context:** `chat.send` `context` has two layers:
 
 - **Sticky discussion** — `deckId` / `cardId`. Omit to keep the stored id; send `null` to clear; send a uuid to attach (`requireOwnedDeck` / `requireCatalogCard`). These survive navigation and live on `chat_conversation`. Do not infer them from the open route.
-- **App view** — `view` metadata for this turn only (`area`, optional viewing deck/card ids, search `q`). Not stored on the conversation. Routes never attach or clear sticky ids.
+- **App view** — `view` metadata for this turn only (`area`, optional viewing deck/card ids, search `scryfall`). Not stored on the conversation. Routes never attach or clear sticky ids.
 
 Follow-ups do **not** reject a different sticky `deckId`.
 
@@ -46,7 +46,7 @@ type ChatSend = {
       area: 'home' | 'search' | 'card' | 'deck' | 'new-deck' | 'other';
       deckId?: string;
       cardId?: string;
-      q?: string;
+      scryfall?: string;
     };
   };
 };
@@ -96,9 +96,9 @@ type ToolContext = {
 
 **`listDecks`** — Compact `{ id, name, format, colorIdentity }` for the signed-in user (cap 50). Use this to pick an id for `getDeck` instead of guessing UUIDs.
 
-**`getDeck`** — Auth: `requireOwnedDeck`. Compact deck: id, name, description, format, **color identity** (commander identity on commander format; otherwise union of mainboard), `commander` `{ printingId, cardId, name, typeLine, oracleText, keywords }` or `null`, card count, lines `{ cardId, name, typeLine, manaValue, colorIdentity, keywords, quantity, sideboard }` **without image URLs or per-line oracle**, plus `stats` (type counts, mana curve, top-12 `keywordCounts`). Cap lines (400) with a truncated flag. Commander is never inferred. Use commander oracle + `keywordCounts` when choosing `searchCards` `q` / `typeContains`.
+**`getDeck`** — Auth: `requireOwnedDeck`. Compact deck: id, name, description, format, **color identity** (commander identity on commander format; otherwise union of mainboard), `commander` `{ printingId, cardId, name, typeLine, oracleText, keywords }` or `null`, card count, lines `{ cardId, name, typeLine, manaValue, colorIdentity, keywords, quantity, sideboard }` **without image URLs or per-line oracle**, plus `stats` (type counts, mana curve, top-12 `keywordCounts`). Cap lines (400) with a truncated flag. Commander is never inferred. Use commander oracle + `keywordCounts` when choosing `searchCards` `scryfall`.
 
-**`searchCards`** — Same structured filters as HTTP `GET /cards` (`q`, `colorIdentity`, `legalIn`, `typeContains`, `maxManaValue`, `excludeCardIds`). Tool max **50** (default 25). When the conversation has a deck, the **tool layer** (not the model) always injects `legalIn` from deck format, `excludeCardIds` from the current list, and `colorIdentity` from the commander when `format === 'commander'`. Without a deck, the model may pass `legalIn` / `colorIdentity` if the player named a format or colors.
+**`searchCards`** — Prefer local Scryfall syntax via `scryfall` (colors/identity, types, oracle/keywords, mana/mv, rarity, sets, format `f:`, flags). Legacy structured filters (`q`, `colorIdentity`, `legalIn`, `typeContains`, `maxManaValue`) still work on `GET /cards` / the tool but catalog UIs no longer send them. Tool max **50** (default 25). When the conversation has a deck, the **tool layer** (not the model) always injects `legalIn` from deck format, `excludeCardIds` from the current list, and `colorIdentity` from the commander when `format === 'commander'` (do not also pass `f:` for that format). Without a deck, prefer `f:` / `id:` in `scryfall`. Unsupported Scryfall keywords fail the tool (`bad_request`).
 
 **`getCard`** — `{ cardId }`. Reuse `getById`; include legalities and color identity; omit bulky printing lists (the client hydrates by id). A successful load persists sticky `card_id` the same way `getDeck` persists `deck_id`.
 
@@ -128,7 +128,7 @@ getDeck (sticky or explicit owned id)
   → format, commander oracle/keywords, colorIdentity, in-deck cardIds, type/curve/keyword stats
 searchCards({
   colorIdentity / legalIn / excludeCardIds injected by the tool layer
-  q or typeContains from the commander / keywordCounts / player
+  scryfall from the commander / keywordCounts / player (e.g. t:creature kw:flying)
   limit: 25
 })
   → presentRecommendations (player’s count, or the strong fits — not a default of 3)
@@ -137,7 +137,7 @@ searchCards({
 
 Without a sticky deck, skip `getDeck` unless the player named a list; do not inject format/identity/excludes.
 
-Do **not** send the catalog. Do **not** require pgvector. Keyword `q` is still weak for "interaction"; identity + legality + exclude + a 25-hit search is the MVP bet. `GET /cards` defaults to `sort=name`. Chat `searchCards` defaults to `sort=edhrecRank` (most played in Commander first); pass `sort=name` for A–Z. Name match still wins when `q` is set. Hits include `keywords` and may include a `goodstuff` flag (with tags) from the admin goodstuff list — generically strong cards the model should skip unless the player asked for that class or the attached deck already plays that pattern. After `presentRecommendations`, if the slate is only goodstuff while the same search had other hits, the API logs `chat.recommend_policy` (soft warn; the player still sees the slate). Offline evals include a `goodstuff-only-slate` scorer for that helper — they do not grade Haiku. Per-commander inclusion (what people put in _this_ commander) is not ingested; see [commander-stats.md](commander-stats.md).
+Do **not** send the catalog. Do **not** require pgvector. Prefer `scryfall` over bare keyword `q`; identity + legality inject + exclude + a 25-hit search is the MVP bet. `GET /cards` defaults to `sort=name`. Chat `searchCards` defaults to `sort=edhrecRank` (most played in Commander first); pass `sort=name` for A–Z. Hits include `keywords` and may include a `goodstuff` flag (with tags) from the admin goodstuff list — generically strong cards the model should skip unless the player asked for that class or the attached deck already plays that pattern. After `presentRecommendations`, if the slate is only goodstuff while the same search had other hits, the API logs `chat.recommend_policy` (soft warn; the player still sees the slate). Offline evals include a `goodstuff-only-slate` scorer for that helper — they do not grade Haiku. Per-commander inclusion (what people put in _this_ commander) is not ingested; see [commander-stats.md](commander-stats.md).
 
 ## Structured parts
 
@@ -238,6 +238,6 @@ Vitest in `apps/api`. CI runs fixture evals **without Bedrock**:
 
 ## Out of MVP
 
-Collection, prices, tournaments, rules RAG, pgvector / semantic search, multi-agent, Scryfall search syntax, autonomous deck edits, partner commanders, per-commander EDHREC inclusion ([commander-stats.md](commander-stats.md)).
+Collection, prices, tournaments, rules RAG, pgvector / semantic search, multi-agent, autonomous deck edits, partner commanders, per-commander EDHREC inclusion ([commander-stats.md](commander-stats.md)).
 
 New capability later = domain service → Zod tool → register → eval. Same orchestrator.

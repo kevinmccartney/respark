@@ -1,5 +1,5 @@
 import { isoDateTimeSchema, uuidSchema } from './primitives.js';
-import { cardSearchSortSchema } from './cards.js';
+import { CARD_SEARCH_SCRYFALL_QUERY_MAX, cardSearchSortSchema } from './cards.js';
 import { colorIdentitySchema, deckFormatSchema } from './decks.js';
 import { z } from 'zod';
 
@@ -23,19 +23,18 @@ export const chatViewSchema = z
     area: chatViewAreaSchema,
     deckId: uuidSchema.optional(),
     cardId: uuidSchema.optional(),
-    q: z.string().trim().min(1).max(200).optional(),
+    scryfall: z.string().trim().min(1).max(CARD_SEARCH_SCRYFALL_QUERY_MAX).optional(),
   })
   .strict();
 
 export type ChatView = z.infer<typeof chatViewSchema>;
 
 export const chatViewFromLocation = (pathname: string, search = ''): ChatView => {
-  const query = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
-    .get('q')
-    ?.trim();
-  const q = query ? query.slice(0, 200) : undefined;
+  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  const scryfallRaw = params.get('scryfall')?.trim();
+  const scryfall = scryfallRaw ? scryfallRaw.slice(0, CARD_SEARCH_SCRYFALL_QUERY_MAX) : undefined;
   if (pathname === '/home') return { area: 'home' };
-  if (pathname === '/search') return q ? { area: 'search', q } : { area: 'search' };
+  if (pathname === '/search') return scryfall ? { area: 'search', scryfall } : { area: 'search' };
   if (pathname === '/decks/new') return { area: 'new-deck' };
   const deckMatch = /^\/decks\/([^/]+)$/.exec(pathname);
   if (deckMatch?.[1] && uuidSchema.safeParse(deckMatch[1]).success) {
@@ -265,6 +264,7 @@ export type ListDecksResult = z.infer<typeof listDecksResultSchema>;
 export const searchCardsInputSchema = z
   .object({
     q: z.string().trim().max(200).optional(),
+    scryfall: z.string().trim().min(1).max(CARD_SEARCH_SCRYFALL_QUERY_MAX).optional(),
     colorIdentity: colorIdentitySchema.optional(),
     legalIn: deckFormatSchema.optional(),
     typeContains: z.string().trim().min(1).max(80).optional(),

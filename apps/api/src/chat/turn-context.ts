@@ -63,6 +63,6 @@ const formatView = (view?: ChatView): string => {
   const lines = [`- area: ${view.area}`];
   if (view.deckId) lines.push(`- viewingDeckId: ${view.deckId}`);
   if (view.cardId) lines.push(`- viewingCardId: ${view.cardId}`);
-  if (view.q) lines.push(`- searchQ: ${view.q}`);
+  if (view.scryfall) lines.push(`- searchScryfall: ${view.scryfall}`);
   return lines.join('\n');
 };

@@ -117,6 +117,7 @@ const stubCards = (): CardsService =>
   ({
     search: async (opts: {
       q?: string;
+      scryfall?: string;
       legalIn?: string;
       colorIdentity?: string[];
       typeContains?: string;

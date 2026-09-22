@@ -65,6 +65,7 @@ describe('searchCardsTool', () => {
 
     expect(search).toHaveBeenCalledWith({
       q: 'draw',
+      scryfall: undefined,
       typeContains: undefined,
       maxManaValue: undefined,
       legalIn: 'commander',
@@ -98,6 +99,7 @@ describe('searchCardsTool', () => {
     expect(getForUser).not.toHaveBeenCalled();
     expect(search).toHaveBeenCalledWith({
       q: 'counterspell',
+      scryfall: undefined,
       typeContains: undefined,
       maxManaValue: undefined,
       legalIn: 'modern',
@@ -106,6 +108,56 @@ describe('searchCardsTool', () => {
       sort: 'edhrecRank',
       limit: 10,
       page: 1,
+    });
+  });
+
+  it('passes scryfall through to cards.search', async () => {
+    const search = vi.fn(async (): Promise<CardSearchPage> => ({
+      cards: [],
+      total: 0,
+      page: 1,
+      pageSize: 15,
+      totalPages: 0,
+    }));
+    const tool = searchCardsTool(
+      { getForUser: vi.fn() } as unknown as DecksService,
+      { search } as unknown as CardsService,
+    );
+
+    await tool.execute(
+      { scryfall: 't:creature id:g mv<=3' },
+      { clerkUserId: 'user_1', deckId: null, cardId: null, retrievedCardIds: new Set() },
+    );
+
+    expect(search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scryfall: 't:creature id:g mv<=3',
+        sort: 'edhrecRank',
+      }),
+    );
+  });
+
+  it('surfaces invalid scryfall as bad_request via executeChatTool', async () => {
+    const { BadRequestException } = await import('@nestjs/common');
+    const { executeChatTool } = await import('./registry');
+    const search = vi.fn(async () => {
+      throw new BadRequestException('Unsupported Scryfall keyword “pow”');
+    });
+    const tool = searchCardsTool(
+      { getForUser: vi.fn() } as unknown as DecksService,
+      { search } as unknown as CardsService,
+    );
+
+    const result = await executeChatTool(
+      tool as never,
+      { scryfall: 'pow>1' },
+      { clerkUserId: 'user_1', deckId: null, cardId: null, retrievedCardIds: new Set() },
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      code: 'bad_request',
+      message: 'Unsupported Scryfall keyword “pow”',
     });
   });
 

@@ -1,7 +1,7 @@
 import type { Field } from './ast.js';
 import { ScryfallQueryError } from './error.js';
 
-/** Supported field aliases for the six Scryfall sections in scope. */
+/** Supported field aliases for colors, types, oracle, mana, rarity, sets, and format. */
 export const FIELD_ALIASES: Record<string, Field> = {
   c: 'color',
   color: 'color',
@@ -35,6 +35,8 @@ export const FIELD_ALIASES: Record<string, Field> = {
   group: 'group',
   st: 'setType',
   in: 'in',
+  f: 'format',
+  format: 'format',
   is: 'is',
   has: 'has',
   new: 'new',
@@ -45,8 +47,6 @@ export const FIELD_ALIASES: Record<string, Field> = {
  * Using them returns a clear unsupported error rather than treating them as names.
  */
 export const UNSUPPORTED_FIELD_ALIASES: Record<string, string> = {
-  f: 'format',
-  format: 'format',
   banned: 'banned',
   restricted: 'restricted',
   pow: 'power',
@@ -115,7 +115,7 @@ export const resolveField = (raw: string): Field => {
   const unsupported = UNSUPPORTED_FIELD_ALIASES[key];
   if (unsupported) {
     throw new ScryfallQueryError(
-      `Unsupported Scryfall keyword “${raw}” (not in local colors/types/oracle/mana/rarity/sets support yet)`,
+      `Unsupported Scryfall keyword “${raw}” (not in local colors/types/oracle/mana/rarity/sets/format support yet)`,
       'unsupported',
     );
   }

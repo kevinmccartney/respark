@@ -2,13 +2,9 @@ import { useAuth } from '@clerk/react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  CARD_SEARCH_COLOR_FILTERS,
   CARD_SEARCH_DEFAULT_SORT,
-  CARD_SEARCH_RARITIES,
   CARD_SEARCH_SORTS,
   defaultCardSortDir,
-  type CardSearchColorFilter,
-  type CardSearchRarity,
   type CardSearchResult,
   type CardSearchSort,
 } from 'schemas/cards';
@@ -20,12 +16,9 @@ import { Badge } from '@/core/ui/badge';
 import { Button } from '@/core/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/core/ui/table';
 import { applyAdminLoadError, OffsetPagination } from '@/core';
-import { ColorIdentityFilter } from '../components/ColorIdentityFilter.tsx';
 import { CardThumb } from '../components/CardThumb.tsx';
-import { LegalInFilter } from '../components/LegalInFilter.tsx';
-import { RarityFilter } from '../components/RarityFilter.tsx';
+import { ScryfallSyntaxDialog } from '../components/ScryfallSyntaxDialog.tsx';
 import { SortableHead } from '../components/SortableHead.tsx';
-import { TypeContainsField } from '../components/TypeContainsField.tsx';
 import { searchCards } from '../lib/cards.ts';
 
 const PAGE_SIZE = 40;
@@ -41,34 +34,6 @@ const isCardSearchSort = (value: string): value is CardSearchSort =>
 
 const isSortDir = (value: string): value is SortDir =>
   (SORT_DIRS as readonly string[]).includes(value);
-
-const parseColorIdentity = (raw: string): CardSearchColorFilter[] =>
-  raw
-    .split(',')
-    .map((part) => part.trim())
-    .filter((part): part is CardSearchColorFilter =>
-      (CARD_SEARCH_COLOR_FILTERS as readonly string[]).includes(part),
-    );
-
-const parseLegalIn = (raw: string): DeckFormat[] =>
-  raw
-    .split(',')
-    .map((part) => part.trim())
-    .filter((part): part is DeckFormat => (DECK_FORMATS as readonly string[]).includes(part));
-
-const parseTypeContains = (raw: string): string[] =>
-  raw
-    .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-const parseRarity = (raw: string): CardSearchRarity[] =>
-  raw
-    .split(',')
-    .map((part) => part.trim())
-    .filter((part): part is CardSearchRarity =>
-      (CARD_SEARCH_RARITIES as readonly string[]).includes(part),
-    );
 
 const formatLegalities = (card: CardSearchResult): string => {
   if (!card.legalities) return '—';
@@ -90,30 +55,14 @@ export const CardsListPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const qParam = searchParams.get('q') ?? '';
   const scryfallParam = searchParams.get('scryfall') ?? '';
-  const legalInParam = searchParams.get('legalIn') ?? '';
-  const colorIdentityParam = searchParams.get('colorIdentity') ?? '';
-  const typeContainsParam = searchParams.get('typeContains') ?? '';
-  const rarityParam = searchParams.get('rarity') ?? '';
   const sortRaw = searchParams.get('sort') ?? CARD_SEARCH_DEFAULT_SORT;
   const sortParam = isCardSearchSort(sortRaw) ? sortRaw : CARD_SEARCH_DEFAULT_SORT;
   const dirRaw = searchParams.get('dir');
   const dirParam = dirRaw && isSortDir(dirRaw) ? dirRaw : defaultCardSortDir(sortParam);
   const pageParam = Math.max(1, Number(searchParams.get('page') ?? '1') || 1);
 
-  const [draftQ, setDraftQ] = useState(qParam);
   const [draftScryfall, setDraftScryfall] = useState(scryfallParam);
-  const [draftLegalIn, setDraftLegalIn] = useState<DeckFormat[]>(() => parseLegalIn(legalInParam));
-  const [draftColorIdentity, setDraftColorIdentity] = useState<CardSearchColorFilter[]>(() =>
-    parseColorIdentity(colorIdentityParam),
-  );
-  const [draftTypeContains, setDraftTypeContains] = useState<string[]>(() =>
-    parseTypeContains(typeContainsParam),
-  );
-  const [draftRarity, setDraftRarity] = useState<CardSearchRarity[]>(() =>
-    parseRarity(rarityParam),
-  );
 
   const [rows, setRows] = useState<CardSearchResult[]>([]);
   const [total, setTotal] = useState(0);
@@ -121,15 +70,11 @@ export const CardsListPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const [syntaxOpen, setSyntaxOpen] = useState(false);
 
   useEffect(() => {
-    setDraftQ(qParam);
     setDraftScryfall(scryfallParam);
-    setDraftLegalIn(parseLegalIn(legalInParam));
-    setDraftColorIdentity(parseColorIdentity(colorIdentityParam));
-    setDraftTypeContains(parseTypeContains(typeContainsParam));
-    setDraftRarity(parseRarity(rarityParam));
-  }, [qParam, scryfallParam, legalInParam, colorIdentityParam, typeContainsParam, rarityParam]);
+  }, [scryfallParam]);
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
@@ -137,21 +82,10 @@ export const CardsListPage = () => {
       setError(null);
       setForbidden(false);
       try {
-        const colorIdentity = parseColorIdentity(colorIdentityParam);
-        const legalIn = parseLegalIn(legalInParam);
-        const typeContains = parseTypeContains(typeContainsParam);
-        const rarity = parseRarity(rarityParam);
         const result = await searchCards(
           getToken,
           {
-            q: qParam || undefined,
             scryfall: scryfallParam || undefined,
-            legalIn: legalIn.length > 0 ? legalIn : undefined,
-            colorIdentity: colorIdentity.length > 0 ? colorIdentity : undefined,
-            // Colored pips without C exclude empty identity; C opts colorless back in.
-            includeColorless: colorIdentity.length === 0 ? undefined : colorIdentity.includes('C'),
-            typeContains: typeContains.length > 0 ? typeContains : undefined,
-            rarity: rarity.length > 0 ? rarity : undefined,
             sort: sortParam,
             dir: dirParam,
             limit: PAGE_SIZE,
@@ -176,20 +110,7 @@ export const CardsListPage = () => {
         if (!signal?.aborted) setLoading(false);
       }
     },
-    [
-      getToken,
-      qParam,
-      scryfallParam,
-      legalInParam,
-      colorIdentityParam,
-      typeContainsParam,
-      rarityParam,
-      sortParam,
-      dirParam,
-      pageParam,
-      searchParams,
-      setSearchParams,
-    ],
+    [getToken, scryfallParam, sortParam, dirParam, pageParam, searchParams, setSearchParams],
   );
 
   useEffect(() => {
@@ -201,34 +122,8 @@ export const CardsListPage = () => {
   const applyFilters = (event: FormEvent) => {
     event.preventDefault();
     const next = new URLSearchParams();
-    const q = draftQ.trim();
-    if (q) next.set('q', q);
     const scryfall = draftScryfall.trim();
     if (scryfall) next.set('scryfall', scryfall);
-    if (draftLegalIn.length > 0) {
-      next.set('legalIn', DECK_FORMATS.filter((format) => draftLegalIn.includes(format)).join(','));
-    }
-    if (draftColorIdentity.length > 0) {
-      next.set(
-        'colorIdentity',
-        CARD_SEARCH_COLOR_FILTERS.filter((pip) => draftColorIdentity.includes(pip)).join(','),
-      );
-    }
-    if (draftTypeContains.length > 0) {
-      next.set(
-        'typeContains',
-        draftTypeContains
-          .map((token) => token.trim())
-          .filter(Boolean)
-          .join(','),
-      );
-    }
-    if (draftRarity.length > 0) {
-      next.set(
-        'rarity',
-        CARD_SEARCH_RARITIES.filter((rarity) => draftRarity.includes(rarity)).join(','),
-      );
-    }
     writeSortParams(next, sortParam, dirParam);
     setSearchParams(next);
   };
@@ -268,57 +163,34 @@ export const CardsListPage = () => {
       ) : null}
 
       <form
-        className="mb-5 grid gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10 md:grid-cols-2 lg:grid-cols-3"
+        className="mb-5 flex flex-col gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:flex-row sm:items-end"
         onSubmit={applyFilters}
       >
-        <label className="grid gap-1 text-sm">
-          <span className="text-muted-foreground">Name contains</span>
-          <input
-            className="rounded-md border bg-background px-3 py-2"
-            value={draftQ}
-            onChange={(event) => setDraftQ(event.target.value)}
-            placeholder="Name contains…"
-          />
-        </label>
-        <label className="grid gap-1 text-sm md:col-span-2 lg:col-span-2">
+        <label className="grid min-w-0 flex-1 gap-1 text-sm">
           <span className="text-muted-foreground">
             Scryfall query{' '}
-            <a
-              href="https://scryfall.com/docs/syntax"
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
               className="text-foreground underline-offset-2 hover:underline"
+              onClick={() => setSyntaxOpen(true)}
             >
               syntax
-            </a>
+            </button>
           </span>
           <input
             className="rounded-md border bg-background px-3 py-2 font-mono text-[0.9em]"
             value={draftScryfall}
             onChange={(event) => setDraftScryfall(event.target.value)}
-            placeholder="t:creature c:g mv<=3"
+            placeholder="t:creature id:g f:commander mv<=3"
             spellCheck={false}
           />
         </label>
-        <div className="grid gap-1 text-sm">
-          <span className="text-muted-foreground">Legal in</span>
-          <LegalInFilter value={draftLegalIn} onChange={setDraftLegalIn} />
-        </div>
-        <div className="grid gap-1 text-sm">
-          <span className="text-muted-foreground">Color identity</span>
-          <ColorIdentityFilter value={draftColorIdentity} onChange={setDraftColorIdentity} />
-        </div>
-        <TypeContainsField value={draftTypeContains} onChange={setDraftTypeContains} />
-        <div className="grid gap-1 text-sm lg:col-span-2">
-          <span className="text-muted-foreground">Rarity</span>
-          <RarityFilter value={draftRarity} onChange={setDraftRarity} />
-        </div>
-        <div className="flex items-end">
-          <Button type="submit" disabled={loading}>
-            Apply
-          </Button>
-        </div>
+        <Button type="submit" disabled={loading}>
+          Apply
+        </Button>
       </form>
+
+      <ScryfallSyntaxDialog open={syntaxOpen} onOpenChange={setSyntaxOpen} />
 
       <p className="mb-2 text-sm text-muted-foreground" aria-live="polite">
         {loading ? 'Loading…' : `${total.toLocaleString()} cards`}

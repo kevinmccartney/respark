@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { parseColorValue } from './colors.js';
-import { ScryfallQueryError } from './error.js';
 import { normalizeManaSymbols } from './mana.js';
 import { parseScryfallQuery } from './parse.js';
 import { parseRarityName, RARITY_RANK } from './rarity.js';
@@ -199,9 +198,33 @@ describe('parseScryfallQuery', () => {
     expect(parseScryfallQuery('"doom blade"')).toEqual({ type: 'name', text: 'doom blade' });
   });
 
+  it('parses format legality', () => {
+    expect(parseScryfallQuery('f:commander')).toEqual({
+      type: 'clause',
+      field: 'format',
+      op: ':',
+      value: { kind: 'text', text: 'commander' },
+    });
+    expect(parseScryfallQuery('format:modern')).toEqual({
+      type: 'clause',
+      field: 'format',
+      op: ':',
+      value: { kind: 'text', text: 'modern' },
+    });
+    expect(parseScryfallQuery('-f:standard')).toEqual({
+      type: 'not',
+      child: {
+        type: 'clause',
+        field: 'format',
+        op: ':',
+        value: { kind: 'text', text: 'standard' },
+      },
+    });
+    expect(() => parseScryfallQuery('f>commander')).toThrow(/does not support operator/);
+  });
+
   it('rejects unsupported and unknown keywords with clear errors', () => {
-    expect(() => parseScryfallQuery('f:commander')).toThrow(ScryfallQueryError);
-    expect(() => parseScryfallQuery('f:commander')).toThrow(/Unsupported Scryfall keyword/);
+    expect(() => parseScryfallQuery('banned:commander')).toThrow(/Unsupported Scryfall keyword/);
     expect(() => parseScryfallQuery('pow>1')).toThrow(/Unsupported Scryfall keyword/);
     expect(() => parseScryfallQuery('usd>1')).toThrow(/Unsupported Scryfall keyword/);
     expect(() => parseScryfallQuery('cube:vintage')).toThrow(/Unsupported/);

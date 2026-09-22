@@ -10,9 +10,9 @@ describe('chatViewFromLocation', () => {
   it('maps signed-in routes', () => {
     expect(chatViewFromLocation('/home')).toEqual({ area: 'home' });
     expect(chatViewFromLocation('/search')).toEqual({ area: 'search' });
-    expect(chatViewFromLocation('/search', '?q=counterspell')).toEqual({
+    expect(chatViewFromLocation('/search', '?scryfall=t:creature+id:g')).toEqual({
       area: 'search',
-      q: 'counterspell',
+      scryfall: 't:creature id:g',
     });
     expect(chatViewFromLocation('/decks/new')).toEqual({ area: 'new-deck' });
     expect(chatViewFromLocation(`/decks/${deckId}`)).toEqual({ area: 'deck', deckId });
@@ -26,12 +26,12 @@ describe('formatTurnContext', () => {
     const text = formatTurnContext({
       stickyDeckId: deckId,
       stickyCardId: null,
-      view: { area: 'search', q: 'bolt' },
+      view: { area: 'search', scryfall: 't:instant counter' },
     });
     expect(text).toContain(`deckId: ${deckId}`);
     expect(text).toContain('cardId: none');
     expect(text).toContain('area: search');
-    expect(text).toContain('searchQ: bolt');
+    expect(text).toContain('searchScryfall: t:instant counter');
     expect(text).toContain('not sticky');
     expect(text).toContain('none yet');
     expect(text).toContain('none configured');

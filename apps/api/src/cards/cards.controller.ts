@@ -53,7 +53,7 @@ export class CardsController {
     };
   }
 
-  /** Distinct type-line tokens from the catalog for typeContains autocomplete. */
+  /** Distinct type-line tokens — legacy typeContains autocomplete (unused by current UI). */
   @Get('type-suggestions')
   async typeSuggestions(
     @Query(zodPipe(cardTypeSuggestionsQuerySchema)) query: CardTypeSuggestionsQuery,

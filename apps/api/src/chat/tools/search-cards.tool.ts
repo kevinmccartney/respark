@@ -34,7 +34,7 @@ export const searchCardsTool = (
 ): ChatTool<SearchCardsInput, SearchCardsToolResult> => ({
   name: 'searchCards',
   description:
-    'Search the catalog. When a sticky deck is attached, the server injects format legality, commander identity (commander format), and in-deck excludes. Otherwise pass legalIn or colorIdentity if the player specified them. After getDeck, pass q or typeContains that match the commander oracle or stats.keywordCounts — do not search with an empty q when the list has a theme. sort defaults to edhrecRank (most played in Commander first); pass name for A-Z.',
+    'Search the catalog. Prefer scryfall (local Scryfall syntax: t:, id:, o:, mv:, f:, r:, e:, …). When a sticky deck is attached, the server still injects format legality, commander identity (commander format), and in-deck excludes — do not pass f: for the deck format. Without a deck, prefer f:commander (or pass legalIn) and id: for colors. After getDeck, build a scryfall query from commander oracle / types / keywordCounts (e.g. t:creature kw:flying); do not search with an empty query when the list has a theme. sort defaults to edhrecRank; pass name for A-Z. Unsupported Scryfall keywords fail the tool.',
   inputSchema: searchCardsInputSchema,
   execute: async (input, ctx) => {
     const limit = Math.min(
@@ -57,6 +57,7 @@ export const searchCardsTool = (
 
     const page = await cards.search({
       q: input.q,
+      scryfall: input.scryfall,
       typeContains: input.typeContains,
       maxManaValue: input.maxManaValue,
       legalIn,

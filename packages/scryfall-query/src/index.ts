@@ -19,3 +19,4 @@ export {
   SUPPORTED_HAS_FLAGS,
   SUPPORTED_NEW_FLAGS,
 } from './fields.js';
+export { SYNTAX_HELP_MARKDOWN } from './syntax-help.js';

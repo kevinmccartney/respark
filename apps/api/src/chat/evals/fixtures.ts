@@ -96,6 +96,7 @@ export const cardMatchesSearchFilters = (
     maxManaValue?: number;
     excludeCardIds?: string[];
     q?: string;
+    scryfall?: string;
   },
 ): boolean => {
   if (opts.excludeCardIds?.includes(card.id)) return false;
@@ -117,6 +118,31 @@ export const cardMatchesSearchFilters = (
   if (opts.q) {
     const hay = `${card.name} ${card.typeLine ?? ''} ${card.oracleText ?? ''}`.toLowerCase();
     if (!hay.includes(opts.q.toLowerCase())) return false;
+  }
+  if (opts.scryfall) {
+    if (!fixtureMatchesScryfall(card, opts.scryfall)) return false;
+  }
+  return true;
+};
+
+/** Lightweight fixture matcher for a few Scryfall clauses used in offline evals. */
+const fixtureMatchesScryfall = (card: FixtureCard, query: string): boolean => {
+  const tokens = query.trim().split(/\s+/).filter(Boolean);
+  for (const token of tokens) {
+    const typeMatch = /^t(?:ype)?:(.+)$/i.exec(token);
+    if (typeMatch?.[1]) {
+      if (!(card.typeLine ?? '').toLowerCase().includes(typeMatch[1].toLowerCase())) return false;
+      continue;
+    }
+    const mvMatch = /^mv<=(\d+)$/i.exec(token);
+    if (mvMatch?.[1]) {
+      const n = Number(card.manaValue);
+      if (!Number.isFinite(n) || n > Number(mvMatch[1])) return false;
+      continue;
+    }
+    if (token.includes(':')) continue;
+    const hay = `${card.name} ${card.typeLine ?? ''} ${card.oracleText ?? ''}`.toLowerCase();
+    if (!hay.includes(token.toLowerCase())) return false;
   }
   return true;
 };

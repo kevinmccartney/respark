@@ -6,6 +6,7 @@ import { Button } from '@/core/ui/button';
 import { Input } from '@/core/ui/input';
 import { Label } from '@/core/ui/label';
 import { ApiError, isAbortError } from '@/core';
+import { ScryfallSyntaxDialog } from '../components/ScryfallSyntaxDialog.tsx';
 import { searchCards, type CardSearchResult } from '../lib/cards.ts';
 
 const PAGE_SIZE_OPTIONS = [24, 60, 100] as const;
@@ -27,12 +28,10 @@ const parsePage = (raw: string | null): number => {
 export const SearchPage = () => {
   const { getToken } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const qParam = searchParams.get('q') ?? '';
   const scryfallParam = searchParams.get('scryfall') ?? '';
   const pageSize = parsePageSize(searchParams.get('pageSize'));
   const pageParam = parsePage(searchParams.get('page'));
 
-  const [input, setInput] = useState(qParam);
   const [scryfallInput, setScryfallInput] = useState(scryfallParam);
   const [cards, setCards] = useState<CardSearchResult[]>([]);
   const [total, setTotal] = useState(0);
@@ -40,10 +39,7 @@ export const SearchPage = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setInput(qParam);
-  }, [qParam]);
+  const [syntaxOpen, setSyntaxOpen] = useState(false);
 
   useEffect(() => {
     setScryfallInput(scryfallParam);
@@ -51,21 +47,17 @@ export const SearchPage = () => {
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
-      const trimmedQ = input.trim();
       const trimmedScryfall = scryfallInput.trim();
-      const currentQ = (searchParams.get('q') ?? '').trim();
       const currentScryfall = (searchParams.get('scryfall') ?? '').trim();
-      if (trimmedQ === currentQ && trimmedScryfall === currentScryfall) return;
+      if (trimmedScryfall === currentScryfall) return;
       const next = new URLSearchParams(searchParams);
-      if (trimmedQ) next.set('q', trimmedQ);
-      else next.delete('q');
       if (trimmedScryfall) next.set('scryfall', trimmedScryfall);
       else next.delete('scryfall');
       next.delete('page');
       setSearchParams(next, { replace: true });
     }, DEBOUNCE_MS);
     return () => window.clearTimeout(handle);
-  }, [input, scryfallInput, searchParams, setSearchParams]);
+  }, [scryfallInput, searchParams, setSearchParams]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -77,7 +69,6 @@ export const SearchPage = () => {
         const result = await searchCards(
           getToken,
           {
-            q: qParam || undefined,
             scryfall: scryfallParam || undefined,
             limit: pageSize,
             page: pageParam,
@@ -110,7 +101,7 @@ export const SearchPage = () => {
     void load();
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
-  }, [getToken, qParam, scryfallParam, pageSize, pageParam]);
+  }, [getToken, scryfallParam, pageSize, pageParam]);
 
   const updateParams = (mutate: (next: URLSearchParams) => void) => {
     const next = new URLSearchParams(searchParams);
@@ -135,67 +126,56 @@ export const SearchPage = () => {
 
   const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const rangeEnd = Math.min(page * pageSize, total);
-  const hasQuery = Boolean(qParam.trim() || scryfallParam.trim());
+  const hasQuery = Boolean(scryfallParam.trim());
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-8">
       <header className="space-y-3 text-left">
         <h1 className="font-heading text-3xl tracking-tight">Card search</h1>
         <p className="max-w-2xl text-muted-foreground">
-          Keyword search across names, type lines, and oracle text — or use{' '}
-          <a
-            href="https://scryfall.com/docs/syntax"
-            target="_blank"
-            rel="noreferrer"
+          Search with Scryfall syntax (colors, types, oracle, mana, rarity, sets, format). See{' '}
+          <button
+            type="button"
             className="underline underline-offset-2"
+            onClick={() => setSyntaxOpen(true)}
           >
-            Scryfall syntax
-          </a>{' '}
-          (colors, types, oracle, mana, rarity, sets). Both combine with AND when set.
+            supported syntax
+          </button>
+          . Unsupported keywords return an error.
         </p>
-        <div className="flex max-w-2xl flex-col gap-3">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Label htmlFor="card-search">Keyword</Label>
-              <Input
-                id="card-search"
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                placeholder="Name / text contains (e.g. urza)"
-                aria-label="Keyword search"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="page-size">Page size</Label>
-              <select
-                id="page-size"
-                value={pageSize}
-                onChange={(event) => setPageSize(Number(event.target.value) as PageSize)}
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              >
-                {PAGE_SIZE_OPTIONS.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="space-y-1.5">
+        <div className="flex max-w-2xl flex-wrap items-end gap-3">
+          <div className="min-w-0 flex-1 space-y-1.5">
             <Label htmlFor="scryfall-search">Scryfall query</Label>
             <Input
               id="scryfall-search"
               value={scryfallInput}
               onChange={(event) => setScryfallInput(event.target.value)}
-              placeholder="t:creature c:g mv<=3"
+              placeholder="t:creature id:g f:commander mv<=3"
               aria-label="Scryfall syntax search"
               spellCheck={false}
               className="font-mono text-[0.9em]"
               autoFocus
             />
           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="page-size">Page size</Label>
+            <select
+              id="page-size"
+              value={pageSize}
+              onChange={(event) => setPageSize(Number(event.target.value) as PageSize)}
+              className="border-input bg-background h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </header>
+
+      <ScryfallSyntaxDialog open={syntaxOpen} onOpenChange={setSyntaxOpen} />
 
       {error ? (
         <Alert variant="destructive">

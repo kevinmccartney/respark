@@ -9,12 +9,14 @@ COPY package.json package-lock.json ./
 COPY apps/client/package.json apps/client/
 COPY packages/schemas/package.json packages/schemas/
 COPY packages/ui/package.json packages/ui/
+COPY packages/scryfall-query/package.json packages/scryfall-query/
 ENV HUSKY=0
-RUN npm ci --workspace=client --workspace=schemas --workspace=ui
+RUN npm ci --workspace=client --workspace=schemas --workspace=ui --workspace=scryfall-query
 
 COPY apps/client apps/client
 COPY packages/schemas packages/schemas
 COPY packages/ui packages/ui
+COPY packages/scryfall-query packages/scryfall-query
 
 WORKDIR /repo/apps/client
 ENV NODE_ENV=development

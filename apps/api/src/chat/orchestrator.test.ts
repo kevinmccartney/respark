@@ -263,6 +263,27 @@ describe('ChatOrchestrator stop logging', () => {
       ]),
     );
   });
+
+  it('logs scryfall on searchCards tool calls', async () => {
+    const lines: LogLine[] = [];
+    await runTurn(
+      new ScriptedChatProvider([
+        {
+          toolCalls: [
+            { name: 'searchCards', input: { scryfall: 't:creature id:g mv<=3', limit: 15 } },
+          ],
+        },
+        { text: 'Here are some creatures.' },
+      ]),
+      capturingLogger(lines),
+    );
+
+    const toolLog = lines.find(
+      (line) => line.obj.event === 'chat.tool' && line.obj.name === 'searchCards',
+    );
+    expect(toolLog?.obj.scryfall).toBe('t:creature id:g mv<=3');
+    expect(toolLog?.obj.ok).toBe(true);
+  });
 });
 
 describe('ChatOrchestrator prose card links', () => {

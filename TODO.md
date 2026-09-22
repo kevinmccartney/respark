@@ -4,6 +4,8 @@ Writing down ideas for the future
 
 ## Stuff to do
 
+- Update pagination with page numbers
+- Remove failure simulation from ETL
 - Mobile cleanup
 - remove/filter non-paper cards
 - Bulk actions

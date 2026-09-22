@@ -101,6 +101,8 @@ const compileClause = (field: Field, op: CompareOp, value: ClauseValue): SQL => 
       return setTypeSql(expectText(value).toLowerCase());
     case 'in':
       return inSql(value);
+    case 'format':
+      return formatLegalSql(op, expectText(value).toLowerCase());
     case 'is':
       return isFlagSql(expectFlag(value));
     case 'has':
@@ -354,6 +356,13 @@ const inSql = (value: ClauseValue): SQL => {
   const text = expectText(value).toLowerCase();
   if (SET_TYPES.has(text)) return setTypeSql(text);
   return setCodeSql(text);
+};
+
+/** Same semantics as structured `legalIn`: `(legalities ->> format) = 'legal'`. */
+const formatLegalSql = (op: CompareOp, format: string): SQL => {
+  const legal = sql`(c.legalities ->> ${format}) = 'legal'`;
+  if (op === '!=') return sql`(NOT (${legal}))`;
+  return legal;
 };
 
 const isFlagSql = (flag: string): SQL => {
