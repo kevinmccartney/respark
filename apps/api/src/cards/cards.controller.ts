@@ -1,4 +1,5 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+
 import {
   CARD_SEARCH_DEFAULT_LIMIT,
   CARD_SEARCH_DEFAULT_SORT,
@@ -9,10 +10,12 @@ import {
   type CardSearchQuery,
   type CardSuggestionsQuery,
   type CardTypeSuggestionsQuery,
-} from 'schemas/cards';
-import { uuidSchema } from 'schemas/primitives';
+} from '@respark/schemas/cards';
+import { uuidSchema } from '@respark/schemas/primitives';
+
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard';
 import { zodPipe } from '../lib/zod-pipe';
+
 import { CardsService } from './cards.service';
 
 @Controller('cards')

@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+
 import {
   ADMIN_LIST_DEFAULT_LIMIT,
   SYNC_LOG_DEFAULT_LIMIT,
@@ -16,16 +17,18 @@ import {
   startEtlSyncBodySchema,
   type AdminListQuery,
   type StartEtlSyncBody,
-} from 'schemas/etl-sync';
+} from '@respark/schemas/etl-sync';
+import { uuidSchema } from '@respark/schemas/primitives';
 import {
   createRecommendationGoodstuffBodySchema,
   type CreateRecommendationGoodstuffBody,
-} from 'schemas/recommendations';
-import { uuidSchema } from 'schemas/primitives';
+} from '@respark/schemas/recommendations';
+
 import { AdminRoleGuard } from '../auth/admin-role.guard';
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard';
 import { zodPipe } from '../lib/zod-pipe';
 import { RecommendationsService } from '../recommendations/recommendations.service';
+
 import { AdminEtlService } from './admin-etl.service';
 import { AdminService } from './admin.service';
 

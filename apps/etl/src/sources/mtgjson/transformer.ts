@@ -1,4 +1,5 @@
-import { leadershipSkillsSchema, type LeadershipSkills } from 'schemas/cards';
+import { leadershipSkillsSchema, type LeadershipSkills } from '@respark/schemas/cards';
+
 import type { MtgjsonCard } from './schema';
 
 export type EnrichmentIdentifier = {

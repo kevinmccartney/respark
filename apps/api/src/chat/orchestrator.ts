@@ -1,9 +1,18 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import type { ChatPart, ChatServerEvent, ChatStatusCode, ChatView, ToolResult } from 'schemas/chat';
+
+import type {
+  ChatPart,
+  ChatServerEvent,
+  ChatStatusCode,
+  ChatView,
+  ToolResult,
+} from '@respark/schemas/chat';
+
 import { CardsService } from '../cards/cards.service';
 import { DecksService } from '../decks/decks.service';
 import { RecommendationsService } from '../recommendations/recommendations.service';
+
 import { catalogCardsFromLookupCombos, collectLinkableCards, rewriteCardLinks } from './card-links';
 import {
   CHAT_GOODSTUFF_PROMPT_CAP,
@@ -14,8 +23,6 @@ import {
   SPELLBOOK_CLIENT,
   type ChatTurnStopReason,
 } from './chat.constants';
-import { createSpellbookClient } from './spellbook/client';
-import type { SpellbookClient } from './spellbook/types';
 import { ChatService } from './chat.service';
 import { textFromParts } from './history';
 import { toToolJsonSchema } from './json-schema';
@@ -26,11 +33,13 @@ import type {
   ProviderToolDef,
 } from './provider/chat-provider';
 import { estimateUsd } from './provider/model-prices';
+import { hitsFromToolResult, recommendPolicy, type RecommendPolicyHit } from './recommend-policy';
+import { createSpellbookClient } from './spellbook/client';
+import type { SpellbookClient } from './spellbook/types';
 import { buildChatTools } from './tools/build-tools';
 import { executeChatTool } from './tools/registry';
 import type { ChatTool, ToolContext } from './tools/types';
 import { formatTurnContext } from './turn-context';
-import { hitsFromToolResult, recommendPolicy, type RecommendPolicyHit } from './recommend-policy';
 
 const STATUS_CODES = new Set<ChatStatusCode>([
   'thinking',

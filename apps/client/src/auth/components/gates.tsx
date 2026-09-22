@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { GuestOnly as UiGuestOnly, RequireAuth as UiRequireAuth } from 'ui/auth';
+
+import { GuestOnly as UiGuestOnly, RequireAuth as UiRequireAuth } from '@respark/ui/auth';
 
 export const RequireAuth = ({ children }: { children: ReactNode }) => (
   <UiRequireAuth redirectTo="/" fallbackClassName="min-h-svh">

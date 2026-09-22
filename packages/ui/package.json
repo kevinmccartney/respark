@@ -1,9 +1,21 @@
 {
-  "name": "ui",
+  "name": "@respark/ui",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./src/index.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./lib": {
+      "types": "./dist/lib/index.d.ts",
+      "import": "./src/lib/index.ts",
+      "require": "./dist/lib/index.js",
+      "default": "./dist/lib/index.js"
+    },
     "./mana": {
       "types": "./dist/mana.d.ts",
       "import": "./src/mana.ts",
@@ -31,6 +43,9 @@
   },
   "typesVersions": {
     "*": {
+      "lib": [
+        "./dist/lib/index.d.ts"
+      ],
       "mana": [
         "./dist/mana.d.ts"
       ],
@@ -52,7 +67,11 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "schemas": "*"
+    "@base-ui/react": "^1.8.0",
+    "@respark/schemas": "*",
+    "class-variance-authority": "^0.7.1",
+    "cn": "^0.3.0",
+    "lucide-react": "^1.47.0"
   },
   "peerDependencies": {
     "@clerk/react": "^6.16.1",
@@ -63,6 +82,9 @@
     "@clerk/react": "^6.16.1",
     "@types/react": "^19.2.0",
     "react-router-dom": "^7.18.4",
+    "shadcn": "^4.21.0",
     "typescript": "~5.8.3"
-  }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts"
 }

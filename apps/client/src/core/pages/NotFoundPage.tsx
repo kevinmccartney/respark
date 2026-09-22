@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/core/ui/button';
-import { goBackOrHome } from '../lib/navigation.ts';
+
+import { Button } from '@respark/ui/lib';
+
+import { goBackOrHome } from '../lib/navigation';
 
 type NotFoundPageProps = {
   title?: string;

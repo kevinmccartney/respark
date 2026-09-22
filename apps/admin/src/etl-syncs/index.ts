@@ -1,3 +1,3 @@
-export { useSyncDetail } from './hooks/useSyncDetail.ts';
-export { SyncDetailPage } from './pages/SyncDetailPage.tsx';
-export { SyncsListPage } from './pages/SyncsListPage.tsx';
+export { useSyncDetail } from './hooks/useSyncDetail';
+export { SyncDetailPage } from './pages/SyncDetailPage';
+export { SyncsListPage } from './pages/SyncsListPage';

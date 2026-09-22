@@ -1,12 +1,15 @@
-import { Badge } from '@/core/ui/badge';
+import type { EtlJobRun, EtlSync } from '@respark/schemas/etl-sync';
+import { Badge } from '@respark/ui/lib';
+
+import { JOB_LABELS, STAGE_LABELS } from '@respark-admin/etl-syncs/constants';
+
 import {
   formatDuration,
   formatNumber,
   formatProgressPercent,
   statusBadgeProps,
-} from '../lib/format.ts';
-import type { EtlJobRun, EtlSync } from 'schemas/etl-sync';
-import { JOB_LABELS, STAGE_LABELS, syncJobSlots } from '../lib/syncs.ts';
+  syncJobSlots,
+} from '../lib';
 
 type JobProgress = {
   percent: number | null;

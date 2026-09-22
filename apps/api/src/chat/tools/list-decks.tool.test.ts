@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Deck } from 'schemas/decks';
+
+import type { Deck } from '@respark/schemas/decks';
+
 import type { DecksService } from '../../decks/decks.service';
+
 import { listDecksTool } from './list-decks.tool';
 
 const decks: Deck[] = [

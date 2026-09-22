@@ -7,6 +7,8 @@
 @import '@fontsource-variable/geist';
 @import '@fontsource-variable/geist-mono';
 
+@source '../../../packages/ui/src';
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

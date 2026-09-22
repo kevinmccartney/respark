@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { DeckCard, DeckDetail } from 'schemas/decks';
+
+import type { DeckCard, DeckDetail } from '@respark/schemas/decks';
+
 import { toSpellbookDecklist } from './decklist';
 
 const line = (opts: Partial<DeckCard> & Pick<DeckCard, 'name' | 'printingId'>): DeckCard => ({

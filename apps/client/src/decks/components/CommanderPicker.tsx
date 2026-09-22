@@ -1,8 +1,9 @@
 import { useAuth } from '@clerk/react';
 import { useEffect, useState } from 'react';
-import { Button } from '@/core/ui/button';
-import { Input } from '@/core/ui/input';
-import { isLeadershipCommander } from 'schemas/cards';
+
+import { isLeadershipCommander } from '@respark/schemas/cards';
+import { Button, Input } from '@respark/ui/lib';
+
 import { fetchCard, suggestCardNames, type CardNameSuggestion } from '@/cards';
 import { isAbortError } from '@/core';
 

@@ -14,6 +14,9 @@ export const SORT_DIRS = ['asc', 'desc'] as const;
 export const sortDirSchema = z.enum(SORT_DIRS);
 export type SortDir = z.infer<typeof sortDirSchema>;
 
+export const isSortDir = (value: string): value is SortDir =>
+  (SORT_DIRS as readonly string[]).includes(value);
+
 /**
  * Query-string integers. Missing or empty stay undefined; non-numeric values fail.
  */

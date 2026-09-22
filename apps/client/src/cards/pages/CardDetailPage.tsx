@@ -1,18 +1,20 @@
 import { useAuth } from '@clerk/react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Alert, AlertDescription } from '@/core/ui/alert';
-import { Badge } from '@/core/ui/badge';
-import { Button } from '@/core/ui/button';
-import { isLeadershipCommander, printingHasFoilTreatment } from 'schemas/cards';
-import { uuidSchema } from 'schemas/primitives';
-import { ManaCost, ManaText } from 'ui/mana';
+
+import { isLeadershipCommander, printingHasFoilTreatment } from '@respark/schemas/cards';
+import { DECK_FORMATS, type DeckFormat } from '@respark/schemas/decks';
+import { uuidSchema } from '@respark/schemas/primitives';
+import { Alert, AlertDescription, Badge, Button } from '@respark/ui/lib';
+import { ManaCost, ManaText } from '@respark/ui/mana';
+
 import { ApiError, goBackOrHome, isAbortError, isNotFound, NotFoundPage } from '@/core';
-import { DECK_FORMATS, type DeckFormat } from 'schemas/decks';
-import { FlippableCardImage } from '../components/FlippableCardImage.tsx';
-import { PrintingFinishes } from '../components/FoilMark.tsx';
-import { resolveCardFace } from '../lib/card-faces.ts';
-import { fetchCard, type CardDetail, type CardPrintingSummary } from '../lib/cards.ts';
+
+import { FlippableCardImage } from '../components/FlippableCardImage';
+import { PrintingFinishes } from '../components/FoilMark';
+import { resolveCardFace } from '../lib/card-faces';
+import { fetchCard, type CardDetail, type CardPrintingSummary } from '../lib/cards';
+
 
 const DECK_FORMAT_LABELS: Record<DeckFormat, string> = {
   standard: 'Standard',

@@ -1,3 +1,5 @@
+import type { IncomingMessage } from 'node:http';
+
 import {
   BadRequestException,
   NotFoundException,
@@ -12,13 +14,15 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import type { IncomingMessage } from 'node:http';
 import type { Server, WebSocket } from 'ws';
-import { chatSendSchema, type ChatServerEvent } from 'schemas/chat';
+
+import { chatSendSchema, type ChatServerEvent } from '@respark/schemas/chat';
+
 import { verifyClerkToken } from '../auth/clerk';
+
 import { CHAT_MAX_CONNECTIONS, CHAT_WS_PATH, CHAT_WS_PING_MS, WS_CLOSE } from './chat.constants';
-import { ChatOrchestrator } from './orchestrator';
 import { ChatService } from './chat.service';
+import { ChatOrchestrator } from './orchestrator';
 import { tokenFromWsUrl } from './ws-auth';
 
 type ClientState = {

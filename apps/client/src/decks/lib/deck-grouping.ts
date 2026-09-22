@@ -1,4 +1,4 @@
-import type { ColorIdentityPip, DeckCard } from './decks.ts';
+import type { ColorIdentityPip, DeckCard } from './decks';
 
 export const DECK_GROUP_MODES = ['type', 'color', 'cmc'] as const;
 export type DeckGroupMode = (typeof DECK_GROUP_MODES)[number];

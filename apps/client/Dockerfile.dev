@@ -11,7 +11,7 @@ COPY packages/schemas/package.json packages/schemas/
 COPY packages/ui/package.json packages/ui/
 COPY packages/scryfall-query/package.json packages/scryfall-query/
 ENV HUSKY=0
-RUN npm ci --workspace=client --workspace=schemas --workspace=ui --workspace=scryfall-query
+RUN npm ci --workspace=client --workspace=@respark/schemas --workspace=@respark/ui --workspace=@respark/scryfall-query
 
 COPY apps/client apps/client
 COPY packages/schemas packages/schemas

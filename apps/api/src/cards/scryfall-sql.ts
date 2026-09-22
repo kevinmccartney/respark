@@ -1,4 +1,5 @@
 import { sql, type SQL } from 'drizzle-orm';
+
 import {
   RARITY_RANK,
   type Ast,
@@ -9,7 +10,7 @@ import {
   type Field,
   type ManaValue,
   type RarityName,
-} from 'scryfall-query';
+} from '@respark/scryfall-query';
 
 /** Scryfall set_type values used to disambiguate `in:` (vs set codes). */
 const SET_TYPES = new Set([

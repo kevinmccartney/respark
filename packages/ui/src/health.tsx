@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { platformInfoSchema } from 'schemas/platform';
+
+import { platformInfoSchema } from '@respark/schemas/platform';
 
 type HealthState = 'checking' | 'ok' | 'error';
 

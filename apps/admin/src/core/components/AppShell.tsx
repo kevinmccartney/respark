@@ -1,9 +1,10 @@
 import { Show } from '@clerk/react';
 import { Outlet } from 'react-router-dom';
-import { ApiHealthFooter } from 'ui/health';
-import { apiBaseUrl } from '../lib/api.ts';
-import { AdminHeader } from './AdminHeader.tsx';
-import { AdminNav } from './AdminNav.tsx';
+
+import { ApiHealthFooter } from '@respark/ui';
+
+import { AdminHeader, AdminNav } from '@respark-admin/core/components';
+import { apiBaseUrl } from '@respark-admin/core/lib/api';
 
 export const AppShell = () => (
   <div className="flex min-h-svh flex-col bg-muted/40">

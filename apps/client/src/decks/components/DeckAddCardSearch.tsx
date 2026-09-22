@@ -1,9 +1,12 @@
 import { useAuth } from '@clerk/react';
 import { useEffect, useState } from 'react';
-import { Input } from '@/core/ui/input';
+
+import { Input } from '@respark/ui/lib';
+
 import { suggestCardNames, type CardNameSuggestion } from '@/cards';
 import { isAbortError } from '@/core';
-import type { ColorIdentityPip, DeckFormat } from '../lib/decks.ts';
+
+import type { ColorIdentityPip, DeckFormat } from '../lib/decks';
 
 const SUGGEST_DEBOUNCE_MS = 200;
 

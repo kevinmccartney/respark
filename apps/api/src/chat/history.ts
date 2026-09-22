@@ -1,4 +1,5 @@
-import type { ChatPart } from 'schemas/chat';
+import type { ChatPart } from '@respark/schemas/chat';
+
 import { CHAT_HISTORY_LIMIT } from './chat.constants';
 
 export const selectHistoryMessages = <T extends { role: string }>(

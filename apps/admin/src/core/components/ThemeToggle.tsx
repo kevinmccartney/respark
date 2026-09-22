@@ -1,6 +1,7 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
-import { Button } from '@/core/ui/button';
-import { useTheme, type Theme } from 'ui/theme';
+
+import { Button } from '@respark/ui/lib';
+import { useTheme, type Theme } from '@respark/ui/theme';
 
 const LABELS: Record<Theme, string> = {
   light: 'Light',

@@ -1,7 +1,7 @@
-import { Badge } from '@/core/ui/badge';
-import { Card, CardContent } from '@/core/ui/card';
-import { formatNumber } from '../lib/format.ts';
-import type { IngestionReconciliation } from 'schemas/etl-sync';
+import type { IngestionReconciliation } from '@respark/schemas/etl-sync';
+import { Badge, Card, CardContent } from '@respark/ui/lib';
+
+import { formatNumber } from '../lib/format';
 
 type JobReconciliationSectionProps = {
   reconciliation: IngestionReconciliation;

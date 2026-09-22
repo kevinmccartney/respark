@@ -1,4 +1,6 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+
+import { uuidSchema } from '@respark/schemas/primitives';
 import {
   SET_PRINTINGS_DEFAULT_LIMIT,
   SET_PRINTING_DEFAULT_SORT,
@@ -11,10 +13,11 @@ import {
   type SetDetailQuery,
   type SetSearchQuery,
   type SetTypeSuggestionsQuery,
-} from 'schemas/sets';
-import { uuidSchema } from 'schemas/primitives';
+} from '@respark/schemas/sets';
+
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard';
 import { zodPipe } from '../lib/zod-pipe';
+
 import { SetsService } from './sets.service';
 
 @Controller('sets')

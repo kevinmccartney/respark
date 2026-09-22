@@ -26,16 +26,21 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         to: '/catalog/sets',
         match: (pathname) => pathname.startsWith('/catalog/sets'),
       },
+    ],
+  },
+  {
+    label: 'Users',
+    items: [{ label: 'Management', to: '/users/management', comingSoon: true }],
+  },
+  {
+    label: 'Operations',
+    items: [
       {
         label: 'ETL Syncs',
         to: '/',
         match: (pathname) => pathname === '/' || pathname.startsWith('/syncs'),
       },
     ],
-  },
-  {
-    label: 'Users',
-    items: [{ label: 'Management', to: '/users/management', comingSoon: true }],
   },
   {
     label: 'Recommendations',

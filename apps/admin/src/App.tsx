@@ -1,9 +1,12 @@
 import { Route, Routes } from 'react-router-dom';
-import { GuestOnly, RequireAuth, SignInPage } from '@/auth';
-import { CardDetailPage, CardsListPage, SetDetailPage, SetsListPage } from '@/catalog';
-import { AppShell, ComingSoonPage, NotFoundPage } from '@/core';
-import { SyncDetailPage, SyncsListPage } from '@/etl-syncs';
-import { GoodstuffsPage } from '@/recommendations';
+
+import { GuestOnly, RequireAuth } from '@respark-admin/auth/components';
+import { SignInPage } from '@respark-admin/auth/pages';
+import { CardDetailPage, CardsListPage, GoodstuffsPage } from '@respark-admin/cards/pages';
+import { AppShell } from '@respark-admin/core/components';
+import { ComingSoonPage, NotFoundPage } from '@respark-admin/core/pages';
+import { SyncDetailPage, SyncsListPage } from '@respark-admin/etl-syncs/pages';
+import { SetDetailPage, SetsListPage } from '@respark-admin/sets/pages';
 
 export default function App() {
   return (
@@ -66,6 +69,14 @@ export default function App() {
           }
         />
         <Route
+          path="/catalog/goodstuff"
+          element={
+            <RequireAuth>
+              <GoodstuffsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
           path="/users/management"
           element={
             <RequireAuth>
@@ -73,14 +84,6 @@ export default function App() {
                 title="User management"
                 description="Invite and manage admin users here."
               />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/recommendations/goodstuff"
-          element={
-            <RequireAuth>
-              <GoodstuffsPage />
             </RequireAuth>
           }
         />

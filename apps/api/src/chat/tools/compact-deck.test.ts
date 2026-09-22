@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { DeckCard, DeckDetail } from 'schemas/decks';
+
+import type { DeckCard, DeckDetail } from '@respark/schemas/decks';
+
 import { GET_DECK_LINE_CAP } from '../chat.constants';
+
 import { keywordCounts, manaBucket, primaryType, toCompactDeck } from './compact-deck';
 
 const line = (

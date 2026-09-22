@@ -31,9 +31,9 @@ Style is enforced by Prettier + ESLint (`task format`, `task lint`). Do not bike
 - **Shared wire schemas** live in `packages/schemas` (import `schemas/decks`, `schemas/cards`, `schemas/etl-sync`). Nest validates requests with `zodPipe`; client/admin parse responses. Do not share Scryfall/MTGJSON ETL source schemas.
 - **Early returns** over deep nesting; keep functions focused.
 - **Import from the defining module**: don’t re-export types/values as a convenience barrel. Callers import `EtlSync` from `schemas/etl-sync`, fetch helpers from `syncs.ts`, etc. Exception: Vite feature folders (`apps/client/src/<feature>`, `apps/admin/src/<feature>`) expose a root `index.ts` façade. Outside the feature, import `@/decks` / `@/etl-syncs`. Inside the feature, import from the defining file so the barrel cannot cycle.
-- Client/admin features use kind subfolders (`pages/`, `components/`, `hooks/`, `lib/`, `types/` when needed). No app-root `lib` / `pages` / `hooks` / `components`. Shadcn stays in `core/ui/`.
+- Client/admin features use kind subfolders (`pages/`, `components/`, `hooks/`, `lib/`, `api/`, `types/` when needed). No app-root `lib` / `pages` / `hooks` / `components`. Shadcn primitives live in `packages/ui/src/lib` (import `@respark/ui/lib`).
 - **Arrow functions**: prefer `const fn = () => {}` / `export const Foo = () => {}` over `function` declarations. Class methods stay as methods (Nest services/controllers). Generators and `this`-bound functions may keep `function`. Enforced by ESLint (`prefer-arrow-functions`, `prefer-arrow-callback`).
 - React: arrow-function components; hooks at top level; don’t add `useMemo` / `useCallback` unless the codebase already needs them for a measured reason.
 - Nest: keep business logic in services; controllers stay thin; inject `PinoLogger` for structured logs.
 - ETL: keep stages/jobs aligned with `docs/etl/`; repository functions named after the table/domain they touch.
-- Don’t fight generated `core/ui/**` (shadcn) unless fixing a real bug.
+- Don’t fight generated `packages/ui/src/lib/**` (shadcn) unless fixing a real bug.

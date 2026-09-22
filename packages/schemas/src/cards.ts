@@ -1,3 +1,6 @@
+import { z } from 'zod';
+
+import { deckFormatSchema, type DeckFormat } from './decks.js';
 import {
   cardFaceSchema,
   queryBoolSchema,
@@ -6,9 +9,8 @@ import {
   uuidSchema,
   type SortDir,
 } from './primitives.js';
-import { deckFormatSchema, type DeckFormat } from './decks.js';
 import { recommendationGoodstuffFlagSchema } from './recommendations.js';
-import { z } from 'zod';
+
 
 export const cardLegalitiesSchema = z.record(z.string(), z.string());
 
@@ -188,6 +190,9 @@ export const CARD_SEARCH_SORTS = ['name', 'edhrecRank', 'manaValue'] as const;
 export const cardSearchSortSchema = z.enum(CARD_SEARCH_SORTS);
 export type CardSearchSort = z.infer<typeof cardSearchSortSchema>;
 export const CARD_SEARCH_DEFAULT_SORT: CardSearchSort = 'name';
+
+export const isCardSearchSort = (value: string): value is CardSearchSort =>
+  (CARD_SEARCH_SORTS as readonly string[]).includes(value);
 
 /** Default direction when `dir` is omitted. */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

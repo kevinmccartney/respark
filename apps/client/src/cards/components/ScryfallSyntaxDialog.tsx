@@ -1,14 +1,14 @@
 import Markdown, { type Components } from 'react-markdown';
-import { SYNTAX_HELP_MARKDOWN } from 'scryfall-query';
-import { Button } from '@/core/ui/button';
+
+import { SYNTAX_HELP_MARKDOWN } from '@respark/scryfall-query';
 import {
+  Button,
   Dialog,
   DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from '@/core/ui/dialog';
-
+} from '@respark/ui/lib';
 const helpMarkdownComponents: Components = {
   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
   strong: ({ children }) => <strong className="font-semibold">{children}</strong>,

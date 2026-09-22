@@ -1,4 +1,4 @@
-import { PRESENT_RECOMMENDATIONS_MAX } from 'schemas/chat';
+import { PRESENT_RECOMMENDATIONS_MAX } from '@respark/schemas/chat';
 
 export const allowlistCardIds = (
   requested: string[],

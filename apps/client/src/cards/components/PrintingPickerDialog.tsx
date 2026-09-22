@@ -1,19 +1,24 @@
 import { useAuth } from '@clerk/react';
 import { useEffect, useState } from 'react';
-import { Alert, AlertDescription } from '@/core/ui/alert';
-import { Button } from '@/core/ui/button';
+
+import { printingHasFoilTreatment } from '@respark/schemas/cards';
+import type { DeckCard } from '@respark/schemas/decks';
 import {
+  Alert,
+  AlertDescription,
+  Button,
   Dialog,
   DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from '@/core/ui/dialog';
-import { printingHasFoilTreatment } from 'schemas/cards';
+} from '@respark/ui/lib';
+
 import { ApiError, isAbortError } from '@/core';
-import type { DeckCard } from 'schemas/decks';
-import { fetchCard, type CardPrintingSummary } from '../lib/cards.ts';
-import { PrintingFinishes } from './FoilMark.tsx';
+
+import { fetchCard, type CardPrintingSummary } from '../lib/cards';
+
+import { PrintingFinishes } from './FoilMark';
 
 type Props = {
   open: boolean;

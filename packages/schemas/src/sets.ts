@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import {
   queryBoolSchema,
   queryIntSchema,
@@ -5,7 +7,6 @@ import {
   uuidSchema,
   type SortDir,
 } from './primitives.js';
-import { z } from 'zod';
 
 export const SET_SEARCH_DEFAULT_LIMIT = 50;
 export const SET_SEARCH_MAX_LIMIT = 100;
@@ -24,6 +25,9 @@ export const setSearchSortSchema = z.enum(SET_SEARCH_SORTS);
 export type SetSearchSort = z.infer<typeof setSearchSortSchema>;
 export const SET_SEARCH_DEFAULT_SORT: SetSearchSort = 'releasedAt';
 
+export const isSetSearchSort = (value: string): value is SetSearchSort =>
+  (SET_SEARCH_SORTS as readonly string[]).includes(value);
+
 /** Default direction when `dir` is omitted — newest-first for release date. */
 export const defaultSetSortDir = (sort: SetSearchSort): SortDir =>
   sort === 'releasedAt' || sort === 'cardCount' ? 'desc' : 'asc';
@@ -32,6 +36,9 @@ export const SET_PRINTING_SORTS = ['collectorNumber', 'name', 'rarity'] as const
 export const setPrintingSortSchema = z.enum(SET_PRINTING_SORTS);
 export type SetPrintingSort = z.infer<typeof setPrintingSortSchema>;
 export const SET_PRINTING_DEFAULT_SORT: SetPrintingSort = 'collectorNumber';
+
+export const isSetPrintingSort = (value: string): value is SetPrintingSort =>
+  (SET_PRINTING_SORTS as readonly string[]).includes(value);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const defaultSetPrintingSortDir = (_sort: SetPrintingSort): SortDir => 'asc';

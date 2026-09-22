@@ -1,5 +1,4 @@
-import { Button } from '@/core/ui/button';
-import { Pagination, PaginationContent, PaginationItem } from '@/core/ui/pagination';
+import { Button, Pagination, PaginationContent, PaginationItem } from '@respark/ui/lib';
 
 type OffsetPaginationProps = {
   offset: number;

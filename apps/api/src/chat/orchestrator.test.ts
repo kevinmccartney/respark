@@ -1,15 +1,18 @@
-import { describe, expect, it } from 'vitest';
 import type { PinoLogger } from 'nestjs-pino';
-import type { CardSearchPage } from 'schemas/cards';
-import type { ChatPart, ChatServerEvent } from 'schemas/chat';
-import type { DeckCard, DeckDetail } from 'schemas/decks';
+import { describe, expect, it } from 'vitest';
+
+import type { CardSearchPage } from '@respark/schemas/cards';
+import type { ChatPart, ChatServerEvent } from '@respark/schemas/chat';
+import type { DeckCard, DeckDetail } from '@respark/schemas/decks';
+
 import type { CardsService } from '../cards/cards.service';
 import type { DecksService } from '../decks/decks.service';
 import type { RecommendationsService } from '../recommendations/recommendations.service';
+
 import { CHAT_MAX_TOOL_CALLS } from './chat.constants';
+import type { ChatService } from './chat.service';
 import { ChatOrchestrator } from './orchestrator';
 import { ScriptedChatProvider } from './provider/scripted.provider';
-import type { ChatService } from './chat.service';
 import type { SpellbookClient } from './spellbook/types';
 
 const CARD_ID = '00000000-0000-4000-8000-000000000005';

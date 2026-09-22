@@ -1,6 +1,8 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { sql, type SQL } from 'drizzle-orm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+
+import type { SortDir } from '@respark/schemas/primitives';
 import {
   SET_PRINTINGS_DEFAULT_LIMIT,
   SET_PRINTING_DEFAULT_SORT,
@@ -14,8 +16,8 @@ import {
   type SetPrintingSort,
   type SetSearchPage,
   type SetSearchSort,
-} from 'schemas/sets';
-import type { SortDir } from 'schemas/primitives';
+} from '@respark/schemas/sets';
+
 import { DATABASE, type Database } from '../db/database.module';
 
 type CountRow = {

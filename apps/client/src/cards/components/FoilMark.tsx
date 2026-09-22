@@ -1,4 +1,4 @@
-import { formatPrintingFinishes, printingHasFoilTreatment } from 'schemas/cards';
+import { formatPrintingFinishes, printingHasFoilTreatment } from '@respark/schemas/cards';
 
 export const FoilMark = ({ label = 'Foil' }: { label?: string }) => (
   <span

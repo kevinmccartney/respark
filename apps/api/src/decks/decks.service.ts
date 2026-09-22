@@ -1,6 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+
 import {
   isLeadershipCommander,
   isLegalInFormat,
@@ -8,7 +9,7 @@ import {
   printingFoilIsOptional,
   resolveDeckLineFoil,
   type LeadershipSkills,
-} from 'schemas/cards';
+} from '@respark/schemas/cards';
 import {
   COLOR_IDENTITY_PIPS,
   colorIdentityPipSchema,
@@ -23,8 +24,9 @@ import {
   type DeckImportResult,
   type PatchDeckCardBody,
   type UpdateDeckInput,
-} from 'schemas/decks';
-import { parseCardFaces } from 'schemas/primitives';
+} from '@respark/schemas/decks';
+import { parseCardFaces } from '@respark/schemas/primitives';
+
 import {
   defaultPrintingId,
   printingFacesJsonSql,
@@ -33,6 +35,7 @@ import {
 import { DATABASE, type Database } from '../db/database.module';
 import { cards, deckCards, decks, printings } from '../db/schema';
 import { UsersService } from '../users/users.service';
+
 import { isIgnoredCommanderImport, parseMoxfieldExport } from './moxfield-import';
 
 type DeckRow = {

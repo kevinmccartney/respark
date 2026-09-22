@@ -1,14 +1,23 @@
 import { useAuth } from '@clerk/react';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Alert, AlertDescription } from '@/core/ui/alert';
-import { Button } from '@/core/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/core/ui/card';
-import { Input } from '@/core/ui/input';
-import { Label } from '@/core/ui/label';
+
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+} from '@respark/ui/lib';
+
 import { ApiError } from '@/core';
-import { CommanderPicker } from '../components/CommanderPicker.tsx';
-import { createDeck, DECK_FORMAT_LABELS, DECK_FORMATS, type DeckFormat } from '../lib/decks.ts';
+
+import { CommanderPicker } from '../components/CommanderPicker';
+import { createDeck, DECK_FORMAT_LABELS, DECK_FORMATS, type DeckFormat } from '../lib/decks';
 
 export const NewDeckPage = () => {
   const { getToken } = useAuth();

@@ -1,8 +1,10 @@
-import { OffsetPagination } from '@/core';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/core/ui/table';
-import type { IngestionUnmatched } from 'schemas/etl-sync';
-import { formatNumber } from '../lib/format.ts';
-import { PAGE_SIZE } from '../lib/syncs.ts';
+import type { IngestionUnmatched } from '@respark/schemas/etl-sync';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@respark/ui/lib';
+
+import { OffsetPagination } from '@respark-admin/core/components';
+import { PAGE_SIZE } from '@respark-admin/etl-syncs/constants';
+
+import { formatNumber } from '../lib/format';
 
 type JobUnmatchedSectionProps = {
   unmatched: IngestionUnmatched[];
@@ -26,7 +28,7 @@ export const JobUnmatchedSection = ({
       </h2>
       <span className="text-muted-foreground">
         {formatNumber(total)} total
-        {total > 0 ? ` · showing ${offset + 1}–${offset + unmatched.length}` : null}
+        {total > 0 ? ` · showing ${offset + 1}-${offset + unmatched.length}` : null}
       </span>
     </div>
 

@@ -1,5 +1,6 @@
 import type { Pool, PoolClient } from 'pg';
-import type { IngestionRunStatus } from 'schemas/etl-sync';
+
+import type { IngestionRunStatus } from '@respark/schemas/etl-sync';
 
 export type StartJobRunInput = {
   syncId: string;

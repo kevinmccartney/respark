@@ -1,17 +1,21 @@
 import { useAuth } from '@clerk/react';
 import { useState } from 'react';
-import { Alert, AlertDescription } from '@/core/ui/alert';
-import { Button } from '@/core/ui/button';
+
 import {
+  Alert,
+  AlertDescription,
+  Button,
   Dialog,
   DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from '@/core/ui/dialog';
-import { Label } from '@/core/ui/label';
+  Label,
+} from '@respark/ui/lib';
+
 import { ApiError } from '@/core';
-import { importDeckList, type DeckDetail, type DeckImportUnmatched } from '../lib/decks.ts';
+
+import { importDeckList, type DeckDetail, type DeckImportUnmatched } from '../lib/decks';
 
 type Props = {
   open: boolean;

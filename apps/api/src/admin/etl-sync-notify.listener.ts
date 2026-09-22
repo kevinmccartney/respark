@@ -1,8 +1,11 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import type { Pool, PoolClient } from 'pg';
-import { syncEventSchema } from 'schemas/sync-event';
+
+import { syncEventSchema } from '@respark/schemas/sync-event';
+
 import { DATABASE_POOL } from '../db/database.module';
+
 import { EtlSyncEventsService } from './etl-sync-events.service';
 
 const CHANNEL = 'etl_sync';

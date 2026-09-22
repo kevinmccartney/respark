@@ -1,15 +1,26 @@
 import { useAuth } from '@clerk/react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Alert, AlertDescription } from '@/core/ui/alert';
-import { Button } from '@/core/ui/button';
-import { Input } from '@/core/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/core/ui/table';
+
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Input,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@respark/ui/lib';
+
 import { ColorIdentity } from '@/cards';
 import { useChatSession } from '@/chat';
 import { ApiError, isAbortError } from '@/core';
-import { DECK_FORMAT_LABELS, deleteDeck, fetchDecks, type Deck } from '../lib/decks.ts';
-import { formatRelativeTime } from '../lib/format.ts';
+
+import { DECK_FORMAT_LABELS, deleteDeck, fetchDecks, type Deck } from '../lib/decks';
+import { formatRelativeTime } from '../lib/format';
 
 type SortKey = 'name' | 'colors' | 'format' | 'updatedAt';
 type SortDir = 'asc' | 'desc';

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import {
   formatPrintingFinishes,
   premiumFinishLabel,
@@ -7,7 +8,7 @@ import {
   printingHasFoilTreatment,
   printingHasPremiumFinish,
   resolveDeckLineFoil,
-} from 'schemas/cards';
+} from '@respark/schemas/cards';
 
 describe('printing finishes', () => {
   it('treats etched as a premium finish like foil', () => {

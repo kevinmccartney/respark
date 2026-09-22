@@ -1,12 +1,16 @@
 import type { z } from 'zod';
 
+import { ApiError } from './errors';
+
 const defaultApiBase = 'http://localhost:3000';
 
 export type GetToken = () => Promise<string | null>;
 
 export const apiBaseUrl = (): string => {
   const configured = import.meta.env.VITE_API_URL?.trim();
-  if (configured) return configured.replace(/\/$/, '');
+  if (configured) {
+    return configured.replace(/\/$/, '');
+  }
 
   if (import.meta.env.PROD) {
     throw new Error('Missing VITE_API_URL. Production builds must set the API origin.');
@@ -14,18 +18,6 @@ export const apiBaseUrl = (): string => {
 
   return defaultApiBase;
 };
-
-export const isNotFound = (err: unknown): boolean => err instanceof ApiError && err.status === 404;
-
-export class ApiError extends Error {
-  readonly status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-  }
-}
 
 export const apiFetch = async (
   path: string,
@@ -76,8 +68,12 @@ export const apiFetchJson = async <S extends z.ZodType>(
 const errorMessage = async (response: Response): Promise<string> => {
   try {
     const body = (await response.json()) as { message?: unknown };
-    if (typeof body.message === 'string' && body.message) return body.message;
-    if (Array.isArray(body.message) && body.message.length) return String(body.message[0]);
+    if (typeof body.message === 'string' && body.message) {
+      return body.message;
+    }
+    if (Array.isArray(body.message) && body.message.length) {
+      return String(body.message[0]);
+    }
   } catch {
     // Response had no JSON body.
   }

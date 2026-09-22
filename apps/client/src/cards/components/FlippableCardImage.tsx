@@ -1,6 +1,6 @@
 import { RotateCw } from 'lucide-react';
-import { Button } from '@/core/ui/button';
 
+import { Button } from '@respark/ui/lib';
 export const FlippableCardImage = ({
   src,
   alt,

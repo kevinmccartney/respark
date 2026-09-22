@@ -1,24 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Alert, AlertDescription } from '@/core/ui/alert';
-import { Button } from '@/core/ui/button';
+
+import { Alert, AlertDescription, Button } from '@respark/ui/lib';
+
 import { PrintingPickerDialog } from '@/cards';
 import { useChatSession } from '@/chat';
 import { NotFoundPage } from '@/core';
-import { BoardSection, CardPreview } from '../components/DeckBoard.tsx';
-import { DeckAddCardSearch } from '../components/DeckAddCardSearch.tsx';
-import { DeckDetailsHeader } from '../components/DeckDetailsHeader.tsx';
-import { DeckImportDialog } from '../components/DeckImportDialog.tsx';
-import { DeckListToolbar } from '../components/DeckListToolbar.tsx';
-import { useDeckDetail } from '../hooks/useDeckDetail.ts';
+
+import { DeckAddCardSearch } from '../components/DeckAddCardSearch';
+import { BoardSection, CardPreview } from '../components/DeckBoard';
+import { DeckDetailsHeader } from '../components/DeckDetailsHeader';
+import { DeckImportDialog } from '../components/DeckImportDialog';
+import { DeckListToolbar } from '../components/DeckListToolbar';
+import { useDeckDetail } from '../hooks/useDeckDetail';
 import {
   commanderDeckGroup,
   groupDeckCards,
   type DeckGroupMode,
   type DeckSortMode,
   type DeckViewMode,
-} from '../lib/deck-grouping.ts';
-import type { DeckCard } from '../lib/decks.ts';
+} from '../lib/deck-grouping';
+import type { DeckCard } from '../lib/decks';
 
 export const DeckDetailPage = () => {
   const { id = '' } = useParams<{ id: string }>();

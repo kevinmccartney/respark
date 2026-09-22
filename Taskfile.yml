@@ -78,7 +78,7 @@ tasks:
       - scryfall-query:build
     cmds:
       - npm test -w etl
-      - npm test -w scryfall-query
+      - npm test -w @respark/scryfall-query
       - npm test -w api
 
   precommit:
@@ -218,22 +218,22 @@ tasks:
   schemas:build:
     desc: Compile shared Zod wire schemas to packages/schemas/dist
     cmds:
-      - npm run build -w schemas
+      - npm run build -w @respark/schemas
 
   scryfall-query:build:
     desc: Compile packages/scryfall-query
     cmds:
-      - npm run build -w scryfall-query
+      - npm run build -w @respark/scryfall-query
 
   scryfall-query:test:
     desc: Run scryfall-query unit tests
     cmds:
-      - npm run test -w scryfall-query
+      - npm run test -w @respark/scryfall-query
 
   ui:build:
     desc: Compile shared UI package to packages/ui/dist
     cmds:
-      - npm run build -w ui
+      - npm run build -w @respark/ui
 
   schemas:ci:
     desc: Format-check, lint, and build packages/schemas
@@ -265,7 +265,7 @@ tasks:
       - npx eslint apps/api
       - task: schemas:build
       - task: scryfall-query:build
-      - npm test -w scryfall-query
+      - npm test -w @respark/scryfall-query
       - npm test -w api
       - task: api:build
 
@@ -361,7 +361,7 @@ tasks:
   admin:dev:
     desc: Run the admin Vite app on port 4000
     cmds:
-      - npm run dev -w admin
+      - npm run dev -w @respark/admin
 
   api:debug:
     desc: Run the API with Node inspector on 9229 (or use VS Code "API debug (launch)")

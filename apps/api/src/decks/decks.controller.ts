@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+
 import {
   addDeckCardBodySchema,
   createDeckBodySchema,
@@ -10,11 +11,13 @@ import {
   type ImportDeckBody,
   type PatchDeckCardBody,
   type UpdateDeckInput,
-} from 'schemas/decks';
-import { uuidSchema } from 'schemas/primitives';
+} from '@respark/schemas/decks';
+import { uuidSchema } from '@respark/schemas/primitives';
+
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard';
 import { CurrentUserId } from '../auth/current-user.decorator';
 import { zodPipe } from '../lib/zod-pipe';
+
 import { DecksService } from './decks.service';
 
 @Controller('decks')

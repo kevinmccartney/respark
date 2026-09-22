@@ -1,7 +1,9 @@
 import { Show, SignInButton, UserButton } from '@clerk/react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/core/ui/button';
-import { ThemeToggle } from './ThemeToggle.tsx';
+
+import { Button } from '@respark/ui/lib';
+
+import { ThemeToggle } from './ThemeToggle';
 
 export const AdminHeader = () => (
   <header className="flex items-center justify-between gap-4 border-b bg-card px-5 py-3">

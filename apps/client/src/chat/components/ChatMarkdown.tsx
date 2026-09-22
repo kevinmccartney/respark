@@ -1,6 +1,7 @@
 import Markdown, { type Components } from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
-import { ChatCardLink } from './ChatCardLink.tsx';
+
+import { ChatCardLink } from './ChatCardLink';
 
 const CARD_PATH = /^\/cards\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i;
 

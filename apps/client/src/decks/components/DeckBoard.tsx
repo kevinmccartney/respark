@@ -1,10 +1,14 @@
 import { RotateCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { ManaCost, ManaText } from 'ui/mana';
+
+import { ManaCost, ManaText } from '@respark/ui/mana';
+
 import { ColorIdentity, FlippableCardImage, FoilMark, resolveCardFace } from '@/cards';
-import { DeckCardMenu, DeckCardMenuToggle } from './DeckCardMenu.tsx';
-import type { DeckCardGroup, DeckViewMode } from '../lib/deck-grouping.ts';
-import type { DeckCard } from '../lib/decks.ts';
+
+import type { DeckCardGroup, DeckViewMode } from '../lib/deck-grouping';
+import type { DeckCard } from '../lib/decks';
+
+import { DeckCardMenu, DeckCardMenuToggle } from './DeckCardMenu';
 
 type BoardHandlers = {
   previewCardId: string | null;

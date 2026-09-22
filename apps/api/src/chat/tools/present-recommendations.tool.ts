@@ -2,8 +2,10 @@ import {
   PRESENT_RECOMMENDATIONS_MAX,
   presentRecommendationsInputSchema,
   type PresentRecommendationsInput,
-} from 'schemas/chat';
+} from '@respark/schemas/chat';
+
 import { allowlistCardIds } from '../allowlist';
+
 import type { ChatTool } from './types';
 
 export type PresentRecommendationsResult = {

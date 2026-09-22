@@ -1,7 +1,10 @@
 import { useAuth } from '@clerk/react';
 import { useEffect, useState } from 'react';
-import { uuidSchema } from 'schemas/primitives';
+
+import { uuidSchema } from '@respark/schemas/primitives';
+
 import { ApiError, isAbortError, isNotFound } from '@/core';
+
 import {
   addCardToDeck,
   deleteDeck,
@@ -17,7 +20,7 @@ import {
   type DeckCard,
   type DeckDetail,
   type DeckFormat,
-} from '../lib/decks.ts';
+} from '../lib/decks';
 
 type SaveDeckDetailsInput = {
   name: string;

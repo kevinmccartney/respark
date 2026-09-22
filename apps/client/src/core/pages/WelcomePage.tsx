@@ -1,6 +1,6 @@
 import { SignInButton, SignUpButton } from '@clerk/react';
-import { Button } from '@/core/ui/button';
 
+import { Button } from '@respark/ui/lib';
 export const WelcomePage = () => (
   <div className="relative flex flex-1 items-center justify-center overflow-hidden px-6 py-12">
     <div

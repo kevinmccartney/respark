@@ -1,29 +1,39 @@
 import { Link, useParams } from 'react-router-dom';
-import { NotFoundPage } from '@/core';
-import { Alert, AlertDescription, AlertTitle } from '@/core/ui/alert';
-import { Badge } from '@/core/ui/badge';
+
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
   Breadcrumb,
+  BreadcrumbList,
+  Badge,
   BreadcrumbItem,
   BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
+  Card,
+  CardContent,
   BreadcrumbSeparator,
-} from '@/core/ui/breadcrumb';
-import { Card, CardContent } from '@/core/ui/card';
-import { JobErrorsSection } from '../components/JobErrorsSection.tsx';
-import { JobReconciliationSection } from '../components/JobReconciliationSection.tsx';
-import { JobUnmatchedSection } from '../components/JobUnmatchedSection.tsx';
-import { LiveLogPanel } from '../components/LiveLogPanel.tsx';
-import { SyncJobList } from '../components/SyncJobList.tsx';
-import { useSyncDetail } from '../hooks/useSyncDetail.ts';
+  BreadcrumbPage,
+} from '@respark/ui/lib';
+
+import { NotFoundPage } from '@respark-admin/core/pages';
+import { JOB_LABELS } from '@respark-admin/etl-syncs/constants';
+
+import {
+  JobErrorsSection,
+  JobReconciliationSection,
+  JobUnmatchedSection,
+  LiveLogPanel,
+  SyncJobList,
+} from '../components';
+import { useSyncDetail } from '../hooks';
 import {
   formatDuration,
   formatProgressPercent,
   formatTimestamp,
   statusBadgeProps,
-} from '../lib/format.ts';
-import { JOB_LABELS, syncDurationMs, syncStagesLabel } from '../lib/syncs.ts';
+  syncDurationMs,
+  syncStagesLabel,
+} from '../lib';
 
 export const SyncDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -42,7 +52,7 @@ export const SyncDetailPage = () => {
     return (
       <NotFoundPage
         title="Sync not found"
-        description="That sync id doesn’t match a pipeline run."
+        description="That sync id doesn't match a pipeline run."
       />
     );
   }

@@ -1,6 +1,6 @@
-import type { IngestionRunStatus } from 'schemas/etl-sync';
+import type { JobDisplayStatus, StatusBadgeProps } from '../types';
 
-export type JobDisplayStatus = IngestionRunStatus | 'scheduled' | 'skipped';
+export type { JobDisplayStatus, StatusBadgeProps };
 
 export const formatDuration = (ms: number | null): string => {
   if (ms == null) return '—';
@@ -23,11 +23,6 @@ export const formatNumber = (n: number): string => n.toLocaleString();
 
 export const formatProgressPercent = (percent: number | null): string =>
   percent == null ? '…' : `${Math.round(percent)}%`;
-
-export type StatusBadgeProps = {
-  variant: 'secondary' | 'destructive' | 'outline';
-  className?: string;
-};
 
 export const statusBadgeProps = (status: JobDisplayStatus): StatusBadgeProps => {
   switch (status) {

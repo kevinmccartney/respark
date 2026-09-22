@@ -8,8 +8,9 @@ import {
   type CardSearchPage,
   type CardSearchResult,
   type CardSearchSort,
-} from 'schemas/cards';
-import type { ColorIdentityPip, DeckFormat } from 'schemas/decks';
+} from '@respark/schemas/cards';
+import type { ColorIdentityPip, DeckFormat } from '@respark/schemas/decks';
+
 import { apiFetchJson, type GetToken } from '@/core';
 
 export type {

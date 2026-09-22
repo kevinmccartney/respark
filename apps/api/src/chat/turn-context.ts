@@ -1,5 +1,7 @@
-import type { ChatView } from 'schemas/chat';
+import type { ChatView } from '@respark/schemas/chat';
+
 import type { GoodstuffPromptLine } from '../recommendations/recommendations.service';
+
 import type { LinkableCard } from './card-links';
 import { CHAT_GOODSTUFF_PROMPT_CAP, CHAT_GROUNDED_CARD_PROMPT_CAP } from './chat.constants';
 import { SYSTEM_PROMPT } from './prompts';

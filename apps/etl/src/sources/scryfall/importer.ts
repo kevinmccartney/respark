@@ -1,15 +1,18 @@
 import type { Pool } from 'pg';
-import type { IngestionRunStatus } from 'schemas/etl-sync';
+
+import type { IngestionRunStatus } from '@respark/schemas/etl-sync';
+
+import { isCatalogExtra } from '../../core/catalogSkip';
 import { resolveStoreRaw } from '../../core/flags';
 import { payloadHash } from '../../core/hashing';
 import type { Logger } from '../../core/logger';
 import { ProgressBar, tapByteStream } from '../../core/progress';
 import { emitSyncEvent } from '../../core/stream-events';
-import { isCatalogExtra } from '../../core/catalogSkip';
 import type { GlobalFlags, JobContext } from '../../core/types';
 import { upsertCatalogRecords, upsertScryfallSetMeta } from '../../repositories/catalog';
 import { finishJobRun, insertIngestionError, startJobRun } from '../../repositories/ingestionRuns';
 import { upsertScryfallCards, type RawScryfallUpsert } from '../../repositories/rawScryfall';
+
 import {
   fetchAllScryfallSets,
   fetchBulkMetadata,

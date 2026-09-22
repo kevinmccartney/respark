@@ -1,4 +1,5 @@
-import type { DeckDetail } from 'schemas/decks';
+import type { DeckDetail } from '@respark/schemas/decks';
+
 import type { SpellbookDecklist } from './types';
 
 export const toSpellbookDecklist = (detail: DeckDetail): SpellbookDecklist => {

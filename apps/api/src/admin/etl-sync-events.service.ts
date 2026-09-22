@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Subject, type Observable } from 'rxjs';
-import type { SyncEvent } from 'schemas/sync-event';
+
+import type { SyncEvent } from '@respark/schemas/sync-event';
 
 /**
  * Process-wide bus so Nest hot-reload does not orphan a running sync's

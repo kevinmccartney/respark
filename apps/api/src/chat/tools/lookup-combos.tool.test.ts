@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { DeckCard, DeckDetail } from 'schemas/decks';
+
+import type { DeckCard, DeckDetail } from '@respark/schemas/decks';
+
 import type { CardsService } from '../../cards/cards.service';
 import type { DecksService } from '../../decks/decks.service';
 import type { SpellbookClient, SpellbookVariantSlice } from '../spellbook/types';
 import { SpellbookUpstreamError } from '../spellbook/types';
+
 import { lookupCombosTool } from './lookup-combos.tool';
 import type { ToolContext } from './types';
 

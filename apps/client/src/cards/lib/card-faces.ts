@@ -1,4 +1,4 @@
-import type { CardFace } from 'schemas/primitives';
+import type { CardFace } from '@respark/schemas/primitives';
 
 export type CardFaceFields = {
   name: string;

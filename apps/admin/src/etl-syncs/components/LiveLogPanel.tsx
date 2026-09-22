@@ -1,5 +1,5 @@
-import type { LiveLog } from '../hooks/useSyncDetail.ts';
-import { formatTimestamp } from '../lib/format.ts';
+import { formatTimestamp } from '../lib';
+import type { LiveLog } from '../types';
 
 type LiveLogPanelProps = {
   logs: LiveLog[];

@@ -1,6 +1,8 @@
-import { getCardInputSchema, type GetCardInput } from 'schemas/chat';
-import type { CardDetail } from 'schemas/cards';
+import type { CardDetail } from '@respark/schemas/cards';
+import { getCardInputSchema, type GetCardInput } from '@respark/schemas/chat';
+
 import type { CardsService } from '../../cards/cards.service';
+
 import type { ChatTool } from './types';
 
 export type GetCardToolResult = Omit<CardDetail, 'printings'>;

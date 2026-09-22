@@ -1,397 +1,185 @@
-import { useAuth } from '@clerk/react';
-import { useEffect, useRef, useState } from 'react';
-import { applyAdminLoadError, apiErrorMessage } from '@/core';
-import { connectEtlSyncWs } from '../lib/etl-ws.ts';
-import type {
-  EtlJobRun,
-  EtlSync,
-  IngestionError,
-  IngestionReconciliation,
-  IngestionUnmatched,
-} from 'schemas/etl-sync';
-import { uuidSchema, type LogLevel } from 'schemas/primitives';
-import type { SyncEvent } from 'schemas/sync-event';
-import {
-  liveErrorFromEvent,
-  liveUnmatchedFromEvent,
-  patchSyncStatus,
-  upsertJobOnSync,
-} from '../lib/sync-state.ts';
-import {
-  fetchEtlSync,
-  fetchEtlSyncLogs,
-  loadJobArtifacts,
-  fetchJobErrors,
-  fetchJobUnmatched,
-  PAGE_SIZE,
-} from '../lib/syncs.ts';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-export type LiveLog = {
-  id: number;
-  level: LogLevel;
-  message: string;
-  at: string;
+import { uuidSchema, type EtlJobRun } from '@respark/schemas';
+
+import { adminQueryErrorState } from '@respark-admin/core/lib';
+import { PAGE_SIZE, SYNC_LOGS_LIMIT } from '@respark-admin/etl-syncs/constants';
+
+import { mergePersistedAndLiveLogs } from '../lib';
+import type { LiveLog } from '../types';
+
+import {
+  useEtlSync,
+  useEtlSyncLogs,
+  useJobErrors,
+  useJobReconciliation,
+  useJobUnmatched,
+} from './syncs';
+import { useEtlSyncDetailLive } from './useEtlSyncDetailLive';
+
+export type { LiveLog } from '../types';
+
+const LOGS_OPTS = { limit: SYNC_LOGS_LIMIT } as const;
+
+const preferredJobId = (jobs: EtlJobRun[]): string | null => {
+  const preferred = jobs.find((j) => j.job === 'identifiers') ?? jobs[0] ?? null;
+  return preferred?.id ?? null;
 };
 
 export const useSyncDetail = (id: string | undefined) => {
-  const { getToken } = useAuth();
+  const validId = Boolean(id) && uuidSchema.safeParse(id).success;
+  const syncId = validId ? id! : '';
 
-  const [sync, setSync] = useState<EtlSync | null>(null);
+  const syncQuery = useEtlSync(syncId);
+  const sync = syncQuery.data;
+  const {
+    forbidden,
+    notFound: errorNotFound,
+    message: loadError,
+  } = adminQueryErrorState(syncQuery.error, 'Could not load sync');
+
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-  const [reconciliation, setReconciliation] = useState<IngestionReconciliation | null>(null);
-  const [unmatched, setUnmatched] = useState<IngestionUnmatched[]>([]);
-  const [totalUnmatched, setTotalUnmatched] = useState(0);
-  const [unmatchedOffset, setUnmatchedOffset] = useState(0);
-  const [unmatchedLoading, setUnmatchedLoading] = useState(false);
-  const [errors, setErrors] = useState<IngestionError[]>([]);
-  const [totalErrors, setTotalErrors] = useState(0);
   const [offset, setOffset] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [errorsLoading, setErrorsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [forbidden, setForbidden] = useState(false);
-  const [notFound, setNotFound] = useState(false);
+  const [unmatchedOffset, setUnmatchedOffset] = useState(0);
   const [expandedPayload, setExpandedPayload] = useState<number | null>(null);
-  const [liveLogs, setLiveLogs] = useState<LiveLog[]>([]);
-  const [live, setLive] = useState(false);
-  const [progressByJobId, setProgressByJobId] = useState<
-    Record<string, { percent: number | null }>
-  >({});
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const selectedJobIdRef = useRef<string | null>(null);
   const errorsOffsetRef = useRef(0);
   const unmatchedOffsetRef = useRef(0);
-  const liveRowIdRef = useRef(-1);
 
-  const setSelectedJob = (jobId: string | null) => {
+  const setSelectedJob = useCallback((jobId: string | null) => {
     selectedJobIdRef.current = jobId;
     setSelectedJobId(jobId);
-  };
+  }, []);
 
   useEffect(() => {
-    if (!id) return;
-    const controller = new AbortController();
-
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      setForbidden(false);
-      setNotFound(false);
-      setLiveLogs([]);
-      setOffset(0);
-      setUnmatchedOffset(0);
-      errorsOffsetRef.current = 0;
-      unmatchedOffsetRef.current = 0;
-      if (!uuidSchema.safeParse(id).success) {
-        if (controller.signal.aborted) return;
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const syncRow = await fetchEtlSync(getToken, id!);
-        if (controller.signal.aborted) return;
-        setSync(syncRow);
-        setProgressByJobId(
-          Object.fromEntries(
-            syncRow.stages
-              .flatMap((stage) => stage.jobs)
-              .map((job) => [job.id, { percent: job.progressPercent }]),
-          ),
-        );
-
-        const allJobs = syncRow.stages.flatMap((s) => s.jobs);
-        const preferred = allJobs.find((j) => j.job === 'identifiers') ?? allJobs[0] ?? null;
-        const jobId = preferred?.id ?? null;
-        setSelectedJob(jobId);
-
-        const [logPage, artifacts] = await Promise.all([
-          fetchEtlSyncLogs(getToken, id!, { limit: 200 }),
-          preferred
-            ? loadJobArtifacts(getToken, id!, preferred, {
-                limit: PAGE_SIZE,
-                offset: 0,
-                unmatchedOffset: 0,
-              })
-            : Promise.resolve(null),
-        ]);
-        if (controller.signal.aborted) return;
-
-        setLiveLogs(
-          logPage.logs.map((row) => ({
-            id: row.id,
-            level: row.level,
-            message: row.message,
-            at: row.createdAt,
-          })),
-        );
-
-        if (artifacts) {
-          setErrors(artifacts.errors);
-          setTotalErrors(artifacts.totalErrors);
-          setReconciliation(artifacts.reconciliation);
-          setUnmatched(artifacts.unmatched);
-          setTotalUnmatched(artifacts.totalUnmatched);
-        } else {
-          setErrors([]);
-          setTotalErrors(0);
-          setReconciliation(null);
-          setUnmatched([]);
-          setTotalUnmatched(0);
-        }
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        applyAdminLoadError(err, { setError, setForbidden, setNotFound }, 'Could not load sync');
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    };
-
-    void load();
-    return () => controller.abort();
-  }, [getToken, id]);
+    selectedJobIdRef.current = selectedJobId;
+  }, [selectedJobId]);
 
   useEffect(() => {
-    if (!id || forbidden) return;
+    errorsOffsetRef.current = offset;
+  }, [offset]);
 
-    const appendLog = (level: LogLevel, message: string) => {
-      setLiveLogs((prev) => {
-        if (prev.some((line) => line.level === level && line.message === message)) {
-          return prev;
-        }
-        liveRowIdRef.current -= 1;
-        return [
-          ...prev,
-          {
-            id: liveRowIdRef.current,
-            level,
-            message,
-            at: new Date().toISOString(),
-          },
-        ].slice(-200);
-      });
-    };
+  useEffect(() => {
+    unmatchedOffsetRef.current = unmatchedOffset;
+  }, [unmatchedOffset]);
 
-    const upsertJob = (job: Partial<EtlJobRun> & { id: string; stage: string; job: string }) => {
-      setSync((prev) => (prev ? upsertJobOnSync(prev, job) : prev));
-      if (!selectedJobIdRef.current) setSelectedJob(job.id);
-    };
+  useEffect(() => {
+    setSelectedJob(null);
+    setOffset(0);
+    setUnmatchedOffset(0);
+    setExpandedPayload(null);
+    setActionError(null);
+    errorsOffsetRef.current = 0;
+    unmatchedOffsetRef.current = 0;
+  }, [syncId, setSelectedJob]);
 
-    const applyEvent = (event: SyncEvent) => {
-      const syncId =
-        event.type === 'sync.started' ? event.sync.id : 'syncId' in event ? event.syncId : null;
-      if (syncId !== id) return;
+  useEffect(() => {
+    if (!sync) return;
+    const jobs = sync.stages.flatMap((s) => s.jobs);
+    if (selectedJobId && jobs.some((j) => j.id === selectedJobId)) return;
+    setSelectedJob(preferredJobId(jobs));
+  }, [sync, selectedJobId, setSelectedJob]);
 
-      if (event.type === 'sync.updated' || event.type === 'sync.completed') {
-        setSync((prev) =>
-          prev
-            ? patchSyncStatus(prev, {
-                status: event.status,
-                completedAt: event.completedAt,
-                errorMessage: event.errorMessage,
-              })
-            : prev,
-        );
-        if (event.type === 'sync.completed') {
-          setProgressByJobId({});
-          appendLog(
-            event.status === 'failed' ? 'error' : 'info',
-            `ETL sync finished (${event.status})`,
-          );
-        }
-        return;
-      }
+  const logsQuery = useEtlSyncLogs(syncId, LOGS_OPTS, validId && !forbidden && !errorNotFound);
+  const selectedJob =
+    sync?.stages.flatMap((s) => s.jobs).find((j) => j.id === selectedJobId) ?? null;
+  const isIdentifiers = selectedJob?.job === 'identifiers';
 
-      if (event.type === 'job.started') {
-        upsertJob({
-          id: event.jobRunId,
-          stage: event.stage,
-          job: event.job,
-          status: event.status,
-          startedAt: event.startedAt,
-        });
-        appendLog('info', `Job started: ${event.stage}/${event.job}`);
-        return;
-      }
+  const errorsOpts = { limit: PAGE_SIZE, offset };
+  const unmatchedOpts = { limit: PAGE_SIZE, offset: unmatchedOffset };
 
-      if (event.type === 'job.completed') {
-        upsertJob({
-          id: event.jobRunId,
-          stage: event.stage,
-          job: event.job,
-          status: event.status,
-          completedAt: event.completedAt,
-          errorMessage: event.errorMessage,
-          ...event.metrics,
-        });
-        setProgressByJobId((prev) => {
-          const next = { ...prev };
-          delete next[event.jobRunId];
-          return next;
-        });
-        appendLog(
-          event.status === 'failed' ? 'error' : 'info',
-          `Job completed: ${event.stage}/${event.job} (${event.status})`,
-        );
-        return;
-      }
+  const errorsQuery = useJobErrors(
+    syncId,
+    selectedJobId,
+    errorsOpts,
+    Boolean(selectedJobId) && !forbidden,
+  );
+  const reconciliationQuery = useJobReconciliation(
+    syncId,
+    selectedJobId,
+    Boolean(selectedJobId) && isIdentifiers && !forbidden,
+  );
+  const unmatchedQuery = useJobUnmatched(
+    syncId,
+    selectedJobId,
+    unmatchedOpts,
+    Boolean(selectedJobId) && isIdentifiers && !forbidden,
+  );
 
-      if (event.type === 'job.progress') {
-        upsertJob({
-          id: event.jobRunId,
-          stage: event.stage,
-          job: event.job,
-          recordsSeen: event.progress.cards,
-          recordsInserted: event.progress.inserted,
-          recordsUpdated: event.progress.updated,
-          recordsUnchanged: event.progress.unchanged,
-          recordsFailed: event.progress.failed,
-          progressPercent: event.progress.percent,
-        });
-        setProgressByJobId((prev) => ({
-          ...prev,
-          [event.jobRunId]: { percent: event.progress.percent },
-        }));
-        return;
-      }
+  const { live, progressByJobId, liveLogTail } = useEtlSyncDetailLive(validId ? id : undefined, {
+    enabled: validId && !forbidden && !errorNotFound,
+    sync,
+    selectedJobIdRef,
+    errorsOffsetRef,
+    unmatchedOffsetRef,
+    setSelectedJob,
+  });
 
-      if (event.type === 'job.log') {
-        appendLog(event.level, event.message);
-        return;
-      }
+  const persistedLogs: LiveLog[] =
+    logsQuery.data?.logs.map((row) => ({
+      id: row.id,
+      level: row.level,
+      message: row.message,
+      at: row.createdAt,
+    })) ?? [];
+  const liveLogs = mergePersistedAndLiveLogs(persistedLogs, liveLogTail);
 
-      if (event.type === 'job.error') {
-        const selected = selectedJobIdRef.current;
-        if (selected && event.jobRunId === selected) {
-          setTotalErrors((n) => n + 1);
-          if (errorsOffsetRef.current === 0) {
-            liveRowIdRef.current -= 1;
-            const row = liveErrorFromEvent(event, liveRowIdRef.current);
-            setErrors((prev) => [row, ...prev].slice(0, PAGE_SIZE));
-          }
-        }
-        appendLog('error', event.error.errorMessage);
-        return;
-      }
+  const errors = errorsQuery.data?.errors ?? [];
+  const totalErrors = errorsQuery.data?.total ?? 0;
+  const unmatched = unmatchedQuery.data?.unmatched ?? [];
+  const totalUnmatched = unmatchedQuery.data?.total ?? 0;
+  const reconciliation = reconciliationQuery.data ?? null;
 
-      if (event.type === 'job.unmatched') {
-        const selected = selectedJobIdRef.current;
-        if (selected && event.jobRunId === selected) {
-          setTotalUnmatched((n) => n + 1);
-          if (unmatchedOffsetRef.current === 0) {
-            liveRowIdRef.current -= 1;
-            const row = liveUnmatchedFromEvent(event, liveRowIdRef.current);
-            setUnmatched((prev) => [...prev, row].slice(0, PAGE_SIZE));
-          }
-        }
-      }
-    };
+  const payloadRow =
+    expandedPayload == null ? null : (errors.find((e) => e.id === expandedPayload) ?? null);
 
-    const ws = connectEtlSyncWs(getToken, {
-      onOpen: () => {
-        setLive(true);
-        ws.subscribeSync(id);
-      },
-      onClose: () => setLive(false),
-      onEvent: applyEvent,
-    });
-
-    return () => ws.close();
-  }, [getToken, id, forbidden]);
-
-  const selectJob = async (job: EtlJobRun) => {
-    if (!id) return;
+  const selectJob = (job: EtlJobRun) => {
     setSelectedJob(job.id);
-    setErrorsLoading(true);
-    setUnmatchedLoading(true);
     setOffset(0);
     setUnmatchedOffset(0);
     errorsOffsetRef.current = 0;
     unmatchedOffsetRef.current = 0;
     setExpandedPayload(null);
-    try {
-      const artifacts = await loadJobArtifacts(getToken, id, job, {
-        limit: PAGE_SIZE,
-        offset: 0,
-        unmatchedOffset: 0,
-      });
-      setErrors(artifacts.errors);
-      setTotalErrors(artifacts.totalErrors);
-      setReconciliation(artifacts.reconciliation);
-      setUnmatched(artifacts.unmatched);
-      setTotalUnmatched(artifacts.totalUnmatched);
-    } catch (err) {
-      setError(apiErrorMessage(err, 'Could not load job details'));
-    } finally {
-      setErrorsLoading(false);
-      setUnmatchedLoading(false);
-    }
+    setActionError(null);
   };
 
-  const loadErrorPage = async (nextOffset: number) => {
-    if (!id || !selectedJobIdRef.current) return;
-    setErrorsLoading(true);
-    try {
-      const errorPage = await fetchJobErrors(getToken, id, selectedJobIdRef.current, {
-        limit: PAGE_SIZE,
-        offset: nextOffset,
-      });
-      setErrors(errorPage.errors);
-      setTotalErrors(errorPage.total);
-      setOffset(nextOffset);
-      errorsOffsetRef.current = nextOffset;
-      setExpandedPayload(null);
-    } catch (err) {
-      setError(apiErrorMessage(err, 'Could not load failed rows'));
-    } finally {
-      setErrorsLoading(false);
-    }
+  const loadErrorPage = (nextOffset: number) => {
+    setOffset(nextOffset);
+    errorsOffsetRef.current = nextOffset;
+    setExpandedPayload(null);
   };
 
-  const loadUnmatchedPage = async (nextOffset: number) => {
-    if (!id || !selectedJobIdRef.current) return;
-    setUnmatchedLoading(true);
-    try {
-      const page = await fetchJobUnmatched(getToken, id, selectedJobIdRef.current, {
-        limit: PAGE_SIZE,
-        offset: nextOffset,
-      });
-      setUnmatched(page.unmatched);
-      setTotalUnmatched(page.total);
-      setUnmatchedOffset(nextOffset);
-      unmatchedOffsetRef.current = nextOffset;
-    } catch (err) {
-      setError(apiErrorMessage(err, 'Could not load unmatched records'));
-    } finally {
-      setUnmatchedLoading(false);
-    }
+  const loadUnmatchedPage = (nextOffset: number) => {
+    setUnmatchedOffset(nextOffset);
+    unmatchedOffsetRef.current = nextOffset;
   };
 
-  const selectedJob =
-    sync?.stages.flatMap((s) => s.jobs).find((j) => j.id === selectedJobId) ?? null;
+  const queryError =
+    errorsQuery.error ?? reconciliationQuery.error ?? unmatchedQuery.error ?? logsQuery.error;
+  const { message: childError } = adminQueryErrorState(queryError, 'Could not load job details');
 
-  const payloadRow =
-    expandedPayload == null ? null : (errors.find((e) => e.id === expandedPayload) ?? null);
+  const notFound = Boolean(id) && (!validId || errorNotFound);
 
   return {
-    sync,
+    sync: sync ?? null,
     selectedJob,
     selectedJobId,
     live,
-    loading,
-    error,
+    loading: validId && syncQuery.isPending,
+    error: actionError ?? loadError ?? childError,
     forbidden,
     notFound,
     reconciliation,
     unmatched,
     totalUnmatched,
     unmatchedOffset,
-    unmatchedLoading,
+    unmatchedLoading: unmatchedQuery.isFetching,
     errors,
     totalErrors,
     offset,
-    errorsLoading,
+    errorsLoading: errorsQuery.isFetching,
     expandedPayload,
     setExpandedPayload,
     payloadRow,

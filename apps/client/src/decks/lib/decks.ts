@@ -21,7 +21,8 @@ import {
   type DeckImportUnmatched,
   type PatchDeckCardBody,
   type UpdateDeckInput,
-} from 'schemas/decks';
+} from '@respark/schemas/decks';
+
 import { apiFetchJson, type GetToken } from '@/core';
 
 export { COLOR_IDENTITY_PIPS, DECK_FORMATS };

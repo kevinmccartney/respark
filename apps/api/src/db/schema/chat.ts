@@ -1,7 +1,9 @@
 import type { Column } from 'drizzle-orm';
 import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder';
 import { index, jsonb, text, timestamp, uuid } from 'drizzle-orm/pg-core';
-import type { ChatPart } from 'schemas/chat';
+
+import type { ChatPart } from '@respark/schemas/chat';
+
 import { cards } from './catalog/tables';
 import { decks } from './decks';
 import { appSchema } from './pipeline-schemas';

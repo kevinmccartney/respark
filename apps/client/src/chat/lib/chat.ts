@@ -2,7 +2,8 @@ import {
   chatConversationResponseSchema,
   chatLatestResponseSchema,
   type ChatConversation,
-} from 'schemas/chat';
+} from '@respark/schemas/chat';
+
 import { apiFetchJson, type GetToken } from '@/core';
 
 export type { ChatConversation };

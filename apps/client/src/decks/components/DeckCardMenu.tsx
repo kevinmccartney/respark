@@ -1,22 +1,22 @@
 import { EllipsisVertical } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/core/ui/button';
+
 import {
+  Button,
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuTrigger,
-} from '@/core/ui/context-menu';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/core/ui/dropdown-menu';
-import type { DeckCard } from '../lib/decks.ts';
+} from '@respark/ui/lib';
+
+import type { DeckCard } from '../lib/decks';
 
 type DeckCardMenuHandlers = {
   onPreview: (cardId: string) => void;

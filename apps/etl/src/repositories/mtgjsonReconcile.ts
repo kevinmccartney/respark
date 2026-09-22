@@ -1,5 +1,7 @@
 import type { PoolClient } from 'pg';
-import type { LeadershipSkills } from 'schemas/cards';
+
+import type { LeadershipSkills } from '@respark/schemas/cards';
+
 import type { EnrichmentIdentifier, MtgjsonEnrichment } from '../sources/mtgjson/transformer';
 
 export type MatchStatus = 'matched' | 'unmatched' | 'ambiguous';

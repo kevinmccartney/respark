@@ -1,17 +1,23 @@
-import { OffsetPagination } from '@/core';
-import { Button } from '@/core/ui/button';
+import type { EtlJobRun, IngestionError } from '@respark/schemas/etl-sync';
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/core/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/core/ui/table';
-import { formatNumber, formatTimestamp } from '../lib/format.ts';
-import { JOB_LABELS, PAGE_SIZE } from '../lib/syncs.ts';
-import type { EtlJobRun, IngestionError } from 'schemas/etl-sync';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@respark/ui/lib';
+
+import { OffsetPagination } from '@respark-admin/core/components';
+import { JOB_LABELS, PAGE_SIZE } from '@respark-admin/etl-syncs/constants';
+import { formatNumber, formatTimestamp } from '@respark-admin/etl-syncs/lib';
 
 type JobErrorsSectionProps = {
   job: EtlJobRun;

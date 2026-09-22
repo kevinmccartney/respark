@@ -1,5 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import type { ToolResult } from 'schemas/chat';
+
+import type { ToolResult } from '@respark/schemas/chat';
+
 import type { ChatTool, ToolContext } from './types';
 
 type ToolThrowLogger = {

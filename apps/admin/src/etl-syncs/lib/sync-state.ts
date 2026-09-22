@@ -1,5 +1,10 @@
-import type { EtlJobRun, EtlSync, IngestionError, IngestionUnmatched } from 'schemas/etl-sync';
-import type { SyncEvent } from 'schemas/sync-event';
+import type {
+  EtlJobRun,
+  EtlSync,
+  IngestionError,
+  IngestionUnmatched,
+  SyncEvent,
+} from '@respark/schemas';
 
 export const upsertJobOnSync = (
   sync: EtlSync,

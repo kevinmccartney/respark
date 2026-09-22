@@ -1,11 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it, vi } from 'vitest';
+
 import type { PinoLogger } from 'nestjs-pino';
-import type { ChatPart, ChatServerEvent } from 'schemas/chat';
-import type { DeckCard, DeckDetail } from 'schemas/decks';
-import type { CardSearchPage } from 'schemas/cards';
+import { describe, expect, it, vi } from 'vitest';
+
+import type { CardSearchPage } from '@respark/schemas/cards';
+import type { ChatPart, ChatServerEvent } from '@respark/schemas/chat';
+import type { DeckCard, DeckDetail } from '@respark/schemas/decks';
+
 import type { CardsService } from '../../cards/cards.service';
 import type { DecksService } from '../../decks/decks.service';
 import type { RecommendationsService } from '../../recommendations/recommendations.service';
@@ -15,6 +18,7 @@ import { ChatOrchestrator } from '../orchestrator';
 import { ScriptedChatProvider, type ScriptedRound } from '../provider/scripted.provider';
 import { recommendPolicy } from '../recommend-policy';
 import type { SpellbookClient } from '../spellbook/types';
+
 import { cardMatchesSearchFilters, FIXTURE_CARDS, IDS, type FixtureCard } from './fixtures';
 
 const here = dirname(fileURLToPath(import.meta.url));

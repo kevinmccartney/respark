@@ -1,7 +1,10 @@
 import { NotFoundException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
-import type { DeckDetail } from 'schemas/decks';
+
+import type { DeckDetail } from '@respark/schemas/decks';
+
 import type { DecksService } from '../../decks/decks.service';
+
 import { getDeckTool } from './get-deck.tool';
 import type { ToolContext } from './types';
 

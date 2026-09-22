@@ -1,6 +1,6 @@
 # Admin catalog browse
 
-Read-only Catalog screens in `apps/admin` for **Cards** and **Sets**, with printings reached by drilldown (not a top-level nav item). **ETL is the source of truth** for `catalog.*` — the admin UI never mutates cards, sets, or printings. Writable policy (goodstuff) stays under Recommendations.
+Catalog screens in `apps/admin` for **Cards**, **Sets**, and **Goodstuff**. Printings are reached by drilldown (not a top-level nav item). **ETL is the source of truth** for `catalog.*` — the admin UI never mutates cards, sets, or printings. Goodstuff policy is the writable exception under Catalog nav.
 
 Domain objects: [domain.md](domain.md). Ingest: [etl/overview.md](etl/overview.md).
 
@@ -8,17 +8,17 @@ Domain objects: [domain.md](domain.md). Ingest: [etl/overview.md](etl/overview.m
 
 | Topic       | Choice                                                                                   |
 | ----------- | ---------------------------------------------------------------------------------------- |
-| Entities    | Cards + Sets in nav. Printings only on card detail and set detail.                       |
-| Mutability  | Read-only. No POST/PATCH/DELETE on catalog.                                              |
+| Entities    | Cards + Sets + Goodstuff in Catalog nav. Printings only on card detail and set detail.   |
+| Mutability  | Cards/sets read-only. Goodstuff is writable admin policy.                                |
 | Printing UX | Same idea as the player app: selected printing + list of other printings (`?printing=`). |
-| Writes      | ETL only. Goodstuff remains a separate admin list.                                       |
+| Writes      | Catalog rows: ETL only. Goodstuff: admin API.                                            |
 
 ## Information architecture
 
 ```text
 /catalog/cards ──► /catalog/cards/:id?printing=
 /catalog/sets  ──► /catalog/sets/:id ──► card detail (with printing)
-card detail (if goodstuff) ···► /recommendations/goodstuff
+/catalog/goodstuff
 ```
 
 | Route                | Page                                                                 |
@@ -27,12 +27,13 @@ card detail (if goodstuff) ···► /recommendations/goodstuff
 | `/catalog/cards/:id` | Card detail; `?printing=` selects printing (omit = default / newest) |
 | `/catalog/sets`      | Searchable set table                                                 |
 | `/catalog/sets/:id`  | Set summary + printings in that set                                  |
+| `/catalog/goodstuff` | Multi-tag format goodstuff list                                      |
 
-Admin feature folder: [`apps/admin/src/catalog/`](../apps/admin/src/catalog/). Nav leaves for Cards / Sets are live (no `comingSoon`).
+Admin feature folders: [`apps/admin/src/cards/`](../apps/admin/src/cards/), [`apps/admin/src/sets/`](../apps/admin/src/sets/). Nav leaves for Cards / Sets / Goodstuff are live (no `comingSoon`).
 
 ## Screens
 
-Match existing admin chrome: table + filter form, pagination ([`OffsetPagination`](../apps/admin/src/core/components/OffsetPagination.tsx) over page-based list APIs), `applyAdminLoadError`. **No edit / save / delete controls** on catalog pages. Short page copy: catalog data comes from ETL syncs.
+Match existing admin chrome: table + filter form, pagination ([`OffsetPagination`](../apps/admin/src/core/components/OffsetPagination.tsx) over page-based list APIs), `AdminLoadErrorAlert`. **No edit / save / delete controls** on cards/sets pages. Short page copy: catalog data comes from ETL syncs.
 
 ### Cards list (`/catalog/cards`)
 
@@ -49,9 +50,12 @@ Mirror player card detail (browse-only):
 - **Oracle block:** name, mana, type, oracle text, keywords, legalities, leadership skills, EDHREC rank / salt / game-changer, goodstuff flag + tags.
 - **Selected printing:** image, set code/name, collector number, rarity, finishes, artist.
 - **Other printings:** list; switching updates `?printing=` (default printing = first/newest; omit query when default).
-- **Goodstuff:** if flagged, link to `/recommendations/goodstuff`; otherwise a quiet deep link to Recommendations → Goodstuff.
 
 No deck-add or foil toggle — admin is browse-only.
+
+### Goodstuff (`/catalog/goodstuff`)
+
+Maintain the multi-tag goodstuff list (add via card name suggestions, remove entries). Lives under Catalog in the admin menu; API remains `/admin/recommendation-goodstuffs`.
 
 ### Sets list (`/catalog/sets`)
 
@@ -74,7 +78,7 @@ Set metadata (code, name, type, released, card count, digital, Scryfall id).
 - `GET /cards/suggestions` — name autocomplete for pickers (not full search).
 - `GET /cards/type-suggestions` — legacy; unused by current admin UI.
 
-Admin is already Clerk-authenticated. No catalog write routes.
+Admin is already Clerk-authenticated. No catalog write routes on cards/sets.
 
 ### Sets (GET only)
 

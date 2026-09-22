@@ -6,7 +6,8 @@ import {
   lookupCombosInputSchema,
   type LookupCombosInput,
   type LookupCombosResult,
-} from 'schemas/chat';
+} from '@respark/schemas/chat';
+
 import type { CardsService } from '../../cards/cards.service';
 import type { DecksService } from '../../decks/decks.service';
 import { SPELLBOOK_COMBO_URL, SPELLBOOK_SITE_URL } from '../spellbook/constants';
@@ -17,6 +18,7 @@ import {
   type SpellbookClient,
   type SpellbookVariantSlice,
 } from '../spellbook/types';
+
 import type { ChatTool } from './types';
 
 type CatalogResolve = {

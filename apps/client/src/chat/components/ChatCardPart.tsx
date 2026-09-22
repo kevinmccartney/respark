@@ -1,7 +1,9 @@
 import { useAuth } from '@clerk/react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ManaCost } from 'ui/mana';
+
+import { ManaCost } from '@respark/ui/mana';
+
 import { fetchCard, type CardDetail } from '@/cards';
 import { isAbortError } from '@/core';
 

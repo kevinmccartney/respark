@@ -1,5 +1,5 @@
 {
-  "name": "scryfall-query",
+  "name": "@respark/scryfall-query",
   "private": true,
   "version": "0.1.0",
   "main": "./dist/index.js",

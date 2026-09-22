@@ -1,4 +1,4 @@
-import type { SyncEvent } from 'schemas/sync-event';
+import type { SyncEvent } from '@respark/schemas/sync-event';
 
 export type { SyncEvent };
 

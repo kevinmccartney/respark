@@ -1,5 +1,6 @@
-import type { CompactDeck } from 'schemas/chat';
-import type { DeckCard, DeckDetail } from 'schemas/decks';
+import type { CompactDeck } from '@respark/schemas/chat';
+import type { DeckCard, DeckDetail } from '@respark/schemas/decks';
+
 import { GET_DECK_KEYWORD_COUNT_CAP, GET_DECK_LINE_CAP } from '../chat.constants';
 
 const PRIMARY_TYPES = [

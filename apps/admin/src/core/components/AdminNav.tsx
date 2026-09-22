@@ -1,7 +1,9 @@
+import { cn } from 'cn';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Badge } from '@/core/ui/badge';
-import { cn } from '../lib/cn.ts';
-import { ADMIN_NAV, isNavPathActive, type AdminNavLeaf } from '../lib/nav.ts';
+
+import { Badge } from '@respark/ui/lib';
+
+import { ADMIN_NAV, isNavPathActive, type AdminNavLeaf } from '@respark-admin/core/lib/nav';
 
 const leafClass = (active: boolean) =>
   cn(

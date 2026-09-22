@@ -1,8 +1,10 @@
 import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/core/ui/button';
-import { ThemeToggle } from './ThemeToggle.tsx';
+
+import { Button } from '@respark/ui/lib';
+
+import { ThemeToggle } from './ThemeToggle';
 
 type SiteHeaderProps = {
   showAuthActions?: boolean;

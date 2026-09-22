@@ -5,9 +5,11 @@ import {
   SEARCH_CARDS_TOOL_MAX_LIMIT,
   searchCardsInputSchema,
   type SearchCardsInput,
-} from 'schemas/chat';
+} from '@respark/schemas/chat';
+
 import type { CardsService } from '../../cards/cards.service';
 import type { DecksService } from '../../decks/decks.service';
+
 import type { ChatTool } from './types';
 
 export type SearchCardsToolResult = {

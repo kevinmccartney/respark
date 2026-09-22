@@ -1,21 +1,23 @@
 import { useAuth } from '@clerk/react';
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { useLocation } from 'react-router-dom';
+
 import {
   chatViewFromLocation,
   type ChatPart,
   type ChatServerEvent,
   type ChatStatusCode,
   type ChatVisibleMessage,
-} from 'schemas/chat';
-import { Badge } from '@/core/ui/badge';
-import { Button } from '@/core/ui/button';
-import { Input } from '@/core/ui/input';
-import { ChatMarkdown } from './ChatMarkdown.tsx';
+} from '@respark/schemas/chat';
+import { Badge, Button, Input } from '@respark/ui/lib';
+
 import { ApiError, isAbortError, isNotFound } from '@/core';
-import { fetchChatConversation, fetchLatestChatConversation } from '../lib/chat.ts';
-import { useChatSession } from '../lib/chat-session.tsx';
-import { connectChatWs } from '../lib/chat-ws.ts';
+
+import { fetchChatConversation, fetchLatestChatConversation } from '../lib/chat';
+import { useChatSession } from '../lib/chat-session';
+import { connectChatWs } from '../lib/chat-ws';
+
+import { ChatMarkdown } from './ChatMarkdown';
 
 const DECK_PROMPT = 'What would be a good add to this deck?';
 const CATALOG_PROMPT = 'Suggest some cards';

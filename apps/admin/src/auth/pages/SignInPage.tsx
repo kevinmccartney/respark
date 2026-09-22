@@ -1,19 +1,13 @@
 import { SignInButton } from '@clerk/react';
-import { Button } from '@/core/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/core/ui/card';
+
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@respark/ui/lib';
 
 export const SignInPage = () => (
   <main className="mx-auto mt-16 max-w-md px-5">
     <Card>
       <CardHeader>
         <CardTitle>Admin sign in</CardTitle>
-        <CardDescription>
-          Sign in with a Clerk user that has{' '}
-          <code className="rounded-md bg-muted px-1 py-0.5 font-mono text-[0.8em]">
-            {`{ "role": "admin" }`}
-          </code>{' '}
-          in public metadata.
-        </CardDescription>
+        <CardDescription>You know if you're supposed to be here.</CardDescription>
       </CardHeader>
       <CardContent>
         <SignInButton mode="modal">

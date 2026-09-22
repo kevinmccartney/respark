@@ -1,79 +1,75 @@
 import { useAuth } from '@clerk/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, AlertDescription } from '@/core/ui/alert';
-import { Badge } from '@/core/ui/badge';
-import { Button } from '@/core/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/core/ui/table';
-import { applyAdminLoadError, apiErrorMessage } from '@/core';
-import type { EtlSync } from 'schemas/etl-sync';
-import type { SyncEvent } from 'schemas/sync-event';
-import { connectEtlSyncWs } from '../lib/etl-ws.ts';
-import { formatDuration, formatTimestamp, statusBadgeProps } from '../lib/format.ts';
-import { patchSyncInList, upsertStartedSync } from '../lib/sync-state.ts';
+
+import type { EtlSync } from '@respark/schemas';
+import type { SyncEvent } from '@respark/schemas/sync-event';
 import {
-  fetchEtlSyncs,
-  startEtlSync,
+  Alert,
+  AlertDescription,
+  Badge,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@respark/ui/lib';
+
+import { AdminLoadErrorAlert } from '@respark-admin/core/components';
+import { adminQueryErrorState, apiErrorMessage } from '@respark-admin/core/lib';
+
+import { connectEtlSyncWs } from '../api';
+import { etlSyncKeys, useEtlSyncs, useStartEtlSync } from '../hooks';
+import {
+  formatDuration,
+  formatTimestamp,
+  patchSyncInList,
+  statusBadgeProps,
   syncDurationMs,
   syncListProgressLabel,
   syncStagesLabel,
-} from '../lib/syncs.ts';
+  upsertStartedSync,
+} from '../lib';
+
+const LIST_OPTS = { limit: 100 } as const;
 
 export const SyncsListPage = () => {
   const { getToken } = useAuth();
   const navigate = useNavigate();
-  const [syncs, setSyncs] = useState<EtlSync[]>([]);
+  const queryClient = useQueryClient();
+  const { data: syncs = [], isPending, error } = useEtlSyncs(LIST_OPTS);
+  const startSync = useStartEtlSync();
+  const { forbidden } = adminQueryErrorState(error, 'Could not load ETL syncs');
+
   const [progressBySync, setProgressBySync] = useState<
     Record<string, { percent: number | null; job: string }>
   >({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [forbidden, setForbidden] = useState(false);
   const [includeCatalog, setIncludeCatalog] = useState(true);
   const [includeEnrichment, setIncludeEnrichment] = useState(false);
-  const [starting, setStarting] = useState(false);
   const [startMessage, setStartMessage] = useState<string | null>(null);
   const [live, setLive] = useState(false);
 
   const enrichmentOnly = includeEnrichment && !includeCatalog;
-
-  const loadSyncs = useCallback(
-    async (signal?: AbortSignal, silent = false) => {
-      if (!silent) {
-        setLoading(true);
-        setError(null);
-        setForbidden(false);
-      }
-      try {
-        const list = await fetchEtlSyncs(getToken, { limit: 100 });
-        if (!signal?.aborted) setSyncs(list);
-      } catch (err) {
-        if (signal?.aborted) return;
-        applyAdminLoadError(err, { setError, setForbidden }, 'Could not load ETL syncs');
-      } finally {
-        if (!signal?.aborted && !silent) setLoading(false);
-      }
-    },
-    [getToken],
-  );
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void loadSyncs(controller.signal);
-    return () => controller.abort();
-  }, [loadSyncs]);
+  const starting = startSync.isPending;
 
   useEffect(() => {
     if (forbidden) return;
 
     const applyEvent = (event: SyncEvent) => {
       if (event.type === 'sync.started') {
-        setSyncs((prev) => upsertStartedSync(prev, event));
+        queryClient.setQueryData<EtlSync[]>(etlSyncKeys.list(LIST_OPTS), (prev) =>
+          prev ? upsertStartedSync(prev, event) : prev,
+        );
         return;
       }
 
       if (event.type === 'sync.updated' || event.type === 'sync.completed') {
-        setSyncs((prev) => patchSyncInList(prev, event));
+        queryClient.setQueryData<EtlSync[]>(etlSyncKeys.list(LIST_OPTS), (prev) =>
+          prev ? patchSyncInList(prev, event) : prev,
+        );
         if (event.type === 'sync.completed') {
           setProgressBySync((prev) => {
             const next = { ...prev };
@@ -105,26 +101,22 @@ export const SyncsListPage = () => {
     });
 
     return () => ws.close();
-  }, [getToken, forbidden]);
+  }, [getToken, forbidden, queryClient]);
 
   const onStartSync = async () => {
     if (!includeCatalog && !includeEnrichment) {
       setStartMessage('Select Catalog and/or Enrichment');
       return;
     }
-    setStarting(true);
     setStartMessage(null);
     try {
-      await startEtlSync(getToken, {
+      await startSync.mutateAsync({
         catalog: includeCatalog,
         enrichmentJobs: includeEnrichment ? ['identifiers'] : [],
       });
       setStartMessage('Sync started — live updates will appear below.');
-      void loadSyncs(undefined, true);
     } catch (err) {
       setStartMessage(apiErrorMessage(err, 'Could not start ETL sync'));
-    } finally {
-      setStarting(false);
     }
   };
 
@@ -185,14 +177,10 @@ export const SyncsListPage = () => {
         </p>
       ) : null}
 
-      {loading ? <p className="text-muted-foreground">Loading…</p> : null}
-      {error ? (
-        <Alert variant={forbidden ? 'destructive' : 'default'} className="mb-3">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : null}
+      {isPending ? <p className="text-muted-foreground">Loading…</p> : null}
+      <AdminLoadErrorAlert error={error} fallback="Could not load ETL syncs" />
 
-      {!loading && !error ? (
+      {!isPending && !error ? (
         syncs.length === 0 ? (
           <p className="text-muted-foreground">No ETL syncs yet.</p>
         ) : (

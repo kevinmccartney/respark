@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Button } from '@/core/ui/button';
-import { Input } from '@/core/ui/input';
-import { Label } from '@/core/ui/label';
+
+import { Button, Input, Label } from '@respark/ui/lib';
+
 import { ColorIdentity } from '@/cards';
-import { CommanderPicker } from './CommanderPicker.tsx';
-import { DECK_FORMAT_LABELS, DECK_FORMATS, type Deck, type DeckFormat } from '../lib/decks.ts';
+
+import { DECK_FORMAT_LABELS, DECK_FORMATS, type Deck, type DeckFormat } from '../lib/decks';
+
+import { CommanderPicker } from './CommanderPicker';
 
 type Props = {
   deck: Deck;

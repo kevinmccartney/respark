@@ -1,13 +1,13 @@
 import { useAuth } from '@clerk/react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Alert, AlertDescription } from '@/core/ui/alert';
-import { Button } from '@/core/ui/button';
-import { Input } from '@/core/ui/input';
-import { Label } from '@/core/ui/label';
+
+import { Alert, AlertDescription, Button, Input, Label } from '@respark/ui/lib';
+
 import { ApiError, isAbortError } from '@/core';
-import { ScryfallSyntaxDialog } from '../components/ScryfallSyntaxDialog.tsx';
-import { searchCards, type CardSearchResult } from '../lib/cards.ts';
+
+import { ScryfallSyntaxDialog } from '../components/ScryfallSyntaxDialog';
+import { searchCards, type CardSearchResult } from '../lib/cards';
 
 const PAGE_SIZE_OPTIONS = [24, 60, 100] as const;
 const DEFAULT_PAGE_SIZE = 60;

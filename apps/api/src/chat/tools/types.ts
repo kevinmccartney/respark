@@ -1,5 +1,6 @@
 import type { ZodType } from 'zod';
-import type { ToolResult } from 'schemas/chat';
+
+import type { ToolResult } from '@respark/schemas/chat';
 
 export type ToolContext = {
   clerkUserId: string;

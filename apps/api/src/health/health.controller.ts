@@ -1,5 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
-import { platformInfoSchema } from 'schemas/platform';
+
+import { platformInfoSchema } from '@respark/schemas/platform';
+
 import { platformVersion } from './platform-version';
 
 @Controller()

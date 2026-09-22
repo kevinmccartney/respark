@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { PRESENT_RECOMMENDATIONS_MAX, SEARCH_CARDS_TOOL_DEFAULT_LIMIT } from 'schemas/chat';
+
+import {
+  PRESENT_RECOMMENDATIONS_MAX,
+  SEARCH_CARDS_TOOL_DEFAULT_LIMIT,
+} from '@respark/schemas/chat';
+
 import type {
   ChatProvider,
   ProviderContent,

@@ -1,8 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { sql, type SQL } from 'drizzle-orm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { parseScryfallQuery, ScryfallQueryError } from 'scryfall-query';
-import { DATABASE, type Database } from '../db/database.module';
+
 import {
   CARD_SEARCH_DEFAULT_LIMIT,
   CARD_SEARCH_DEFAULT_SORT,
@@ -19,12 +18,19 @@ import {
   type CardSearchResult,
   type CardSearchSort,
   type LeadershipSkills,
-} from 'schemas/cards';
-import type { SortDir } from 'schemas/primitives';
-import { goodstuffTagSchema, type RecommendationGoodstuffFlag } from 'schemas/recommendations';
-import { parseCardFaces, uuidSchema } from 'schemas/primitives';
-import type { ColorIdentityPip, DeckFormat } from 'schemas/decks';
+} from '@respark/schemas/cards';
+import type { ColorIdentityPip, DeckFormat } from '@respark/schemas/decks';
+import type { SortDir } from '@respark/schemas/primitives';
+import { parseCardFaces, uuidSchema } from '@respark/schemas/primitives';
+import {
+  goodstuffTagSchema,
+  type RecommendationGoodstuffFlag,
+} from '@respark/schemas/recommendations';
+import { parseScryfallQuery, ScryfallQueryError } from '@respark/scryfall-query';
+
 import { bestPrintingOrderSql, printingFacesJsonSql } from '../catalog/printings';
+import { DATABASE, type Database } from '../db/database.module';
+
 import { compileScryfallAst } from './scryfall-sql';
 
 type SearchRow = {

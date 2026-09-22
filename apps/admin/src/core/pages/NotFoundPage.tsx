@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/core/ui/button';
+
+import { Button } from '@respark/ui/lib';
 
 type NotFoundPageProps = {
   title?: string;

@@ -1,11 +1,15 @@
 import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { createLogger, runEtlSync } from 'etl';
-import type { EnrichmentJobId } from 'schemas/etl-sync';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import type { Pool } from 'pg';
+
+import type { EnrichmentJobId } from '@respark/schemas/etl-sync';
+
+
 import { DATABASE, DATABASE_POOL, type Database } from '../db/database.module';
 import { etlSyncs } from '../db/schema';
+
 import { EtlSyncEventsService } from './etl-sync-events.service';
 
 export type StartSyncInput = {

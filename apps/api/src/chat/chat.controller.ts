@@ -1,8 +1,11 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
-import { uuidSchema } from 'schemas/primitives';
+
+import { uuidSchema } from '@respark/schemas/primitives';
+
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard';
 import { CurrentUserId } from '../auth/current-user.decorator';
 import { zodPipe } from '../lib/zod-pipe';
+
 import { ChatService } from './chat.service';
 
 @Controller('chat')

@@ -1,1 +1,1 @@
-export { GuestOnly, RequireAuth } from './components/gates.tsx';
+export { GuestOnly, RequireAuth } from './components/gates';

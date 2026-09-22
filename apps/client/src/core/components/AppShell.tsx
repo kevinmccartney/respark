@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react';
 import { Outlet } from 'react-router-dom';
-import { ApiHealthFooter } from 'ui/health';
-import { apiBaseUrl } from '../lib/api.ts';
-import { SiteHeader } from './SiteHeader.tsx';
+
+import { ApiHealthFooter } from '@respark/ui/health';
+
+import { apiBaseUrl } from '../lib/api';
+
+import { SiteHeader } from './SiteHeader';
 
 type AppShellProps = {
   rail?: ReactNode;

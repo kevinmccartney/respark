@@ -1,12 +1,14 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { asc, eq, inArray } from 'drizzle-orm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+
 import {
   goodstuffTagSchema,
   type CreateRecommendationGoodstuffBody,
   type GoodstuffTag,
   type RecommendationGoodstuff,
-} from 'schemas/recommendations';
+} from '@respark/schemas/recommendations';
+
 import { CardsService } from '../cards/cards.service';
 import { DATABASE, type Database } from '../db/database.module';
 import { cards, recommendationGoodstuffTags, recommendationGoodstuffs } from '../db/schema';

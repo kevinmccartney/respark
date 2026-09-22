@@ -1,3 +1,5 @@
+import type { IncomingMessage } from 'node:http';
+
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import {
   ConnectedSocket,
@@ -10,11 +12,17 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import type { IncomingMessage } from 'node:http';
-import type { Server, WebSocket } from 'ws';
 import { Subscription } from 'rxjs';
-import { etlWsSubscribeSchema, type EtlWsSubscribe, type SyncEvent } from 'schemas/sync-event';
+import type { Server, WebSocket } from 'ws';
+
+import {
+  etlWsSubscribeSchema,
+  type EtlWsSubscribe,
+  type SyncEvent,
+} from '@respark/schemas/sync-event';
+
 import { assertAdminUser, verifyClerkToken } from '../auth/clerk';
+
 import { EtlSyncEventsService } from './etl-sync-events.service';
 
 type ClientState = {

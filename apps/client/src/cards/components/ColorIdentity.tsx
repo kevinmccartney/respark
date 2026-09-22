@@ -1,5 +1,5 @@
-import type { ColorIdentityPip } from 'schemas/decks';
-import { ManaCost } from 'ui/mana';
+import type { ColorIdentityPip } from '@respark/schemas/decks';
+import { ManaCost } from '@respark/ui/mana';
 
 export const ColorIdentity = ({
   colors,

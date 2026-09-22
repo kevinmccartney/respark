@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { SEARCH_CARDS_TOOL_MAX_LIMIT } from 'schemas/chat';
-import type { CardSearchPage } from 'schemas/cards';
-import type { DeckDetail } from 'schemas/decks';
+
+import type { CardSearchPage } from '@respark/schemas/cards';
+import { SEARCH_CARDS_TOOL_MAX_LIMIT } from '@respark/schemas/chat';
+import type { DeckDetail } from '@respark/schemas/decks';
+
 import type { CardsService } from '../../cards/cards.service';
 import type { DecksService } from '../../decks/decks.service';
+
 import { searchCardsTool } from './search-cards.tool';
 
 const deckId = '00000000-0000-4000-8000-000000000001';

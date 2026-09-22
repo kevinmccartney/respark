@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { SEARCH_CARDS_TOOL_DEFAULT_LIMIT } from 'schemas/chat';
+
+import { SEARCH_CARDS_TOOL_DEFAULT_LIMIT } from '@respark/schemas/chat';
+
 import { formatTurnContext } from '../turn-context';
+
 import type { ProviderEvent, ProviderMessage, ProviderToolDef } from './chat-provider';
 import {
   catalogSearchInput,

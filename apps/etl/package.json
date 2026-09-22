@@ -28,7 +28,7 @@
     "stream-chain": "^2.2.5",
     "stream-json": "^1.9.1",
     "zod": "^4.6.5",
-    "schemas": "*"
+    "@respark/schemas": "*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

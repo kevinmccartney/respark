@@ -1,5 +1,7 @@
-import { getDeckInputSchema, type CompactDeck, type GetDeckInput } from 'schemas/chat';
+import { getDeckInputSchema, type CompactDeck, type GetDeckInput } from '@respark/schemas/chat';
+
 import type { DecksService } from '../../decks/decks.service';
+
 import { toCompactDeck } from './compact-deck';
 import type { ChatTool } from './types';
 

@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { PRESENT_RECOMMENDATIONS_MAX } from 'schemas/chat';
+
+import { PRESENT_RECOMMENDATIONS_MAX } from '@respark/schemas/chat';
+
 import { allowlistCardIds } from './allowlist';
 
 describe('allowlistCardIds', () => {

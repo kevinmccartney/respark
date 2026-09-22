@@ -1,17 +1,20 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, desc, eq } from 'drizzle-orm';
+
 import {
   chatConversationSchema,
   chatPartSchema,
   type ChatConversation,
   type ChatPart,
   type ChatVisibleMessage,
-} from 'schemas/chat';
+} from '@respark/schemas/chat';
+
 import { CardsService } from '../cards/cards.service';
 import { DATABASE, type Database } from '../db/database.module';
 import { chatConversations, chatMessages } from '../db/schema';
 import { DecksService } from '../decks/decks.service';
 import { UsersService } from '../users/users.service';
+
 import { collectLinkableFromToolMessage, type LinkableCard } from './card-links';
 import { selectHistoryMessages } from './history';
 import { stickyUnchanged } from './sticky-context';

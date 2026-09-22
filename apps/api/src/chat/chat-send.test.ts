@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { chatSendSchema } from 'schemas/chat';
+
+import { chatSendSchema } from '@respark/schemas/chat';
 
 describe('chatSendSchema', () => {
   it('accepts a deck id and a message', () => {

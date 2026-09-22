@@ -1,5 +1,11 @@
-import { listDecksInputSchema, type ListDecksInput, type ListDecksResult } from 'schemas/chat';
+import {
+  listDecksInputSchema,
+  type ListDecksInput,
+  type ListDecksResult,
+} from '@respark/schemas/chat';
+
 import type { DecksService } from '../../decks/decks.service';
+
 import type { ChatTool } from './types';
 
 const LIST_DECKS_CAP = 50;

@@ -1,5 +1,6 @@
+import { chatWsEnvelopeSchema, type ChatSend, type ChatServerEvent } from '@respark/schemas/chat';
+
 import { apiBaseUrl, type GetToken } from '@/core';
-import { chatWsEnvelopeSchema, type ChatSend, type ChatServerEvent } from 'schemas/chat';
 
 export type ChatWsHandlers = {
   onEvent?: (event: ChatServerEvent) => void;

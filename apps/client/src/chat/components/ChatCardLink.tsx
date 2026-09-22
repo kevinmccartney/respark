@@ -1,10 +1,13 @@
 import { useAuth } from '@clerk/react';
+import { Link as LinkIcon } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Link as LinkIcon } from 'lucide-react';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/core/ui/hover-card';
+
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@respark/ui/lib';
+
 import { fetchCard, type CardDetail } from '@/cards';
 import { isAbortError } from '@/core';
+
 
 export const ChatCardLink = ({ cardId, children }: { cardId: string; children: ReactNode }) => {
   const { getToken } = useAuth();

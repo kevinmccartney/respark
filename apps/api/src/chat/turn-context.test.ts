@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { chatViewFromLocation } from 'schemas/chat';
+
+import { chatViewFromLocation } from '@respark/schemas/chat';
+
 import { CHAT_GROUNDED_CARD_PROMPT_CAP } from './chat.constants';
 import { formatGroundedCards, formatTurnContext } from './turn-context';
 

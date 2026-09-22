@@ -1,6 +1,8 @@
 import { MessageSquare } from 'lucide-react';
-import { Button } from '@/core/ui/button';
-import { useChatSession } from '../lib/chat-session.tsx';
+
+import { Button } from '@respark/ui/lib';
+
+import { useChatSession } from '../lib/chat-session';
 
 export const ChatToggle = () => {
   const { isOpen, setOpen } = useChatSession();
