@@ -1,6 +1,7 @@
-import { config } from 'dotenv';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+
+import { config } from 'dotenv';
 import { Pool } from 'pg';
 
 const here = __dirname;

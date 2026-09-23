@@ -1,6 +1,7 @@
 import type { Column } from 'drizzle-orm';
 import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder';
 import { primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+
 import { cards } from './catalog/tables';
 import { appSchema } from './pipeline-schemas';
 

@@ -1,9 +1,11 @@
-import { config } from 'dotenv';
 import { existsSync } from 'fs';
 import { resolve } from 'path';
+
 import { NestFactory } from '@nestjs/core';
 import { WsAdapter } from '@nestjs/platform-ws';
+import { config } from 'dotenv';
 import { Logger } from 'nestjs-pino';
+
 import { AppModule } from './app.module';
 
 const apiRoot = resolve(__dirname, '..');

@@ -1,3 +1,5 @@
+import { verifyWebhook } from '@clerk/backend/webhooks';
+import type { WebhookEvent } from '@clerk/backend/webhooks';
 import {
   BadRequestException,
   Controller,
@@ -7,10 +9,9 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
-import { verifyWebhook } from '@clerk/backend/webhooks';
-import type { WebhookEvent } from '@clerk/backend/webhooks';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import type { Request as ExpressRequest } from 'express';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+
 import { UsersService } from '../users/users.service';
 
 /** Narrowed from the event union so the payload type tracks the SDK version. */

@@ -1,4 +1,5 @@
 import type { Logger } from '../../core/logger';
+
 import { ALL_IDENTIFIERS_URL, META_URL, mtgjsonMetaSchema } from './schema';
 
 const DEFAULT_HEADERS = {

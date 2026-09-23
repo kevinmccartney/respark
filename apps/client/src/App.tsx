@@ -1,5 +1,6 @@
 import { Show } from '@clerk/react';
 import { Route, Routes } from 'react-router-dom';
+
 import { GuestOnly, RequireAuth } from '@/auth';
 import { CardDetailPage, SearchPage } from '@/cards';
 import { ChatSessionProvider, ChatToggle, GlobalChat } from '@/chat';

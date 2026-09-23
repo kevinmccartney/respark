@@ -1,7 +1,8 @@
 import type { Column } from 'drizzle-orm';
-import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder';
 import { sql } from 'drizzle-orm';
+import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder';
 import { check, index, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+
 import { printings } from './catalog/tables';
 import { appSchema } from './pipeline-schemas';
 import { users } from './users';

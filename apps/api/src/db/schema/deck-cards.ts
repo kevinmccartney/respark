@@ -1,6 +1,7 @@
 import type { Column } from 'drizzle-orm';
 import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder';
 import { boolean, index, integer, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+
 import { printings } from './catalog/tables';
 import { decks } from './decks';
 import { appSchema } from './pipeline-schemas';

@@ -1,6 +1,7 @@
 import type { Column } from 'drizzle-orm';
 import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder';
 import { boolean, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+
 import { opsSchema } from './ops-schema';
 
 // Imported so `declaration: true` can name inferred table types (see catalog/tables.ts).

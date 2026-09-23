@@ -6,7 +6,6 @@ import type { Pool } from 'pg';
 
 import type { EnrichmentJobId } from '@respark/schemas/etl-sync';
 
-
 import { DATABASE, DATABASE_POOL, type Database } from '../db/database.module';
 import { etlSyncs } from '../db/schema';
 

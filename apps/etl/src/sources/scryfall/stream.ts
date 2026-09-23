@@ -1,6 +1,6 @@
+import { createInterface } from 'node:readline';
 import { Readable } from 'node:stream';
 import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
-import { createInterface } from 'node:readline';
 import { createGunzip } from 'node:zlib';
 
 export type JsonlLine = { ok: true; value: unknown } | { ok: false; error: string; line: string };

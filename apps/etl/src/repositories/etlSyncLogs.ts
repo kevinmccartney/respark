@@ -1,4 +1,5 @@
 import type { Pool } from 'pg';
+
 import type { SyncEvent } from '../core/stream-events';
 
 export type InsertEtlSyncLog = {

@@ -1,6 +1,7 @@
 import type { PoolClient } from 'pg';
-import type { CanonicalRecord } from '../sources/scryfall/transformer';
+
 import type { ScryfallSet } from '../sources/scryfall/schema';
+import type { CanonicalRecord } from '../sources/scryfall/transformer';
 
 export type CatalogUpsertResult = {
   inserted: number;

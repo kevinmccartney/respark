@@ -4,6 +4,7 @@
  */
 
 import { isCatalogExtra } from '../../core/catalogSkip';
+
 import type { ScryfallCard } from './schema';
 
 export type CanonicalSet = {

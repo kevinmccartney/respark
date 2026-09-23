@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+
 import { assertAdminUser } from './clerk';
 import type { AuthenticatedRequest } from './clerk-auth.guard';
 

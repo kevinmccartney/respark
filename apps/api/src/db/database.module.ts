@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
+
 import {
   Global,
   Inject,
@@ -11,6 +12,7 @@ import {
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
+
 import * as schema from './schema';
 
 export const DATABASE = Symbol('DATABASE');

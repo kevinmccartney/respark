@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { LoggerModule } from 'nestjs-pino';
-import type { AuthenticatedRequest } from './auth/clerk-auth.guard';
+
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
+import type { AuthenticatedRequest } from './auth/clerk-auth.guard';
 import { CardsModule } from './cards/cards.module';
 import { ChatModule } from './chat/chat.module';
 import { DatabaseModule } from './db/database.module';

@@ -9,6 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { ConventionalChangelog } from 'conventional-changelog';
 import { Bumper } from 'conventional-recommended-bump';
 

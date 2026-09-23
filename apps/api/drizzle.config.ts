@@ -1,6 +1,7 @@
-import { config } from 'dotenv';
 import { existsSync } from 'fs';
 import { resolve } from 'path';
+
+import { config } from 'dotenv';
 import { defineConfig } from 'drizzle-kit';
 
 for (const file of ['.env', '.env.local']) {

@@ -1,6 +1,7 @@
 import { NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PinoLogger } from 'nestjs-pino';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { WS_CLOSE } from './chat.constants';
 
 vi.mock('../auth/clerk', () => ({

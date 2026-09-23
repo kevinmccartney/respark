@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { estimateUsd } from './model-prices';
 
 describe('estimateUsd', () => {

@@ -1,5 +1,7 @@
 import type { PoolClient } from 'pg';
+
 import { payloadHash } from '../../core/hashing';
+
 import type { MtgjsonEnrichment } from './transformer';
 
 export type DemoBatchItem = {

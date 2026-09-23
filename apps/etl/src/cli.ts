@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
+
+import { writeSizeReport } from './commands/report';
 import { createPool, loadEnv } from './core/db';
 import { createLogger } from './core/logger';
 import type { GlobalFlags } from './core/types';
-import { writeSizeReport } from './commands/report';
 import { parseEnrichmentJobs, runEtlSync, type EnrichmentJobId } from './lib/run-sync';
 
 loadEnv();

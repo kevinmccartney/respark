@@ -1,5 +1,5 @@
-import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { createClerkClient, verifyToken } from '@clerk/backend';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 
 export const clerkSecretKey = (): string => {
   const secretKey = process.env.CLERK_SECRET_KEY;

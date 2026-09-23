@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+
 import { createSpellbookClient } from './client';
 import { SPELLBOOK_USER_AGENT } from './constants';
 import { SpellbookUpstreamError } from './types';

@@ -1,5 +1,6 @@
-import { cardFaceSchema, isoDateTimeSchema, uuidSchema } from './primitives.js';
 import { z } from 'zod';
+
+import { cardFaceSchema, isoDateTimeSchema, uuidSchema } from './primitives.js';
 
 export const DECK_FORMATS = ['standard', 'commander', 'modern'] as const;
 

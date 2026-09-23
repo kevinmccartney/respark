@@ -8,7 +8,6 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from '@respark/ui/lib';
 import { fetchCard, type CardDetail } from '@/cards';
 import { isAbortError } from '@/core';
 
-
 export const ChatCardLink = ({ cardId, children }: { cardId: string; children: ReactNode }) => {
   const { getToken } = useAuth();
   const [open, setOpen] = useState(false);

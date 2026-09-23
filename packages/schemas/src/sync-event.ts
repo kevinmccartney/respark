@@ -1,6 +1,7 @@
+import { z } from 'zod';
+
 import { ingestionRunStatusSchema } from './etl-sync.js';
 import { isoDateTimeSchema, logLevelSchema, uuidSchema } from './primitives.js';
-import { z } from 'zod';
 
 const syncSummarySchema = z.object({
   id: uuidSchema,

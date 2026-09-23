@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import {
   BedrockRuntimeClient,
   ConverseStreamCommand,
@@ -6,7 +5,9 @@ import {
   type Message,
   type Tool,
 } from '@aws-sdk/client-bedrock-runtime';
+import { Injectable } from '@nestjs/common';
 import type { DocumentType } from '@smithy/types';
+
 import type {
   ChatProvider,
   ProviderContent,

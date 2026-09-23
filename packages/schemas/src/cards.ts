@@ -11,7 +11,6 @@ import {
 } from './primitives.js';
 import { recommendationGoodstuffFlagSchema } from './recommendations.js';
 
-
 export const cardLegalitiesSchema = z.record(z.string(), z.string());
 
 export type CardLegalities = z.infer<typeof cardLegalitiesSchema>;

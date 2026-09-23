@@ -15,7 +15,6 @@ import { PrintingFinishes } from '../components/FoilMark';
 import { resolveCardFace } from '../lib/card-faces';
 import { fetchCard, type CardDetail, type CardPrintingSummary } from '../lib/cards';
 
-
 const DECK_FORMAT_LABELS: Record<DeckFormat, string> = {
   standard: 'Standard',
   commander: 'Commander',

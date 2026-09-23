@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { parseColorValue } from './colors.js';
 import { normalizeManaSymbols } from './mana.js';
 import { parseScryfallQuery } from './parse.js';

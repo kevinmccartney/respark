@@ -1,4 +1,5 @@
 import type { PoolClient } from 'pg';
+
 import { upsertHashGatedBatch, type UpsertBatchResult } from './rawUpsert';
 
 export type RawScryfallUpsert = {

@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import type { Request } from 'express';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+
 import { verifyClerkToken } from './clerk';
 
 export type AuthenticatedRequest = Request & {

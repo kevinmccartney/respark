@@ -1,5 +1,6 @@
-import { isoDateTimeSchema, uuidSchema } from './primitives.js';
 import { z } from 'zod';
+
+import { isoDateTimeSchema, uuidSchema } from './primitives.js';
 
 export const goodstuffTagSchema = z.enum([
   'spot_removal',

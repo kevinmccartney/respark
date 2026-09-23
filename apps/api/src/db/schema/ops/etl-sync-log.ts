@@ -1,6 +1,7 @@
 import type { Column } from 'drizzle-orm';
 import type { ColumnBuilderExtraConfig } from 'drizzle-orm/column-builder';
 import { bigserial, index, jsonb, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+
 import { etlJobRuns } from './etl-job-run';
 import { etlSyncs } from './etl-sync';
 import { opsSchema } from './ops-schema';

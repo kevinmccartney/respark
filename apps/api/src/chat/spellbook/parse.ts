@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import type { SpellbookCardUse, SpellbookVariantSlice } from './types';
 
 const spellbookCardSchema = z.looseObject({
