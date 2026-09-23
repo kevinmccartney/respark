@@ -8,7 +8,7 @@ import { useChatSession } from '@respark-client/chat';
 import { NotFoundPage } from '@respark-client/core';
 
 import { DeckAddCardSearch } from '../components/DeckAddCardSearch';
-import { BoardSection, CardPreview } from '../components/DeckBoard';
+import { BoardSection, CardPreview, MobileCardPreviewOverlay } from '../components/DeckBoard';
 import { DeckDetailsHeader } from '../components/DeckDetailsHeader';
 import { DeckImportDialog } from '../components/DeckImportDialog';
 import { DeckListToolbar } from '../components/DeckListToolbar';
@@ -41,6 +41,7 @@ export const DeckDetailPage = () => {
   const [sortMode, setSortMode] = useState<DeckSortMode>('name');
   const [previewCardId, setPreviewCardId] = useState<string | null>(null);
   const [previewFaceIndex, setPreviewFaceIndex] = useState(0);
+  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
   const [pickingCard, setPickingCard] = useState<DeckCard | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
@@ -101,6 +102,11 @@ export const DeckDetailPage = () => {
     setPreviewCardId(cardId);
   };
 
+  const mobilePreview = (cardId: string) => {
+    previewCardById(cardId);
+    setMobilePreviewOpen(true);
+  };
+
   const transformCard = (cardId: string) => {
     const card = previewableCards.find((entry) => entry.id === cardId);
     const faceCount = card?.faces.length ?? 0;
@@ -130,7 +136,7 @@ export const DeckDetailPage = () => {
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-6 py-8 text-left">
       <div>
-        <Button variant="outline" size="sm" render={<Link to="/home" />}>
+        <Button variant="default" size="sm" render={<Link to="/home" />}>
           Back to decks
         </Button>
       </div>
@@ -209,7 +215,7 @@ export const DeckDetailPage = () => {
                 No cards yet — search by name above to add some.
               </p>
             ) : (
-              <div className="flex flex-col items-start gap-6 lg:flex-row">
+              <div className="flex flex-col items-stretch gap-6 md:flex-row md:items-start">
                 <CardPreview
                   card={previewCard}
                   faceIndex={previewFaceIndex}
@@ -227,6 +233,7 @@ export const DeckDetailPage = () => {
                       previewCardId={previewCard?.id ?? null}
                       previewFaceIndex={previewFaceIndex}
                       onPreview={previewCardById}
+                      onMobilePreview={mobilePreview}
                       onTransform={transformCard}
                       onPickPrinting={setPickingCard}
                       onBump={bumpQuantity}
@@ -243,6 +250,7 @@ export const DeckDetailPage = () => {
                       previewCardId={previewCard?.id ?? null}
                       previewFaceIndex={previewFaceIndex}
                       onPreview={previewCardById}
+                      onMobilePreview={mobilePreview}
                       onTransform={transformCard}
                       onPickPrinting={setPickingCard}
                       onBump={bumpQuantity}
@@ -254,6 +262,16 @@ export const DeckDetailPage = () => {
               </div>
             )}
           </section>
+
+          <MobileCardPreviewOverlay
+            card={previewCard}
+            faceIndex={previewFaceIndex}
+            open={mobilePreviewOpen}
+            onClose={() => setMobilePreviewOpen(false)}
+            onFlip={() => {
+              if (previewCard) transformCard(previewCard.id);
+            }}
+          />
 
           <PrintingPickerDialog
             open={pickingCard !== null}

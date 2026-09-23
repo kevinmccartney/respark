@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
@@ -12,6 +12,7 @@ import { ManaCost, ManaText } from '@respark/ui/mana';
 
 import { ApiError, goBackOrHome, isNotFound, NotFoundPage } from '@respark-client/core';
 
+import { ColorIdentity } from '../components/ColorIdentity';
 import { FlippableCardImage } from '../components/FlippableCardImage';
 import { PrintingFinishes } from '../components/FoilMark';
 import { useCard } from '../hooks/cards';
@@ -81,7 +82,7 @@ export const CardDetailPage = () => {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-8 text-left">
       <div>
-        <Button type="button" variant="outline" size="sm" onClick={() => goBackOrHome(navigate)}>
+        <Button type="button" variant="default" size="sm" onClick={() => goBackOrHome(navigate)}>
           Back
         </Button>
       </div>
@@ -136,10 +137,17 @@ export const CardDetailPage = () => {
 
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
                 <Meta label="Layout" value={card.layout} />
-                <Meta label="Colors" value={card.colors?.length ? card.colors.join(', ') : null} />
+                <Meta
+                  label="Colors"
+                  value={card.colors != null ? <ColorIdentity colors={card.colors} /> : null}
+                />
                 <Meta
                   label="Color identity"
-                  value={card.colorIdentity?.length ? card.colorIdentity.join(', ') : null}
+                  value={
+                    card.colorIdentity != null ? (
+                      <ColorIdentity colors={card.colorIdentity} />
+                    ) : null
+                  }
                 />
                 <Meta
                   label="Keywords"
@@ -259,8 +267,8 @@ export const CardDetailPage = () => {
   );
 };
 
-const Meta = ({ label, value }: { label: string; value: string | null | undefined }) => {
-  if (!value) return null;
+const Meta = ({ label, value }: { label: string; value: ReactNode }) => {
+  if (value == null || value === '') return null;
   return (
     <>
       <dt className="text-muted-foreground">{label}</dt>

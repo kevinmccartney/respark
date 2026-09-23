@@ -3,5 +3,4 @@ export * from './AdminLoadErrorAlert';
 export * from './AdminNav';
 export * from './AppShell';
 export * from './DetailShell';
-export * from './OffsetPagination';
 export * from './SortableTableHead';

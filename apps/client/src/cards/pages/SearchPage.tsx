@@ -1,9 +1,17 @@
+import { cn } from 'cn';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
-import { Alert, AlertDescription, Button, Input, Label } from '@respark/ui/lib';
+import {
+  Alert,
+  AlertDescription,
+  Input,
+  Label,
+  Pagination,
+  useScrollVisibility,
+} from '@respark/ui/lib';
 
-import { ApiError } from '@respark-client/core';
+import { ApiError, setPaginationFooterVisible } from '@respark-client/core';
 
 import { ScryfallSyntaxDialog } from '../components/ScryfallSyntaxDialog';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, SEARCH_DEBOUNCE_MS } from '../constants';
@@ -28,10 +36,14 @@ export const SearchPage = () => {
 
   const [scryfallInput, setScryfallInput] = useState(scryfallParam);
   const [syntaxOpen, setSyntaxOpen] = useState(false);
+  const { visible: searchBarVisible, ref: searchBarRef } = useScrollVisibility('show-on-scroll-up');
+  const { visible: paginationVisible, ref: paginationRef } =
+    useScrollVisibility('show-on-scroll-down');
 
   const {
     data,
     isPending,
+    isFetching,
     error: queryError,
   } = useSearchCards({
     scryfall: scryfallParam || undefined,
@@ -69,12 +81,12 @@ export const SearchPage = () => {
   }, [scryfallInput, searchParams, setSearchParams]);
 
   useEffect(() => {
-    if (!data || data.page === pageParam || data.totalPages === 0) return;
+    if (isFetching || !data || data.page === pageParam || data.totalPages === 0) return;
     const next = new URLSearchParams(searchParams);
     if (data.page <= 1) next.delete('page');
     else next.set('page', String(data.page));
     setSearchParams(next, { replace: true });
-  }, [data, pageParam, searchParams, setSearchParams]);
+  }, [data, isFetching, pageParam, searchParams, setSearchParams]);
 
   const updateParams = (mutate: (next: URLSearchParams) => void) => {
     const next = new URLSearchParams(searchParams);
@@ -100,9 +112,15 @@ export const SearchPage = () => {
   const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const rangeEnd = Math.min(page * pageSize, total);
   const hasQuery = Boolean(scryfallParam.trim());
+  const showPagination = !isPending && cards.length > 0;
+
+  useEffect(() => {
+    setPaginationFooterVisible(showPagination && paginationVisible);
+    return () => setPaginationFooterVisible(false);
+  }, [showPagination, paginationVisible]);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-8">
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 pt-8">
       <header className="space-y-3 text-left">
         <h1 className="font-heading text-3xl tracking-tight">Card search</h1>
         <p className="max-w-2xl text-muted-foreground">
@@ -116,7 +134,16 @@ export const SearchPage = () => {
           </button>
           . Unsupported keywords return an error.
         </p>
-        <div className="flex max-w-2xl flex-wrap items-end gap-3">
+      </header>
+
+      <div
+        ref={searchBarRef}
+        className={cn(
+          'sticky top-0 z-20 -mx-6 border-b border-border bg-background/95 px-6 py-3 backdrop-blur transition-transform duration-200 supports-backdrop-filter:bg-background/80',
+          searchBarVisible ? 'translate-y-0' : 'pointer-events-none -translate-y-full',
+        )}
+      >
+        <div className="mx-auto flex w-full max-w-6xl items-end gap-3">
           <div className="min-w-0 flex-1 space-y-1.5">
             <Label htmlFor="scryfall-search">Scryfall query</Label>
             <Input
@@ -130,7 +157,7 @@ export const SearchPage = () => {
               autoFocus
             />
           </div>
-          <div className="space-y-1.5">
+          <div className="shrink-0 space-y-1.5">
             <Label htmlFor="page-size">Page size</Label>
             <select
               id="page-size"
@@ -146,7 +173,7 @@ export const SearchPage = () => {
             </select>
           </div>
         </div>
-      </header>
+      </div>
 
       <ScryfallSyntaxDialog open={syntaxOpen} onOpenChange={setSyntaxOpen} />
 
@@ -170,23 +197,13 @@ export const SearchPage = () => {
 
       {!isPending && cards.length > 0 ? (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground" aria-live="polite">
-              Showing {rangeStart}-{rangeEnd} of {total} card
-              {total === 1 ? '' : 's'}.
-            </p>
-            <PaginationControls
-              page={page}
-              totalPages={totalPages}
-              onFirst={() => goToPage(1)}
-              onPrev={() => goToPage(page - 1)}
-              onNext={() => goToPage(page + 1)}
-              onLast={() => goToPage(totalPages)}
-            />
-          </div>
-          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            Showing {rangeStart}-{rangeEnd} of {total} card
+            {total === 1 ? '' : 's'}.
+          </p>
+          <ul className="grid grid-cols-1 gap-4 px-3 sm:grid-cols-2 sm:px-0 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {cards.map((card) => (
-              <li key={card.id}>
+              <li key={card.id} className="sm:px-4">
                 <Link
                   to={`/cards/${card.id}`}
                   className="flex flex-col gap-2 text-left transition-opacity hover:opacity-90"
@@ -215,57 +232,22 @@ export const SearchPage = () => {
               </li>
             ))}
           </ul>
-          <div className="flex justify-center py-2">
-            <PaginationControls
+          <div
+            ref={paginationRef}
+            className={cn(
+              'sticky bottom-0 z-10 -mx-6 border-t border-border bg-background/95 px-6 py-2 backdrop-blur transition-transform duration-200 supports-backdrop-filter:bg-background/80',
+              paginationVisible ? 'translate-y-0' : 'pointer-events-none translate-y-full',
+            )}
+          >
+            <Pagination
               page={page}
               totalPages={totalPages}
-              onFirst={() => goToPage(1)}
-              onPrev={() => goToPage(page - 1)}
-              onNext={() => goToPage(page + 1)}
-              onLast={() => goToPage(totalPages)}
+              onPageChange={goToPage}
+              className="mt-0"
             />
           </div>
         </>
       ) : null}
     </main>
-  );
-};
-
-const PaginationControls = ({
-  page,
-  totalPages,
-  onFirst,
-  onPrev,
-  onNext,
-  onLast,
-}: {
-  page: number;
-  totalPages: number;
-  onFirst: () => void;
-  onPrev: () => void;
-  onNext: () => void;
-  onLast: () => void;
-}) => {
-  const atStart = page <= 1;
-  const atEnd = page >= totalPages;
-
-  return (
-    <nav className="flex items-center gap-2" aria-label="Pagination">
-      <Button type="button" variant="outline" size="sm" onClick={onFirst} disabled={atStart}>
-        First
-      </Button>
-      <Button type="button" variant="outline" size="sm" onClick={onPrev} disabled={atStart}>
-        Previous
-      </Button>
-      <span className="px-1 text-sm text-muted-foreground tabular-nums">
-        Page {page} of {totalPages}
-      </span>
-      <Button type="button" variant="outline" size="sm" onClick={onNext} disabled={atEnd}>
-        Next
-      </Button>
-      <Button type="button" variant="outline" size="sm" onClick={onLast} disabled={atEnd}>
-        Last
-      </Button>
-    </nav>
   );
 };

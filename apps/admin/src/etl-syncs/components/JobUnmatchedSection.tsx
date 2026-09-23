@@ -1,7 +1,14 @@
 import type { IngestionUnmatched } from '@respark/schemas/etl-sync';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@respark/ui/lib';
+import {
+  Pagination,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@respark/ui/lib';
 
-import { OffsetPagination } from '@respark-admin/core/components';
 import { PAGE_SIZE } from '@respark-admin/etl-syncs/constants';
 
 import { formatNumber } from '../lib/format';
@@ -73,13 +80,11 @@ export const JobUnmatchedSection = ({
           </Table>
         </div>
 
-        <OffsetPagination
-          offset={offset}
-          total={total}
-          pageSize={PAGE_SIZE}
-          loading={loading}
-          onPrev={() => onPage(Math.max(0, offset - PAGE_SIZE))}
-          onNext={() => onPage(offset + PAGE_SIZE)}
+        <Pagination
+          page={Math.floor(offset / PAGE_SIZE) + 1}
+          totalPages={total === 0 ? 0 : Math.ceil(total / PAGE_SIZE)}
+          disabled={loading}
+          onPageChange={(nextPage) => onPage((nextPage - 1) * PAGE_SIZE)}
         />
       </>
     ) : null}

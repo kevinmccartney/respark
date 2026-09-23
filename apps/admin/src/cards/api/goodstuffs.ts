@@ -2,6 +2,7 @@ import {
   recommendationGoodstuffResponseSchema,
   recommendationGoodstuffsResponseSchema,
   type CreateRecommendationGoodstuffBody,
+  type PatchRecommendationGoodstuffBody,
   type RecommendationGoodstuff,
 } from '@respark/schemas';
 
@@ -32,6 +33,26 @@ export const createGoodstuff = async (
     {
       ...init,
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  return data.goodstuff;
+};
+
+export const patchGoodstuff = async (
+  getToken: GetToken,
+  cardId: string,
+  body: PatchRecommendationGoodstuffBody,
+  init?: RequestInit,
+): Promise<RecommendationGoodstuff> => {
+  const data = await apiFetchJson(
+    `/admin/recommendation-goodstuffs/${cardId}`,
+    getToken,
+    recommendationGoodstuffResponseSchema,
+    {
+      ...init,
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     },

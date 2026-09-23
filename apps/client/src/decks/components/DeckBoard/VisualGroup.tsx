@@ -12,13 +12,21 @@ export const VisualGroup = ({
   previewCardId,
   previewFaceIndex,
   onPreview,
+  onMobilePreview,
   onTransform,
   onPickPrinting,
   onBump,
   onToggleFoil,
   onToggleSideboard,
 }: { group: DeckCardGroup } & BoardHandlers) => {
-  const handlers = { onPreview, onPickPrinting, onBump, onToggleFoil, onToggleSideboard };
+  const handlers = {
+    onPreview,
+    onMobilePreview,
+    onPickPrinting,
+    onBump,
+    onToggleFoil,
+    onToggleSideboard,
+  };
   return (
     <div className="w-44 shrink-0">
       <GroupHeader group={group} />

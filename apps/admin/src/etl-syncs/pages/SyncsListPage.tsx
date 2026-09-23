@@ -121,8 +121,8 @@ export const SyncsListPage = () => {
   };
 
   return (
-    <main className="mx-auto max-w-6xl px-5 py-5">
-      <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+    <main className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col overflow-hidden px-5 py-5">
+      <header className="mb-5 flex shrink-0 flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl tracking-tight">ETL syncs</h1>
           <p className="mt-1 text-muted-foreground">
@@ -172,22 +172,24 @@ export const SyncsListPage = () => {
       </header>
 
       {startMessage ? (
-        <p className="mb-3 text-muted-foreground" role="status">
+        <p className="mb-3 shrink-0 text-muted-foreground" role="status">
           {startMessage}
         </p>
       ) : null}
 
-      {isPending ? <p className="text-muted-foreground">Loading…</p> : null}
-      <AdminLoadErrorAlert error={error} fallback="Could not load ETL syncs" />
+      {isPending ? <p className="shrink-0 text-muted-foreground">Loading…</p> : null}
+      <div className="shrink-0">
+        <AdminLoadErrorAlert error={error} fallback="Could not load ETL syncs" />
+      </div>
 
       {!isPending && !error ? (
         syncs.length === 0 ? (
-          <p className="text-muted-foreground">No ETL syncs yet.</p>
+          <p className="shrink-0 text-muted-foreground">No ETL syncs yet.</p>
         ) : (
-          <div className="rounded-xl bg-card ring-1 ring-foreground/10">
-            <Table>
-              <TableHeader>
-                <TableRow>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+            <Table containerClassName="min-h-0 flex-1 overflow-auto">
+              <TableHeader className="sticky top-0 z-10 bg-card shadow-[inset_0_-1px_0_0_var(--border)]">
+                <TableRow className="hover:bg-transparent">
                   <TableHead>Status</TableHead>
                   <TableHead>Stages</TableHead>
                   <TableHead>Progress</TableHead>

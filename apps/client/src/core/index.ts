@@ -10,5 +10,10 @@ export {
   type GetToken,
 } from './lib/api';
 export { goBackOrHome } from './lib/navigation';
+export {
+  setPaginationFooterVisible,
+  usePaginationFooterVisible,
+} from './lib/pagination-footer-visibility';
+export { routeHasPagination, type AppRouteHandle } from './lib/route-handle';
 export { NotFoundPage } from './pages/NotFoundPage';
 export { WelcomePage } from './pages/WelcomePage';

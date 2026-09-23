@@ -1,4 +1,3 @@
-import type { ColorIdentityPip } from '@respark/schemas/decks';
 import { ManaCost } from '@respark/ui/mana';
 
 export const ColorIdentity = ({
@@ -6,7 +5,7 @@ export const ColorIdentity = ({
   className,
   size = 16,
 }: {
-  colors: ColorIdentityPip[];
+  colors: readonly string[];
   className?: string;
   size?: number;
 }) => {

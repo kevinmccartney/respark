@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -21,7 +22,9 @@ import {
 import { uuidSchema } from '@respark/schemas/primitives';
 import {
   createRecommendationGoodstuffBodySchema,
+  patchRecommendationGoodstuffBodySchema,
   type CreateRecommendationGoodstuffBody,
+  type PatchRecommendationGoodstuffBody,
 } from '@respark/schemas/recommendations';
 
 import { AdminRoleGuard } from '../auth/admin-role.guard';
@@ -135,6 +138,15 @@ export class AdminController {
     body: CreateRecommendationGoodstuffBody,
   ) {
     return { goodstuff: await this.recommendations.create(body) };
+  }
+
+  @Patch('recommendation-goodstuffs/:cardId')
+  async patchRecommendationGoodstuff(
+    @Param('cardId', zodPipe(uuidSchema)) cardId: string,
+    @Body(zodPipe(patchRecommendationGoodstuffBodySchema))
+    body: PatchRecommendationGoodstuffBody,
+  ) {
+    return { goodstuff: await this.recommendations.update(cardId, body) };
   }
 
   @Delete('recommendation-goodstuffs/:cardId')

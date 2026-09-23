@@ -14,17 +14,22 @@ type ClampPageResponse =
   | undefined;
 
 /** Keep `?page=` in sync when the API clamps/corrects the requested page. */
-export const useClampPageParam = (response: ClampPageResponse, pageParam: number) => {
+export const useClampPageParam = (
+  response: ClampPageResponse,
+  pageParam: number,
+  /** Skip while a page fetch is in flight so stale `response.page` cannot rewind the URL. */
+  ready = true,
+) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
-    if (!response || response.totalPages === 0 || response.page === pageParam) {
+    if (!ready || !response || response.totalPages === 0 || response.page === pageParam) {
       return;
     }
     const next = new URLSearchParams(searchParams);
     setPageParam(next, response.page);
     setSearchParams(next, { replace: true });
-  }, [response, pageParam, searchParams, setSearchParams]);
+  }, [ready, response, pageParam, searchParams, setSearchParams]);
 };
 
 type UrlSortParamsOpts<TSort extends string> = {

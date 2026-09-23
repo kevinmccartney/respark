@@ -2,7 +2,6 @@ import { ClerkProvider } from '@clerk/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
 
 import { ThemeProvider } from '@respark/ui/theme';
 
@@ -46,9 +45,7 @@ const Providers = ({ children }: { children: ReactNode }) => (
         },
       }}
     >
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>{children}</BrowserRouter>
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </ClerkProvider>
   </ThemeProvider>
 );

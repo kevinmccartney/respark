@@ -1,3 +1,4 @@
+import { cn } from 'cn';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,6 +9,8 @@ import { NotFoundPage } from '@respark-admin/core/pages';
 
 type DetailShellProps = {
   maxWidth?: '5xl' | '6xl';
+  /** Fill the AppShell outlet and let children manage scroll. */
+  fill?: boolean;
   notFound?: { title: string; description: string } | null;
   error: unknown | null | undefined;
   errorFallback: string;
@@ -23,6 +26,7 @@ const MAX_WIDTH_CLASS = {
 
 export const DetailShell = ({
   maxWidth = '6xl',
+  fill = false,
   notFound = null,
   error,
   errorFallback,
@@ -37,22 +41,34 @@ export const DetailShell = ({
   }
 
   return (
-    <main className={`mx-auto ${MAX_WIDTH_CLASS[maxWidth]} px-5 py-5`}>
-      <div className="mb-4">
+    <main
+      className={cn(
+        'mx-auto w-full px-5 py-5',
+        MAX_WIDTH_CLASS[maxWidth],
+        fill && 'flex h-full min-h-0 flex-col overflow-hidden',
+      )}
+    >
+      <div className={cn('mb-4', fill && 'shrink-0')}>
         <Button type="button" variant="outline" size="sm" onClick={() => navigate(-1)}>
           Back
         </Button>
       </div>
 
-      <AdminLoadErrorAlert error={error} fallback={errorFallback} />
+      <div className={cn(fill && 'shrink-0')}>
+        <AdminLoadErrorAlert error={error} fallback={errorFallback} />
+      </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground" aria-live="polite">
+        <p className={cn('text-sm text-muted-foreground', fill && 'shrink-0')} aria-live="polite">
           {loadingLabel}
         </p>
       ) : null}
 
-      {children}
+      {fill ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+      ) : (
+        children
+      )}
     </main>
   );
 };

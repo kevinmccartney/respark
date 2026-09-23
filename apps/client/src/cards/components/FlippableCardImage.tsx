@@ -32,7 +32,10 @@ export const FlippableCardImage = ({
         variant="secondary"
         className="absolute right-2 bottom-2 z-10 shadow-md"
         aria-label={`Show ${nextFaceName}`}
-        onClick={onFlip}
+        onClick={(event) => {
+          event.stopPropagation();
+          onFlip();
+        }}
       >
         <RotateCw />
       </Button>

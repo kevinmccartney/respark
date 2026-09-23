@@ -33,7 +33,7 @@ export const AdminNav = () => {
   return (
     <nav
       aria-label="Admin"
-      className="w-full shrink-0 border-b bg-card px-3 py-3 md:w-56 md:border-r md:border-b-0"
+      className="w-full shrink-0 border-b bg-card px-3 py-3 md:w-56 md:min-h-0 md:overflow-y-auto md:border-r md:border-b-0"
     >
       <ul className="flex flex-col gap-4">
         {ADMIN_NAV.map((group) => (

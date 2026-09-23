@@ -1,4 +1,5 @@
-import { useEffect, useState, type SubmitEvent } from 'react';
+import { cn } from 'cn';
+import { useEffect, useRef, useState, type SubmitEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import {
@@ -12,23 +13,21 @@ import {
 import {
   Badge,
   Button,
+  Pagination,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
+  useScrollVisibility,
 } from '@respark/ui/lib';
 import { ManaCost } from '@respark/ui/mana';
 
 import { CardThumb, ScryfallSyntaxDialog } from '@respark-admin/cards/components';
 import { CARDS_LIST_PAGE_SIZE } from '@respark-admin/cards/constants';
 import { useSearchCards } from '@respark-admin/cards/hooks';
-import {
-  AdminLoadErrorAlert,
-  OffsetPagination,
-  SortableTableHead,
-} from '@respark-admin/core/components';
+import { AdminLoadErrorAlert, SortableTableHead } from '@respark-admin/core/components';
 import { useClampPageParam, useUrlSortParams } from '@respark-admin/core/hooks';
 
 const FORMAT_SHORT: Record<DeckFormat, string> = {
@@ -88,7 +87,11 @@ export const CardsListPage = () => {
     page: pageParam,
   });
 
-  useClampPageParam(data ? { page: data.page, totalPages: data.totalPages } : undefined, pageParam);
+  useClampPageParam(
+    data ? { page: data.page, totalPages: data.totalPages } : undefined,
+    pageParam,
+    !isFetching,
+  );
 
   const applyFilters = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -104,19 +107,26 @@ export const CardsListPage = () => {
   const rows = data?.cards ?? [];
   const total = data?.total ?? 0;
   const page = data?.page ?? pageParam;
+  const totalPages = data?.totalPages ?? 0;
   const loading = isPending || isFetching;
-  const offset = (page - 1) * CARDS_LIST_PAGE_SIZE;
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+  const { visible: paginationVisible, ref: paginationRef } = useScrollVisibility(
+    'show-on-scroll-down',
+    { scrollerRef: tableScrollRef },
+  );
 
   return (
-    <main className="mx-auto max-w-6xl px-5 py-5">
-      <header className="mb-4">
+    <main className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col overflow-hidden px-5 py-5">
+      <header className="mb-4 shrink-0">
         <h1 className="font-heading text-xl font-semibold">Cards</h1>
       </header>
 
-      <AdminLoadErrorAlert error={error} fallback="Could not load cards" />
+      <div className="shrink-0">
+        <AdminLoadErrorAlert error={error} fallback="Could not load cards" />
+      </div>
 
       <form
-        className="mb-5 flex flex-col gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:flex-row sm:items-end"
+        className="mb-5 flex shrink-0 flex-col gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:flex-row sm:items-end"
         onSubmit={applyFilters}
       >
         <label className="grid min-w-0 flex-1 gap-1 text-sm">
@@ -145,14 +155,18 @@ export const CardsListPage = () => {
 
       <ScryfallSyntaxDialog open={syntaxOpen} onOpenChange={setSyntaxOpen} />
 
-      <p className="mb-2 text-sm text-muted-foreground" aria-live="polite">
+      <p className="mb-2 shrink-0 text-sm text-muted-foreground" aria-live="polite">
         {isPending ? 'Loading…' : `${total.toLocaleString()} cards`}
       </p>
 
-      <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
-        <Table className="min-w-4xl">
-          <TableHeader>
-            <TableRow>
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+        <Table
+          className="min-w-4xl"
+          containerRef={tableScrollRef}
+          containerClassName="min-h-0 flex-1 overflow-auto pb-14"
+        >
+          <TableHeader className="sticky top-0 z-10 bg-card shadow-[inset_0_-1px_0_0_var(--border)]">
+            <TableRow className="hover:bg-transparent">
               <TableHead className={`w-16 min-w-16 ${CELL_PAD}`} />
               <SortableTableHead
                 active={sortParam === 'name'}
@@ -238,16 +252,23 @@ export const CardsListPage = () => {
             ) : null}
           </TableBody>
         </Table>
-      </div>
 
-      <OffsetPagination
-        offset={offset}
-        total={total}
-        pageSize={CARDS_LIST_PAGE_SIZE}
-        loading={loading}
-        onPrev={() => goToPage(page - 1)}
-        onNext={() => goToPage(page + 1)}
-      />
+        <div
+          ref={paginationRef}
+          className={cn(
+            'absolute inset-x-0 bottom-0 z-10 border-t border-border bg-card/95 px-2 py-1 backdrop-blur transition-transform duration-200 supports-backdrop-filter:bg-card/80',
+            paginationVisible ? 'translate-y-0' : 'pointer-events-none translate-y-full',
+          )}
+        >
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            disabled={loading}
+            onPageChange={goToPage}
+            className="mt-0"
+          />
+        </div>
+      </div>
     </main>
   );
 };

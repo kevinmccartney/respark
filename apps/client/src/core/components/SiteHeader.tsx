@@ -14,7 +14,10 @@ export const SiteHeader = ({ showAuthActions = true, headerExtra }: SiteHeaderPr
   <header className="flex items-center justify-between gap-4 border-b bg-card px-5 py-3">
     <div className="flex items-center gap-4">
       <Show when="signed-in">
-        <Link to="/home" className="font-heading text-base font-semibold tracking-tight">
+        <Link
+          to="/home"
+          className="font-heading text-base font-semibold tracking-tight text-chart-1"
+        >
           respark
         </Link>
         <nav className="flex items-center gap-3" aria-label="Primary">
@@ -33,7 +36,7 @@ export const SiteHeader = ({ showAuthActions = true, headerExtra }: SiteHeaderPr
         </nav>
       </Show>
       <Show when="signed-out">
-        <Link to="/" className="font-heading text-base font-semibold tracking-tight">
+        <Link to="/" className="font-heading text-base font-semibold tracking-tight text-secondary">
           respark
         </Link>
       </Show>

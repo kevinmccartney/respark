@@ -1,3 +1,5 @@
+import { cn } from 'cn';
+import { useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import {
@@ -8,16 +10,18 @@ import {
 } from '@respark/schemas';
 import {
   Badge,
+  Pagination,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
+  useScrollVisibility,
 } from '@respark/ui/lib';
 
 import { CardThumb } from '@respark-admin/cards/components';
-import { DetailShell, OffsetPagination, SortableTableHead } from '@respark-admin/core/components';
+import { DetailShell, SortableTableHead } from '@respark-admin/core/components';
 import { useClampPageParam, useUrlSortParams } from '@respark-admin/core/hooks';
 import { adminQueryErrorState } from '@respark-admin/core/lib';
 import { SET_PRINTINGS_PAGE_SIZE } from '@respark-admin/sets/constants';
@@ -48,15 +52,22 @@ export const SetDetailPage = () => {
   useClampPageParam(
     set ? { page: set.printingsPage, totalPages: set.printingsTotalPages } : undefined,
     pageParam,
+    !isFetching,
   );
 
   const loading = isPending || isFetching;
   const page = set?.printingsPage ?? pageParam;
   const total = set?.printingsTotal ?? 0;
-  const offset = (page - 1) * SET_PRINTINGS_PAGE_SIZE;
+  const totalPages = set?.printingsTotalPages ?? 0;
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+  const { visible: paginationVisible, ref: paginationRef } = useScrollVisibility(
+    'show-on-scroll-down',
+    { scrollerRef: tableScrollRef, enabled: Boolean(set) },
+  );
 
   return (
     <DetailShell
+      fill
       notFound={
         !validId || notFound
           ? {
@@ -71,8 +82,8 @@ export const SetDetailPage = () => {
       loadingLabel="Loading set…"
     >
       {set ? (
-        <div className="space-y-6">
-          <header className="space-y-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden">
+          <header className="shrink-0 space-y-2">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h1 className="font-heading text-2xl font-semibold">{set.name}</h1>
               <span className="font-mono text-sm uppercase text-muted-foreground">{set.code}</span>
@@ -113,18 +124,24 @@ export const SetDetailPage = () => {
             </dl>
           </header>
 
-          <section className="space-y-3" aria-labelledby="set-printings-heading">
-            <div className="flex items-baseline justify-between gap-3">
+          <section
+            className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden"
+            aria-labelledby="set-printings-heading"
+          >
+            <div className="flex shrink-0 items-baseline justify-between gap-3">
               <h2 id="set-printings-heading" className="font-heading text-xl">
                 Printings
               </h2>
               <Badge variant="secondary">{total.toLocaleString()}</Badge>
             </div>
 
-            <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
-              <Table>
-                <TableHeader>
-                  <TableRow>
+            <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+              <Table
+                containerRef={tableScrollRef}
+                containerClassName="min-h-0 flex-1 overflow-auto pb-14"
+              >
+                <TableHeader className="sticky top-0 z-10 bg-card shadow-[inset_0_-1px_0_0_var(--border)]">
+                  <TableRow className="hover:bg-transparent">
                     <TableHead className="w-12" />
                     <SortableTableHead
                       active={sortParam === 'collectorNumber'}
@@ -180,16 +197,23 @@ export const SetDetailPage = () => {
                   ) : null}
                 </TableBody>
               </Table>
-            </div>
 
-            <OffsetPagination
-              offset={offset}
-              total={total}
-              pageSize={SET_PRINTINGS_PAGE_SIZE}
-              loading={loading}
-              onPrev={() => goToPage(page - 1)}
-              onNext={() => goToPage(page + 1)}
-            />
+              <div
+                ref={paginationRef}
+                className={cn(
+                  'absolute inset-x-0 bottom-0 z-10 border-t border-border bg-card/95 px-2 py-1 backdrop-blur transition-transform duration-200 supports-backdrop-filter:bg-card/80',
+                  paginationVisible ? 'translate-y-0' : 'pointer-events-none translate-y-full',
+                )}
+              >
+                <Pagination
+                  page={page}
+                  totalPages={totalPages}
+                  disabled={loading}
+                  onPageChange={goToPage}
+                  className="mt-0"
+                />
+              </div>
+            </div>
           </section>
         </div>
       ) : null}

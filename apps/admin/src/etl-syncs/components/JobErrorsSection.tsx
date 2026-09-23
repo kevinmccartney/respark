@@ -7,6 +7,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Pagination,
   Table,
   TableBody,
   TableCell,
@@ -15,7 +16,6 @@ import {
   TableRow,
 } from '@respark/ui/lib';
 
-import { OffsetPagination } from '@respark-admin/core/components';
 import { JOB_LABELS, PAGE_SIZE } from '@respark-admin/etl-syncs/constants';
 import { formatNumber, formatTimestamp } from '@respark-admin/etl-syncs/lib';
 
@@ -124,13 +124,11 @@ export const JobErrorsSection = ({
           </DialogContent>
         </Dialog>
 
-        <OffsetPagination
-          offset={offset}
-          total={total}
-          pageSize={PAGE_SIZE}
-          loading={loading}
-          onPrev={() => onPage(Math.max(0, offset - PAGE_SIZE))}
-          onNext={() => onPage(offset + PAGE_SIZE)}
+        <Pagination
+          page={Math.floor(offset / PAGE_SIZE) + 1}
+          totalPages={total === 0 ? 0 : Math.ceil(total / PAGE_SIZE)}
+          disabled={loading}
+          onPageChange={(nextPage) => onPage((nextPage - 1) * PAGE_SIZE)}
         />
       </>
     ) : null}

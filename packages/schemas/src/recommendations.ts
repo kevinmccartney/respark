@@ -96,6 +96,20 @@ export type CreateRecommendationGoodstuffBody = z.infer<
   typeof createRecommendationGoodstuffBodySchema
 >;
 
+export const patchRecommendationGoodstuffBodySchema = z
+  .object({
+    tags: z.array(goodstuffTagSchema).min(1).optional(),
+    note: z.string().trim().max(500).optional().nullable(),
+  })
+  .strict()
+  .refine((value) => value.tags !== undefined || value.note !== undefined, {
+    message: 'tags or note is required',
+  });
+
+export type PatchRecommendationGoodstuffBody = z.infer<
+  typeof patchRecommendationGoodstuffBodySchema
+>;
+
 export type RecommendationGoodstuffSeed = {
   name: string;
   tags: readonly GoodstuffTag[];

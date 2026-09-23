@@ -69,7 +69,7 @@ export default function App() {
           }
         />
         <Route
-          path="/catalog/goodstuff"
+          path="/recommendations/goodstuff"
           element={
             <RequireAuth>
               <GoodstuffsPage />

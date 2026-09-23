@@ -1,8 +1,9 @@
+import { History, Plus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { chatViewFromLocation, type ChatPart, type ChatStatusCode } from '@respark/schemas/chat';
-import { Badge, Button, Input } from '@respark/ui/lib';
+import { Badge, Button, Textarea } from '@respark/ui/lib';
 
 import { ApiError, isNotFound } from '@respark-client/core';
 
@@ -11,6 +12,7 @@ import { useChatConversation, useChatLive, useChatSession } from '../hooks';
 import { toLocalChatMessage } from '../lib/chat-events';
 import type { LocalChatMessage } from '../types';
 
+import { ChatHistoryPanel } from './ChatHistoryPanel';
 import { ChatMarkdown } from './ChatMarkdown';
 
 export const GlobalChat = () => {
@@ -38,7 +40,9 @@ export const GlobalChat = () => {
   const [streamingParts, setStreamingParts] = useState<ChatPart[]>([]);
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const draftRef = useRef<HTMLTextAreaElement | null>(null);
   const loadGen = useRef(0);
   const prompt = deckId ? DECK_CHAT_PROMPT : CATALOG_CHAT_PROMPT;
 
@@ -104,8 +108,17 @@ export const GlobalChat = () => {
   ]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: 'end' });
+    const list = listRef.current;
+    if (!list) return;
+    list.scrollTop = list.scrollHeight;
   }, [messages, streamingText, streamingParts, status]);
+
+  useEffect(() => {
+    const el = draftRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [draft]);
 
   const submit = (text: string) => {
     const message = text.trim();
@@ -139,6 +152,7 @@ export const GlobalChat = () => {
     setError(null);
     setBusy(false);
     setReady(true);
+    setShowHistory(false);
   };
 
   if (!isOpen) return null;
@@ -146,67 +160,106 @@ export const GlobalChat = () => {
   return (
     <aside
       id="global-chat-drawer"
-      className="flex h-full w-[min(100vw,24rem)] shrink-0 flex-col overflow-hidden border-l border-border bg-card"
+      className="flex h-svh max-h-svh w-[min(100vw,24rem)] shrink-0 flex-col overflow-hidden border-l border-border bg-card"
     >
-      <div className="flex min-h-0 flex-1 flex-col gap-3 p-4">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="font-heading text-lg">Chat</h2>
-          <Button type="button" variant="ghost" size="sm" onClick={newConversation}>
-            New
-          </Button>
-        </div>
-
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
-          {messages.map((message) => (
-            <ChatBubble key={message.id} message={message} />
-          ))}
-          {busy && (streamingText || streamingParts.length > 0) ? (
-            <ChatBubble
-              message={{
-                id: 'streaming',
-                role: 'assistant',
-                parts: [
-                  ...(streamingText ? ([{ type: 'text', text: streamingText }] as ChatPart[]) : []),
-                  ...streamingParts,
-                ],
-              }}
-            />
-          ) : null}
-          <div ref={bottomRef} />
-        </div>
-
-        {status && busy ? <Badge variant="secondary">{CHAT_STATUS_LABEL[status]}</Badge> : null}
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-3">
+        <h2 className="font-heading text-lg">Chat</h2>
         <Button
           type="button"
-          variant="outline"
-          size="sm"
-          disabled={busy || !ready}
-          onClick={() => submit(prompt)}
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Close chat"
+          title="Close chat"
+          onClick={() => setOpen(false)}
         >
-          {prompt}
+          <X />
         </Button>
+      </header>
 
-        <form
-          className="flex gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            submit(draft);
-          }}
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-2">
+        <Button type="button" variant="default" size="sm" onClick={newConversation}>
+          <Plus />
+          New chat
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          aria-pressed={showHistory}
+          onClick={() => setShowHistory((open) => !open)}
         >
-          <Input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder={deckId ? 'Ask about this deck…' : 'Ask about cards…'}
-            disabled={busy || !ready}
-            aria-label="Chat message"
-          />
-          <Button type="submit" disabled={busy || !ready || !draft.trim()}>
-            Send
-          </Button>
-        </form>
+          <History />
+          Chat history
+        </Button>
       </div>
+
+      {showHistory ? (
+        <ChatHistoryPanel onBack={() => setShowHistory(false)} />
+      ) : (
+        <>
+          <div ref={listRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
+            {messages.map((message) => (
+              <ChatBubble key={message.id} message={message} />
+            ))}
+            {busy && (streamingText || streamingParts.length > 0) ? (
+              <ChatBubble
+                message={{
+                  id: 'streaming',
+                  role: 'assistant',
+                  parts: [
+                    ...(streamingText
+                      ? ([{ type: 'text', text: streamingText }] as ChatPart[])
+                      : []),
+                    ...streamingParts,
+                  ],
+                }}
+              />
+            ) : null}
+          </div>
+
+          <footer className="flex shrink-0 flex-col gap-3 border-t border-border px-4 py-3">
+            {status && busy ? <Badge variant="secondary">{CHAT_STATUS_LABEL[status]}</Badge> : null}
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy || !ready}
+              onClick={() => submit(prompt)}
+            >
+              {prompt}
+            </Button>
+
+            <form
+              className="flex items-end gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submit(draft);
+              }}
+            >
+              <Textarea
+                ref={draftRef}
+                rows={1}
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' || event.shiftKey) return;
+                  event.preventDefault();
+                  submit(draft);
+                }}
+                placeholder={deckId ? 'Ask about this deck…' : 'Ask about cards…'}
+                disabled={busy || !ready}
+                aria-label="Chat message"
+                className="max-h-40"
+              />
+              <Button type="submit" disabled={busy || !ready || !draft.trim()}>
+                Send
+              </Button>
+            </form>
+          </footer>
+        </>
+      )}
     </aside>
   );
 };

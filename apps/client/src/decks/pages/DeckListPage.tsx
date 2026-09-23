@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -118,8 +119,8 @@ export const DeckListPage = () => {
   const deletingId = deleteMutation.isPending ? deleteMutation.variables : null;
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-5 px-6 py-8 text-left">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+    <main className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col gap-5 overflow-hidden px-6 py-8 text-left">
+      <header className="flex shrink-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div>
           <h1 className="font-heading text-3xl tracking-tight">Your decks</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -128,44 +129,55 @@ export const DeckListPage = () => {
               : `Showing ${filtered.length} of ${decks.length} ${decks.length === 1 ? 'result' : 'results'}`}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button render={<Link to="/decks/new" />}>New deck</Button>
+        <div className="flex w-full items-center gap-2 sm:w-auto sm:gap-3">
+          <Button className="hidden sm:inline-flex" render={<Link to="/decks/new" />}>
+            New deck
+          </Button>
           <Input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search decks…"
             aria-label="Search decks"
-            className="w-56"
+            className="min-w-0 flex-1 sm:w-56 sm:flex-none"
           />
+          <Button
+            className="shrink-0 sm:hidden"
+            size="icon"
+            render={<Link to="/decks/new" />}
+            aria-label="New deck"
+            title="New deck"
+          >
+            <Plus />
+          </Button>
         </div>
       </header>
 
       {error ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="shrink-0">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
 
       {actionError ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="shrink-0">
           <AlertDescription>{actionError}</AlertDescription>
         </Alert>
       ) : null}
 
       {!loading && !error && decks.length === 0 ? (
-        <p className="text-muted-foreground">No decks yet — create your first one.</p>
+        <p className="shrink-0 text-muted-foreground">No decks yet — create your first one.</p>
       ) : null}
 
       {!loading && !error && decks.length > 0 && filtered.length === 0 ? (
-        <p className="text-muted-foreground">No decks match that search.</p>
+        <p className="shrink-0 text-muted-foreground">No decks match that search.</p>
       ) : null}
 
       {!loading && !error && filtered.length > 0 ? (
-        <div className="rounded-xl bg-card ring-1 ring-foreground/10">
-          <Table>
-            <TableHeader>
-              <TableRow>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+          <Table containerClassName="min-h-0 flex-1 overflow-auto">
+            <TableHeader className="sticky top-0 z-10 bg-card shadow-[inset_0_-1px_0_0_var(--border)]">
+              <TableRow className="hover:bg-transparent">
                 <SortHeader
                   label="Name"
                   column="name"

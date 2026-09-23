@@ -14,13 +14,21 @@ export const ListGroup = ({
   previewCardId,
   previewFaceIndex,
   onPreview,
+  onMobilePreview,
   onTransform,
   onPickPrinting,
   onBump,
   onToggleFoil,
   onToggleSideboard,
 }: { group: DeckCardGroup } & BoardHandlers) => {
-  const handlers = { onPreview, onPickPrinting, onBump, onToggleFoil, onToggleSideboard };
+  const handlers = {
+    onPreview,
+    onMobilePreview,
+    onPickPrinting,
+    onBump,
+    onToggleFoil,
+    onToggleSideboard,
+  };
   return (
     <div className="mb-6 break-inside-avoid">
       <GroupHeader group={group} />
@@ -43,7 +51,7 @@ export const ListGroup = ({
                   </span>
                   <button
                     type="button"
-                    className="min-w-0 truncate text-left text-sm font-medium hover:underline"
+                    className="min-w-0 truncate text-left text-sm font-medium"
                     onClick={() => handlers.onPreview(card.id)}
                   >
                     {card.name}

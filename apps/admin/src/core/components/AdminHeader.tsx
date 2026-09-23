@@ -8,7 +8,7 @@ export const AdminHeader = () => (
   <header className="flex items-center justify-between gap-4 border-b bg-card px-5 py-3">
     <div className="flex items-center gap-4">
       <Show when="signed-in">
-        <Link to="/" className="font-heading text-base font-semibold tracking-tight">
+        <Link to="/" className="font-heading text-base font-semibold tracking-tight text-chart-1">
           respark admin
         </Link>
       </Show>

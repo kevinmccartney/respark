@@ -27,7 +27,9 @@ export const BoardSection = ({
       ) : null}
       <div
         className={
-          viewMode === 'list' ? 'columns-3xs gap-x-8' : 'flex flex-wrap items-start gap-x-5 gap-y-8'
+          viewMode === 'list'
+            ? 'columns-2xs gap-x-6 md:columns-3xs md:gap-x-8'
+            : 'flex flex-wrap items-start gap-x-5 gap-y-8'
         }
       >
         {groups.map((group) =>

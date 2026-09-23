@@ -13,8 +13,8 @@ type AppShellProps = {
 };
 
 export const AppShell = ({ rail, headerExtra }: AppShellProps) => (
-  <div className="flex h-svh overflow-hidden">
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+  <div className="flex h-svh max-h-svh overflow-hidden">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <SiteHeader headerExtra={headerExtra} />
       <div className="min-h-0 flex-1 overflow-y-auto">
         <Outlet />

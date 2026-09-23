@@ -17,8 +17,8 @@ export const CardPreview = ({
 }) => {
   if (!card) {
     return (
-      <aside className="w-full max-w-65 shrink-0 text-sm text-muted-foreground">
-        Hover a card to preview it.
+      <aside className="w-full shrink-0 text-sm text-muted-foreground md:w-52 lg:w-65">
+        Hover or long-press a card to preview it.
       </aside>
     );
   }
@@ -34,7 +34,7 @@ export const CardPreview = ({
   });
 
   return (
-    <aside className="w-full max-w-65 shrink-0 lg:sticky lg:top-4">
+    <aside className="w-full shrink-0 md:sticky md:top-4 md:w-52 lg:w-65">
       <div className="space-y-3">
         <FlippableCardImage
           src={displayed.imageSrc}

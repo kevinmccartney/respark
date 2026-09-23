@@ -6,6 +6,7 @@ import {
   goodstuffTagSchema,
   type CreateRecommendationGoodstuffBody,
   type GoodstuffTag,
+  type PatchRecommendationGoodstuffBody,
   type RecommendationGoodstuff,
 } from '@respark/schemas/recommendations';
 
@@ -83,6 +84,47 @@ export class RecommendationsService {
     );
 
     return this.requireRow(card.id);
+  }
+
+  async update(
+    cardId: string,
+    body: PatchRecommendationGoodstuffBody,
+  ): Promise<RecommendationGoodstuff> {
+    await this.requireRow(cardId);
+
+    await this.db.transaction(async (tx) => {
+      if (body.note !== undefined) {
+        await tx
+          .update(recommendationGoodstuffs)
+          .set({ note: body.note })
+          .where(eq(recommendationGoodstuffs.cardId, cardId));
+      }
+
+      if (body.tags !== undefined) {
+        const tags: GoodstuffTag[] = [...new Set(body.tags)];
+        await tx
+          .delete(recommendationGoodstuffTags)
+          .where(eq(recommendationGoodstuffTags.cardId, cardId));
+        await tx.insert(recommendationGoodstuffTags).values(
+          tags.map((tag) => ({
+            cardId,
+            tag,
+          })),
+        );
+      }
+    });
+
+    this.logger.info(
+      {
+        event: 'recommendations.goodstuff.patch',
+        cardId,
+        tags: body.tags,
+        noteUpdated: body.note !== undefined,
+      },
+      'Patched recommendation goodstuff',
+    );
+
+    return this.requireRow(cardId);
   }
 
   async remove(cardId: string): Promise<void> {
