@@ -1,5 +1,18 @@
 # Changelog
 
+
+## [0.4.0](https://github.com/kevinmccartney/respark/compare/v0.3.0...v0.4.0) (2026-09-23)
+
+### Features
+
+* **admin:** user management ([f772001](https://github.com/kevinmccartney/respark/commit/f77200117908681aacda8fc97cd96613430e9f36))
+* all kinds of ding dang ui enhancements ([1ce6311](https://github.com/kevinmccartney/respark/commit/1ce63114a7d4b44c6e10c0feae2f2dc326c4d91c))
+* **client:** chat history ([db68db2](https://github.com/kevinmccartney/respark/commit/db68db2cbc88f784fa2a7c28a70dae25b09e9144))
+* **client:** chat history title summary generation ([ed84527](https://github.com/kevinmccartney/respark/commit/ed84527991d890c456ae7212377392b819a02f67))
+* mostly refactor, but removed system from theme picker ([6231373](https://github.com/kevinmccartney/respark/commit/62313733d985a930eb51dffd59caf383202e7146))
+* theme update ([04ba1af](https://github.com/kevinmccartney/respark/commit/04ba1af0811da9978b59995dba496bb7208355dd))
+* tuning import and scryfall search ([0c2b62e](https://github.com/kevinmccartney/respark/commit/0c2b62eaf98efd446c81924777db1a503812d4ca))
+
 ## [0.3.0](https://github.com/kevinmccartney/respark/compare/v0.2.0...v0.3.0) (2026-09-23)
 
 ### Features
