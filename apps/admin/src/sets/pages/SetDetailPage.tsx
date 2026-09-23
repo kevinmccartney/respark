@@ -9,7 +9,6 @@ import {
   uuidSchema,
 } from '@respark/schemas';
 import {
-  Badge,
   Pagination,
   Table,
   TableBody,
@@ -87,7 +86,6 @@ export const SetDetailPage = () => {
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h1 className="font-heading text-2xl font-semibold">{set.name}</h1>
               <span className="font-mono text-sm uppercase text-muted-foreground">{set.code}</span>
-              {set.digital ? <Badge variant="secondary">Digital</Badge> : null}
             </div>
             <dl className="grid max-w-xl grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Type</dt>

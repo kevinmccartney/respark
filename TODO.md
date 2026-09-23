@@ -6,21 +6,24 @@ Writing down ideas for the future
 
 ### Features
 
-- remove/filter non-paper cards
-- changelog for decks
-- collection
+- update theme
 - Prod env
+- changelog for decks
+- bulk actions
 - (admin) ai cost management
+- stacks
+- collection
 - (admin/etl) failed rows don't stream into the UI
+- MTG pricing data
+- bracket estimator
+- get search more consistent to scryfall
 
 ### Tech Debt
 
-- Tear out demo mismatches/errors. Then figure out how I can recreate them via sql script
-- Remove failure simulation from ETL
 - mdc AI agent docs guidance and refresh
-- Bulk actions
 - (api) refactor/cleanup
 - (etl) refactor/cleanup
-- bracket estimator
+- scryfall E2E tests
+- tear out demo mismatches/errors. Then figure out how I can recreate them via sql script
 - build combo graph from Commander Spellbook myself?
 - Per-commander inclusion — see docs/commander-stats.md

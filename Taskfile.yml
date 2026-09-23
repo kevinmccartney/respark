@@ -347,6 +347,15 @@ tasks:
     cmds:
       - bash scripts/purge-non-playable-cards.sh {{.CLI_ARGS}}
 
+  db:purge-digital:
+    desc: Delete digital-only sets/printings ({{.ENV}} via tunnel; dry-run unless -- apply)
+    env:
+      AWS_REGION: '{{.AWS_REGION}}'
+      ENV: '{{.ENV}}'
+      TF_DIR: '{{.TF_DIR}}'
+    cmds:
+      - bash scripts/purge-digital-sets.sh {{.CLI_ARGS}}
+
   api:dev:
     desc: Run the API in watch mode on PORT (default {{.API_PORT}})
     deps:

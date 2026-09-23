@@ -1,26 +1,13 @@
 import { z } from 'zod';
 
-import {
-  queryBoolSchema,
-  queryIntSchema,
-  sortDirSchema,
-  uuidSchema,
-  type SortDir,
-} from './primitives.js';
+import { queryIntSchema, sortDirSchema, uuidSchema, type SortDir } from './primitives.js';
 
 export const SET_SEARCH_DEFAULT_LIMIT = 50;
 export const SET_SEARCH_MAX_LIMIT = 100;
 export const SET_PRINTINGS_DEFAULT_LIMIT = 50;
 export const SET_PRINTINGS_MAX_LIMIT = 100;
 
-export const SET_SEARCH_SORTS = [
-  'name',
-  'code',
-  'releasedAt',
-  'setType',
-  'cardCount',
-  'digital',
-] as const;
+export const SET_SEARCH_SORTS = ['name', 'code', 'releasedAt', 'setType', 'cardCount'] as const;
 export const setSearchSortSchema = z.enum(SET_SEARCH_SORTS);
 export type SetSearchSort = z.infer<typeof setSearchSortSchema>;
 export const SET_SEARCH_DEFAULT_SORT: SetSearchSort = 'releasedAt';
@@ -62,7 +49,6 @@ export const setListItemSchema = z.object({
   setType: z.string().nullable(),
   releasedAt: z.string().nullable(),
   cardCount: z.number().int(),
-  digital: z.boolean().nullable(),
 });
 
 export type SetListItem = z.infer<typeof setListItemSchema>;
@@ -123,7 +109,6 @@ const setTypeQuerySchema = z.preprocess(
 export const setSearchQuerySchema = z.object({
   q: z.string().optional(),
   setType: setTypeQuerySchema,
-  digital: queryBoolSchema,
   sort: optionalQueryString(setSearchSortSchema),
   dir: optionalQueryString(sortDirSchema),
   limit: queryIntSchema(1, SET_SEARCH_MAX_LIMIT),

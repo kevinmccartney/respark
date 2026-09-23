@@ -290,8 +290,8 @@ const uuidListQuerySchema = z.preprocess((value: unknown) => {
 
 export const cardSearchQuerySchema = z.object({
   /**
-   * Legacy keyword ILIKE across name/type/oracle/…. Prefer `scryfall` (bare name or field
-   * clauses). Still accepted for old bookmarks and chat until callers finish migrating.
+   * Same language as `scryfall` (bare words = name substring; `t:`, `-t:`, …). Prefer
+   * `scryfall`. Kept for old bookmarks and chat callers that still send `q`.
    */
   q: z.string().optional(),
   /** Primary match language: Scryfall syntax parsed locally and compiled to SQL. */

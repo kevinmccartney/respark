@@ -76,15 +76,15 @@ Scryfall is the source of truth for identity, printings, sets, images, and forma
 
 ### Card (`catalog.card`)
 
-The conceptual / oracle card (`oracle_id` from Scryfall). Shared rules text, colors, type line, format `legalities` (Scryfall map), and `leadership_skills` (MTGJSON `leadershipSkills`, including `commander` / `brawl` / `oathbreaker`). Global Commander popularity is `edhrec_rank` (Scryfall) and `edhrec_saltiness` (MTGJSON); `is_game_changer` comes from Scryfall, with MTGJSON as fallback. Search and autocomplete query this table; the deck builder then picks a printing. `GET /cards` accepts `sort=name` (default), `sort=edhrecRank`, or `sort=manaValue` (CMC). Per-commander inclusion is not stored ([commander-stats.md](commander-stats.md)). Adds and imports reject cards that are not `legal` in the deck’s format once legalities have been synced. Commander search and commander assignment require `leadershipSkills.commander`. Tokens, emblems, art series, minigames, planes, schemes, vanguards, and other Scryfall extras are not imported (`layout` / `set_type`, not legalities). The identifiers job skips the same extras.
+The conceptual / oracle card (`oracle_id` from Scryfall). Shared rules text, colors, type line, format `legalities` (Scryfall map), and `leadership_skills` (MTGJSON `leadershipSkills`, including `commander` / `brawl` / `oathbreaker`). Global Commander popularity is `edhrec_rank` (Scryfall) and `edhrec_saltiness` (MTGJSON); `is_game_changer` comes from Scryfall, with MTGJSON as fallback. Search and autocomplete query this table; the deck builder then picks a printing. `GET /cards` accepts `sort=name` (default), `sort=edhrecRank`, or `sort=manaValue` (CMC). Per-commander inclusion is not stored ([commander-stats.md](commander-stats.md)). Adds and imports reject cards that are not `legal` in the deck’s format once legalities have been synced. Commander search and commander assignment require `leadershipSkills.commander`. Tokens, emblems, art series, minigames, planes, schemes, vanguards, and other Scryfall extras are not imported (`layout` / `set_type`, not legalities). Digital-only releases (Scryfall `digital: true`, including Alchemy) are skipped at ETL — the product catalog is paper-only. The identifiers job skips the same extras.
 
 ### Set (`catalog.set`)
 
-A published set (`code` unique, plus optional Scryfall set id). Printings belong to a set with `ON DELETE RESTRICT` so a set is not dropped out from under cards.
+A published set (`code` unique, plus optional Scryfall set id). Printings belong to a set with `ON DELETE RESTRICT` so a set is not dropped out from under cards. `digital` is kept as an ETL gate (skip / enrich) and is not a browse filter; paper-only ingest means digital sets should not appear in the product catalog.
 
 ### Printing (`catalog.printing`)
 
-One physical or digital printing of a card in a set (`scryfall_id` unique). Collector number, language, rarity, artist, image URLs, and `finishes` (`nonfoil`, `foil`, `etched`, …). A deck line may be foil when `foil` or `etched` is in that list (empty means not synced yet). Etched and foil-only printings always show the foil overlay; dual `nonfoil`+`foil` printings stay optional. This is what a deck line stores.
+One paper printing of a card in a set (`scryfall_id` unique). Collector number, language, rarity, artist, image URLs, and `finishes` (`nonfoil`, `foil`, `etched`, …). A deck line may be foil when `foil` or `etched` is in that list (empty means not synced yet). Etched and foil-only printings always show the foil overlay; dual `nonfoil`+`foil` printings stay optional. This is what a deck line stores.
 
 ### Card face (`catalog.card_face`)
 

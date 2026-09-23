@@ -26,7 +26,7 @@ import {
   goodstuffTagSchema,
   type RecommendationGoodstuffFlag,
 } from '@respark/schemas/recommendations';
-import { parseScryfallQuery, ScryfallQueryError } from '@respark/scryfall-query';
+import { parseScryfallQuery, ScryfallQueryError, type Ast } from '@respark/scryfall-query';
 
 import { bestPrintingOrderSql, printingFacesJsonSql } from '../catalog/printings';
 import { DATABASE, type Database } from '../db/database.module';
@@ -129,10 +129,11 @@ export class CardsService {
     const sort = opts.sort ?? CARD_SEARCH_DEFAULT_SORT;
     const dir = opts.dir ?? defaultCardSortDir(sort);
 
-    let scryfallPredicate: SQL = sql`TRUE`;
-    if (scryfallQ) {
+    const matchAsts: Ast[] = [];
+    for (const raw of [q, scryfallQ]) {
+      if (!raw) continue;
       try {
-        scryfallPredicate = compileScryfallAst(parseScryfallQuery(scryfallQ));
+        matchAsts.push(parseScryfallQuery(raw));
       } catch (err) {
         if (err instanceof ScryfallQueryError) {
           throw new BadRequestException(err.message);
@@ -140,9 +141,18 @@ export class CardsService {
         throw err;
       }
     }
+    const scryfallPredicate =
+      matchAsts.length === 0
+        ? sql`TRUE`
+        : matchAsts.length === 1
+          ? compileScryfallAst(matchAsts[0]!)
+          : sql`(${sql.join(
+              matchAsts.map((ast) => compileScryfallAst(ast)),
+              sql` AND `,
+            )})`;
 
-    const pattern = q.length > 0 ? `%${escapeIlike(q)}%` : null;
-    const matchPredicate = matchSql(pattern);
+    const nameBoost = matchAsts.map(firstNameText).find((text) => text !== null) ?? null;
+    const pattern = nameBoost ? `%${escapeIlike(nameBoost)}%` : null;
     const legalPredicate = legalInSql(opts.legalIn);
     const identityPredicate = colorIdentitySql(opts.colorIdentity, opts.includeColorless);
     const commanderPredicate = commanderEligibleSql(opts.commanderEligible);
@@ -154,8 +164,7 @@ export class CardsService {
     const countResult = await this.db.execute<CountRow>(sql`
       SELECT count(*)::int AS total
       FROM catalog.card c
-      WHERE ${matchPredicate}
-        AND ${legalPredicate}
+      WHERE ${legalPredicate}
         AND ${identityPredicate}
         AND ${commanderPredicate}
         AND ${typePredicate}
@@ -200,8 +209,7 @@ export class CardsService {
           FROM app.recommendation_goodstuff_tag t
           WHERE t.card_id = c.id
         ) gt ON g.card_id IS NOT NULL
-        WHERE ${matchPredicate}
-          AND ${legalPredicate}
+        WHERE ${legalPredicate}
           AND ${identityPredicate}
           AND ${commanderPredicate}
           AND ${typePredicate}
@@ -255,14 +263,13 @@ export class CardsService {
     const cards = pageResult.rows.map(toCard);
 
     const legacyMatch =
-      q.length > 0 ||
       Boolean(opts.legalIn) ||
       Boolean(opts.colorIdentity?.length) ||
       Boolean(opts.typeContains) ||
       Boolean(opts.rarity?.length) ||
       opts.maxManaValue !== undefined;
 
-    if (legacyMatch) {
+    if (legacyMatch || q.length > 0) {
       this.logger.debug(
         {
           event: 'cards.search.legacy_filters',
@@ -274,7 +281,7 @@ export class CardsService {
           maxManaValue: opts.maxManaValue ?? null,
           hasScryfall: Boolean(scryfallQ),
         },
-        'GET /cards used legacy match filters; prefer scryfall',
+        'GET /cards used legacy structured filters and/or q; prefer scryfall',
       );
     }
 
@@ -684,27 +691,27 @@ const toGoodstuff = (
   return { tags: parsed, note };
 };
 
-const matchSql = (pattern: string | null): SQL => sql`
-    (
-      ${pattern}::text IS NULL
-      OR c.name ILIKE ${pattern} ESCAPE '\\'
-      OR c.type_line ILIKE ${pattern} ESCAPE '\\'
-      OR c.oracle_text ILIKE ${pattern} ESCAPE '\\'
-      OR c.mana_cost ILIKE ${pattern} ESCAPE '\\'
-      OR catalog.immutable_array_to_string(c.keywords, ' ') ILIKE ${pattern} ESCAPE '\\'
-      OR EXISTS (
-        SELECT 1
-        FROM catalog.printing p
-        JOIN catalog.card_face f ON f.printing_id = p.id
-        WHERE p.card_id = c.id
-          AND (
-            f.name ILIKE ${pattern} ESCAPE '\\'
-            OR f.type_line ILIKE ${pattern} ESCAPE '\\'
-            OR f.oracle_text ILIKE ${pattern} ESCAPE '\\'
-          )
-      )
-    )
-  `;
+const firstNameText = (ast: Ast): string | null => {
+  switch (ast.type) {
+    case 'name':
+      return ast.text;
+    case 'and':
+    case 'or':
+      for (const child of ast.children) {
+        const found = firstNameText(child);
+        if (found) return found;
+      }
+      return null;
+    case 'not':
+      return firstNameText(ast.child);
+    case 'clause':
+      return null;
+    default: {
+      const _exhaustive: never = ast;
+      return _exhaustive;
+    }
+  }
+};
 
 const escapeIlike = (value: string): string =>
   value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');

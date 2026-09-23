@@ -14,7 +14,9 @@ Local search understands a **subset** of [Scryfall syntax](https://scryfall.com/
 - **NOT** — leading \`-\` (e.g. \`-t:creature\`)
 - **Groups** — parentheses: \`(c:r OR c:g) t:instant\`
 
-Bare words match **card name** (substring). Quotes allow phrases: \`"doom blade"\`.
+Bare words match **card name** (substring), including multi-face names. Quotes allow phrases: \`"doom blade"\`.
+
+Examples: \`Markov\`, \`Markov t:vampire\`, \`Markov -t:vampire\` (name Markov and **not** type Vampire — leading \`-\` is NOT).
 
 ## Colors & identity
 

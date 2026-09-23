@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { SET_SEARCH_DEFAULT_SORT, defaultSetSortDir, isSetSearchSort } from '@respark/schemas';
 import {
-  Badge,
   Button,
   Pagination,
   Table,
@@ -20,6 +19,7 @@ import { useClampPageParam, useUrlSortParams } from '@respark-admin/core/hooks';
 import { SetTypeFilter } from '@respark-admin/sets/components';
 import { SETS_LIST_PAGE_SIZE } from '@respark-admin/sets/constants';
 import { useSearchSets } from '@respark-admin/sets/hooks';
+
 const parseSetTypes = (raw: string): string[] =>
   raw
     .split(',')
@@ -45,25 +45,20 @@ export const SetsListPage = () => {
 
   const qParam = searchParams.get('q') ?? '';
   const setTypeParam = searchParams.get('setType') ?? '';
-  const digitalParam = searchParams.get('digital');
 
   const [draftQ, setDraftQ] = useState(qParam);
   const [draftSetType, setDraftSetType] = useState<string[]>(() => parseSetTypes(setTypeParam));
-  const [draftDigital, setDraftDigital] = useState(digitalParam ?? '');
 
   useEffect(() => {
     setDraftQ(qParam);
     setDraftSetType(parseSetTypes(setTypeParam));
-    setDraftDigital(digitalParam ?? '');
-  }, [qParam, setTypeParam, digitalParam]);
+  }, [qParam, setTypeParam]);
 
-  const digital = digitalParam === 'true' ? true : digitalParam === 'false' ? false : undefined;
   const setType = parseSetTypes(setTypeParam);
 
   const { data, isPending, isFetching, error } = useSearchSets({
     q: qParam || undefined,
     setType: setType.length > 0 ? setType : undefined,
-    digital,
     sort: sortParam,
     dir: dirParam,
     limit: SETS_LIST_PAGE_SIZE,
@@ -91,9 +86,6 @@ export const SetsListPage = () => {
           .filter(Boolean)
           .join(','),
       );
-    }
-    if (draftDigital === 'true' || draftDigital === 'false') {
-      next.set('digital', draftDigital);
     }
     writeSortParams(next, sortParam, dirParam);
     setSearchParams(next);
@@ -124,7 +116,7 @@ export const SetsListPage = () => {
       </div>
 
       <form
-        className="mb-5 grid shrink-0 gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10 md:grid-cols-2 lg:grid-cols-4"
+        className="mb-5 grid shrink-0 gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10 md:grid-cols-2 lg:grid-cols-3"
         onSubmit={applyFilters}
       >
         <label className="grid gap-1 text-sm">
@@ -137,18 +129,6 @@ export const SetsListPage = () => {
           />
         </label>
         <SetTypeFilter value={draftSetType} onChange={setDraftSetType} />
-        <label className="grid gap-1 text-sm">
-          <span className="text-muted-foreground">Digital</span>
-          <select
-            className="rounded-md border bg-background px-3 py-2"
-            value={draftDigital}
-            onChange={(event) => setDraftDigital(event.target.value)}
-          >
-            <option value="">Any</option>
-            <option value="true">Digital only</option>
-            <option value="false">Paper only</option>
-          </select>
-        </label>
         <div className="flex items-end">
           <Button type="submit" disabled={loading}>
             Apply
@@ -202,13 +182,6 @@ export const SetsListPage = () => {
               >
                 Cards
               </SortableTableHead>
-              <SortableTableHead
-                active={sortParam === 'digital'}
-                dir={sortParam === 'digital' ? dirParam : undefined}
-                onClick={() => setSort('digital')}
-              >
-                Digital
-              </SortableTableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -231,14 +204,11 @@ export const SetsListPage = () => {
                 <TableCell className="text-muted-foreground">{set.setType ?? '—'}</TableCell>
                 <TableCell className="text-muted-foreground">{set.releasedAt ?? '—'}</TableCell>
                 <TableCell className="text-muted-foreground">{set.cardCount}</TableCell>
-                <TableCell>
-                  {set.digital ? <Badge variant="secondary">Digital</Badge> : '—'}
-                </TableCell>
               </TableRow>
             ))}
             {!isPending && rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-muted-foreground">
+                <TableCell colSpan={5} className="text-muted-foreground">
                   No sets match these filters.
                 </TableCell>
               </TableRow>

@@ -199,6 +199,31 @@ describe('parseScryfallQuery', () => {
     expect(parseScryfallQuery('"doom blade"')).toEqual({ type: 'name', text: 'doom blade' });
   });
 
+  it('ANDs bare name with type filters and negation', () => {
+    expect(parseScryfallQuery('Markov t:vampire')).toEqual({
+      type: 'and',
+      children: [
+        { type: 'name', text: 'Markov' },
+        { type: 'clause', field: 'type', op: ':', value: { kind: 'text', text: 'vampire' } },
+      ],
+    });
+    expect(parseScryfallQuery('Markov -t:vampire')).toEqual({
+      type: 'and',
+      children: [
+        { type: 'name', text: 'Markov' },
+        {
+          type: 'not',
+          child: {
+            type: 'clause',
+            field: 'type',
+            op: ':',
+            value: { kind: 'text', text: 'vampire' },
+          },
+        },
+      ],
+    });
+  });
+
   it('parses format legality', () => {
     expect(parseScryfallQuery('f:commander')).toEqual({
       type: 'clause',

@@ -136,6 +136,8 @@ export const transformScryfallCard = (card: ScryfallCard): CanonicalRecord | nul
       layout: card.layout,
       typeLine: card.type_line,
       setType: card.set_type,
+      digital: card.digital,
+      name: card.name,
     })
   ) {
     return null;

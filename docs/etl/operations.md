@@ -79,6 +79,18 @@ task db:purge-non-playable -- apply
 
 Printings still listed on a deck stay (`RESTRICT`). Pass `local` to hit Compose instead of RDS (`task db:purge-non-playable -- local`).
 
+## One-off: purge digital-only sets
+
+Catalog syncs also skip digital-only cards (`digital: true` / Alchemy / `A-` name prefix), but existing rows need a one-off delete — including Alchemy rebalances nested under paper sets (e.g. AFR `#A-87`):
+
+```bash
+task db:tunnel              # leave running
+task db:purge-digital       # counts only
+task db:purge-digital -- apply
+```
+
+Printings still listed on a deck (or as a commander) stay. Pass `local` for Compose Postgres.
+
 ## Env knobs
 
 | Variable         | Where     | Purpose                                   |

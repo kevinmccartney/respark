@@ -2,7 +2,7 @@ import type { Pool } from 'pg';
 
 import type { IngestionRunStatus } from '@respark/schemas/etl-sync';
 
-import { isCatalogExtra } from '../../core/catalogSkip';
+import { isCatalogExtra, isDigitalCatalogSkip } from '../../core/catalogSkip';
 import { resolveStoreRaw } from '../../core/flags';
 import { payloadHash } from '../../core/hashing';
 import type { Logger } from '../../core/logger';
@@ -251,6 +251,8 @@ export const runScryfallImport = async (
           layout: card.layout,
           typeLine: card.type_line,
           setType: card.set_type,
+          digital: card.digital,
+          name: card.name,
         })
       ) {
         recordsSkipped += 1;
@@ -336,6 +338,14 @@ export const runScryfallImport = async (
         try {
           await client.query('begin');
           for (const set of scryfallSets) {
+            if (
+              isDigitalCatalogSkip({
+                digital: set.digital,
+                setType: set.set_type,
+              })
+            ) {
+              continue;
+            }
             if (await upsertScryfallSetMeta(client, set)) setsUpdated += 1;
           }
           await client.query('commit');

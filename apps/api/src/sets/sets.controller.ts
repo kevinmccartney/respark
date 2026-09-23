@@ -30,7 +30,6 @@ export class SetsController {
     return this.setsService.search({
       q: query.q,
       setType: query.setType,
-      digital: query.digital,
       sort: query.sort ?? SET_SEARCH_DEFAULT_SORT,
       dir: query.dir,
       limit: query.limit ?? SET_SEARCH_DEFAULT_LIMIT,

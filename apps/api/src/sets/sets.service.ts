@@ -34,7 +34,6 @@ type SetRow = {
   block_code: string | null;
   released_at: string | null;
   card_count: number | null;
-  digital: boolean | null;
   parent_set_code: string | null;
   icon_svg_uri: string | null;
 };
@@ -60,7 +59,6 @@ export class SetsService {
   async search(opts: {
     q?: string;
     setType?: string | string[];
-    digital?: boolean;
     sort?: SetSearchSort;
     dir?: SortDir;
     limit?: number;
@@ -75,7 +73,6 @@ export class SetsService {
     const pattern = q.length > 0 ? `%${escapeIlike(q)}%` : null;
     const matchPredicate = matchSql(pattern);
     const typePredicate = setTypeSql(opts.setType);
-    const digitalPredicate = digitalSql(opts.digital);
     const orderSql = searchOrderSql(sort, dir);
 
     const countResult = await this.db.execute<CountRow>(sql`
@@ -83,7 +80,6 @@ export class SetsService {
       FROM catalog.set s
       WHERE ${matchPredicate}
         AND ${typePredicate}
-        AND ${digitalPredicate}
     `);
     const total = Number(countResult.rows[0]?.total ?? 0);
     const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
@@ -103,13 +99,11 @@ export class SetsService {
           FROM catalog.printing p
           WHERE p.set_id = s.id
         ) AS card_count,
-        s.digital,
         s.parent_set_code,
         s.icon_svg_uri
       FROM catalog.set s
       WHERE ${matchPredicate}
         AND ${typePredicate}
-        AND ${digitalPredicate}
       ORDER BY ${orderSql}
       LIMIT ${pageSize}
       OFFSET ${offset}
@@ -122,7 +116,6 @@ export class SetsService {
         event: 'sets.search',
         q: q || null,
         setType: opts.setType ?? null,
-        digital: opts.digital ?? null,
         sort,
         dir,
         page,
@@ -190,7 +183,6 @@ export class SetsService {
         s.block_code,
         s.released_at::text AS released_at,
         s.card_count,
-        s.digital,
         s.parent_set_code,
         s.icon_svg_uri
       FROM catalog.set s
@@ -275,7 +267,6 @@ const toListItem = (row: SetRow): SetListItem => ({
   setType: row.set_type,
   releasedAt: row.released_at,
   cardCount: Number(row.card_count ?? 0),
-  digital: row.digital,
 });
 
 const escapeIlike = (value: string): string =>
@@ -294,11 +285,6 @@ const setTypeSql = (setType: string | string[] | undefined): SQL => {
     types.map((token) => sql`${token}`),
     sql`, `,
   )})`;
-};
-
-const digitalSql = (digital: boolean | undefined): SQL => {
-  if (digital === undefined) return sql`TRUE`;
-  return sql`s.digital = ${digital}`;
 };
 
 const printingCountOrderSql = sql`(
@@ -322,10 +308,6 @@ const searchOrderSql = (sort: SetSearchSort, dir: SortDir): SQL => {
       return ascending
         ? sql`${printingCountOrderSql} ASC, s.name ASC`
         : sql`${printingCountOrderSql} DESC, s.name ASC`;
-    case 'digital':
-      return ascending
-        ? sql`s.digital ASC NULLS LAST, s.name ASC`
-        : sql`s.digital DESC NULLS LAST, s.name ASC`;
     case 'releasedAt':
     default:
       return ascending

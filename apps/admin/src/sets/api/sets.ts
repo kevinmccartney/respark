@@ -21,7 +21,6 @@ export const fetchSets = (
     const cleaned = types.map((token) => token.trim()).filter(Boolean);
     if (cleaned.length > 0) params.set('setType', cleaned.join(','));
   }
-  if (opts.digital !== undefined) params.set('digital', opts.digital ? 'true' : 'false');
   if (opts.sort) params.set('sort', opts.sort);
   if (opts.dir) params.set('dir', opts.dir);
   if (opts.limit !== undefined) params.set('limit', String(opts.limit));

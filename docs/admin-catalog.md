@@ -59,13 +59,13 @@ Maintain the multi-tag goodstuff list (add via card name suggestions, remove ent
 
 ### Sets list (`/catalog/sets`)
 
-**Columns:** code, name, set type, released, card count, digital.
+**Columns:** code, name, set type, released, card count.
 
-**Filters:** `q` (name or code), optional `setType` (comma-separated exact types, OR), optional `digital`, `sort` (`name` \| `code` \| `releasedAt` \| `setType` \| `cardCount` \| `digital`).
+**Filters:** `q` (name or code), optional `setType` (comma-separated exact types, OR), `sort` (`name` \| `code` \| `releasedAt` \| `setType` \| `cardCount`).
 
 ### Set detail (`/catalog/sets/:id`)
 
-Set metadata (code, name, type, released, card count, digital, Scryfall id).
+Set metadata (code, name, type, released, card count, Scryfall id).
 
 **Printings table** (paginated): collector number, card name → `/catalog/cards/:cardId?printing=:printingId`, rarity, optional thumb.
 
@@ -84,7 +84,7 @@ Admin is already Clerk-authenticated. No catalog write routes on cards/sets.
 
 | Method | Path                     | Purpose                                                                              |
 | ------ | ------------------------ | ------------------------------------------------------------------------------------ |
-| `GET`  | `/sets`                  | List/search: `q`, `setType` (comma OR), `digital`, `sort`, `page` / `limit`          |
+| `GET`  | `/sets`                  | List/search: `q`, `setType` (comma OR), `sort`, `page` / `limit`                     |
 | `GET`  | `/sets/type-suggestions` | Distinct `set_type` values for bounded autocomplete (`q`, `limit`)                   |
 | `GET`  | `/sets/:id`              | Set row + paginated printings: `cardId`, `cardName`, collector number, rarity, image |
 

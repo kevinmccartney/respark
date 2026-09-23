@@ -150,7 +150,7 @@ export const SearchPage = () => {
               id="scryfall-search"
               value={scryfallInput}
               onChange={(event) => setScryfallInput(event.target.value)}
-              placeholder="t:creature id:g f:commander mv<=3"
+              placeholder="Markov t:vampire"
               aria-label="Scryfall syntax search"
               spellCheck={false}
               className="font-mono text-[0.9em]"

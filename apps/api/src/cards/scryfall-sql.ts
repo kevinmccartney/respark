@@ -55,7 +55,16 @@ const compileNode = (ast: Ast): SQL => {
       return sql`(NOT (${compileNode(ast.child)}))`;
     case 'name': {
       const pattern = `%${escapeIlike(ast.text)}%`;
-      return sql`c.name ILIKE ${pattern} ESCAPE '\\'`;
+      return sql`(
+        c.name ILIKE ${pattern} ESCAPE '\\'
+        OR EXISTS (
+          SELECT 1
+          FROM catalog.printing p
+          JOIN catalog.card_face f ON f.printing_id = p.id
+          WHERE p.card_id = c.id
+            AND f.name ILIKE ${pattern} ESCAPE '\\'
+        )
+      )`;
     }
     case 'clause':
       return compileClause(ast.field, ast.op, ast.value);

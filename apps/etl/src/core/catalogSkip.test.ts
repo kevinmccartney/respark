@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { hasBareCardFace, isCatalogExtra } from './catalogSkip';
+import { hasAlchemyNamePrefix, hasBareCardFace, isCatalogExtra } from './catalogSkip';
 
 describe('hasBareCardFace', () => {
   it('matches a face that is exactly Card', () => {
@@ -16,6 +16,19 @@ describe('hasBareCardFace', () => {
     assert.equal(hasBareCardFace('Legendary Creature — Elf'), false);
     assert.equal(hasBareCardFace(null), false);
     assert.equal(hasBareCardFace(''), false);
+  });
+});
+
+describe('hasAlchemyNamePrefix', () => {
+  it('matches A- rebalance names', () => {
+    assert.equal(hasAlchemyNamePrefix('A-Acererak the Archlich'), true);
+    assert.equal(hasAlchemyNamePrefix('  A-Lightning Strike'), true);
+  });
+
+  it('ignores paper names', () => {
+    assert.equal(hasAlchemyNamePrefix('Acererak the Archlich'), false);
+    assert.equal(hasAlchemyNamePrefix('Aardvark'), false);
+    assert.equal(hasAlchemyNamePrefix(null), false);
   });
 });
 
@@ -41,6 +54,33 @@ describe('isCatalogExtra', () => {
     assert.equal(isCatalogExtra({ layout: 'normal', typeLine: 'Card // Card' }), true);
   });
 
+  it('skips digital cards, alchemy sets, and A- rebalance names', () => {
+    assert.equal(isCatalogExtra({ layout: 'normal', digital: true }), true);
+    assert.equal(isCatalogExtra({ layout: 'normal', typeLine: 'Instant', digital: true }), true);
+    assert.equal(isCatalogExtra({ layout: 'normal', setType: 'alchemy' }), true);
+    assert.equal(
+      isCatalogExtra({ layout: 'normal', typeLine: 'Creature — Human', setType: 'alchemy' }),
+      true,
+    );
+    assert.equal(
+      isCatalogExtra({
+        layout: 'normal',
+        name: 'A-Acererak the Archlich',
+        setType: 'expansion',
+        digital: false,
+      }),
+      true,
+    );
+    assert.equal(
+      isCatalogExtra({
+        layout: 'normal',
+        name: 'A-Lightning Strike',
+        setType: 'expansion',
+      }),
+      true,
+    );
+  });
+
   it('keeps playable cards including Un-sets', () => {
     assert.equal(
       isCatalogExtra({ layout: 'normal', typeLine: 'Instant', setType: 'funny' }),
@@ -52,5 +92,14 @@ describe('isCatalogExtra', () => {
     );
     assert.equal(isCatalogExtra({ layout: 'host', typeLine: 'Host Creature — Clamfolk' }), false);
     assert.equal(isCatalogExtra({ layout: 'reversible_card' }), false);
+    assert.equal(
+      isCatalogExtra({
+        layout: 'normal',
+        typeLine: 'Instant',
+        digital: false,
+        name: 'Acererak the Archlich',
+      }),
+      false,
+    );
   });
 });
