@@ -6,7 +6,6 @@ Writing down ideas for the future
 
 ### Features
 
-- (admin) User management
 - chat history
 - remove/filter non-paper cards
 - collection

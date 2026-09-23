@@ -4,9 +4,10 @@ import { GuestOnly, RequireAuth } from '@respark-admin/auth/components';
 import { SignInPage } from '@respark-admin/auth/pages';
 import { CardDetailPage, CardsListPage, GoodstuffsPage } from '@respark-admin/cards/pages';
 import { AppShell } from '@respark-admin/core/components';
-import { ComingSoonPage, NotFoundPage } from '@respark-admin/core/pages';
+import { NotFoundPage } from '@respark-admin/core/pages';
 import { SyncDetailPage, SyncsListPage } from '@respark-admin/etl-syncs/pages';
 import { SetDetailPage, SetsListPage } from '@respark-admin/sets/pages';
+import { UserDetailPage, UsersListPage } from '@respark-admin/users/pages';
 
 export default function App() {
   return (
@@ -80,10 +81,15 @@ export default function App() {
           path="/users/management"
           element={
             <RequireAuth>
-              <ComingSoonPage
-                title="User management"
-                description="Invite and manage admin users here."
-              />
+              <UsersListPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/users/management/:clerkUserId"
+          element={
+            <RequireAuth>
+              <UserDetailPage />
             </RequireAuth>
           }
         />

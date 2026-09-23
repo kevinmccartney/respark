@@ -26,6 +26,12 @@ import {
   type CreateRecommendationGoodstuffBody,
   type PatchRecommendationGoodstuffBody,
 } from '@respark/schemas/recommendations';
+import {
+  ADMIN_USER_LIST_DEFAULT_LIMIT,
+  adminUserListQuerySchema,
+  clerkUserIdSchema,
+  type AdminUserListQuery,
+} from '@respark/schemas/users';
 
 import { AdminRoleGuard } from '../auth/admin-role.guard';
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard';
@@ -33,6 +39,7 @@ import { zodPipe } from '../lib/zod-pipe';
 import { RecommendationsService } from '../recommendations/recommendations.service';
 
 import { AdminEtlService } from './admin-etl.service';
+import { AdminUsersService } from './admin-users.service';
 import { AdminService } from './admin.service';
 
 @Controller('admin')
@@ -41,6 +48,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly adminEtl: AdminEtlService,
+    private readonly adminUsers: AdminUsersService,
     private readonly recommendations: RecommendationsService,
   ) {}
 
@@ -125,6 +133,20 @@ export class AdminController {
       unmatched: result.unmatched,
       total: result.total,
     };
+  }
+
+  @Get('users')
+  async listUsers(@Query(zodPipe(adminUserListQuerySchema)) query: AdminUserListQuery) {
+    return this.adminUsers.listUsers({
+      q: query.q,
+      page: query.page ?? 1,
+      limit: query.limit ?? ADMIN_USER_LIST_DEFAULT_LIMIT,
+    });
+  }
+
+  @Get('users/:clerkUserId')
+  async getUser(@Param('clerkUserId', zodPipe(clerkUserIdSchema)) clerkUserId: string) {
+    return { user: await this.adminUsers.getUser(clerkUserId) };
   }
 
   @Get('recommendation-goodstuffs')

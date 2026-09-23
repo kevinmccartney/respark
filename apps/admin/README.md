@@ -54,6 +54,6 @@ Signed-in chrome is a left nav (header only when signed out):
 
 - **Catalog** — `/catalog/cards` (+ `/:id?printing=`), `/catalog/sets` (+ `/:id`), `/catalog/goodstuff` — browse + goodstuff policy; see [`docs/admin-catalog.md`](../../docs/admin-catalog.md)
 - **ETL Syncs** — `/` list + **Start sync** (catalog / enrichment → `POST /admin/etl-syncs`); live via WebSocket. `/syncs/:id` is sync detail (stages/jobs, live log, reconciliation, failed rows)
-- **Users** — `/users/management` (coming soon)
+- **Users** — `/users/management` (list + detail via Clerk)
 
 WebSocket: `ws://<api>/admin/etl-syncs/ws?token=<clerk_jwt>` (admin role required). Subscribe with `{ "event": "subscribe", "data": { "channel": "list" } }` or `{ "channel": "sync", "syncId": "…" }`.

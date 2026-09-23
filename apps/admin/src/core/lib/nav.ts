@@ -30,7 +30,13 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     label: 'Users',
-    items: [{ label: 'Management', to: '/users/management', comingSoon: true }],
+    items: [
+      {
+        label: 'Management',
+        to: '/users/management',
+        match: (pathname) => pathname.startsWith('/users/management'),
+      },
+    ],
   },
   {
     label: 'Operations',
