@@ -14,6 +14,7 @@ import { BedrockChatProvider } from './provider/bedrock.provider';
 import type { ChatProvider } from './provider/chat-provider';
 import { MockChatProvider } from './provider/mock.provider';
 import { createSpellbookClient } from './spellbook/client';
+import { ConversationTitleGenerator } from './title-generator';
 
 const resolveChatProvider = (
   bedrock: BedrockChatProvider,
@@ -30,6 +31,7 @@ const resolveChatProvider = (
     ChatService,
     ChatOrchestrator,
     ChatGateway,
+    ConversationTitleGenerator,
     BedrockChatProvider,
     MockChatProvider,
     {

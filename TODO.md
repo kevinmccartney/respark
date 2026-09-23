@@ -7,6 +7,7 @@ Writing down ideas for the future
 ### Features
 
 - remove/filter non-paper cards
+- changelog for decks
 - collection
 - Prod env
 - (admin) ai cost management

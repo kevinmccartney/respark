@@ -198,7 +198,7 @@ export type ChatLatestResponse = z.infer<typeof chatLatestResponseSchema>;
 
 export const CHAT_CONVERSATION_LIST_DEFAULT_LIMIT = 50;
 export const CHAT_CONVERSATION_LIST_MAX_LIMIT = 100;
-export const CHAT_CONVERSATION_TITLE_MAX = 60;
+export const CHAT_CONVERSATION_TITLE_MAX = 50;
 
 export const chatConversationSummarySchema = z.object({
   id: uuidSchema,

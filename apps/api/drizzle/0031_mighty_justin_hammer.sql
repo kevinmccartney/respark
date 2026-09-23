@@ -1,0 +1,1 @@
+ALTER TABLE "app"."chat_conversation" ADD COLUMN "title" text;

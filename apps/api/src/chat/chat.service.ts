@@ -1,9 +1,9 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
 import {
   CHAT_CONVERSATION_LIST_DEFAULT_LIMIT,
-  CHAT_CONVERSATION_TITLE_MAX,
   chatConversationSchema,
   chatPartSchema,
   type ChatConversation,
@@ -21,6 +21,7 @@ import { UsersService } from '../users/users.service';
 import { collectLinkableFromToolMessage, type LinkableCard } from './card-links';
 import { selectHistoryMessages } from './history';
 import { stickyUnchanged } from './sticky-context';
+import { clampConversationTitle, ConversationTitleGenerator } from './title-generator';
 
 @Injectable()
 export class ChatService {
@@ -30,6 +31,9 @@ export class ChatService {
     private readonly decks: DecksService,
     private readonly cards: CardsService,
     private readonly users: UsersService,
+    private readonly titles: ConversationTitleGenerator,
+    @InjectPinoLogger(ChatService.name)
+    private readonly logger: PinoLogger,
   ) {}
 
   async requireOwnedDeck(clerkUserId: string, deckId: string) {
@@ -131,6 +135,7 @@ export class ChatService {
         id: chatConversations.id,
         deckId: chatConversations.deckId,
         cardId: chatConversations.cardId,
+        title: chatConversations.title,
         createdAt: chatConversations.createdAt,
         updatedAt: chatConversations.updatedAt,
       })
@@ -141,28 +146,25 @@ export class ChatService {
 
     if (rows.length === 0) return [];
 
-    const firstUserMessages = await this.db
-      .select({
-        conversationId: chatMessages.conversationId,
-        parts: chatMessages.parts,
-        createdAt: chatMessages.createdAt,
-      })
-      .from(chatMessages)
-      .where(
-        and(
-          inArray(
-            chatMessages.conversationId,
-            rows.map((row) => row.id),
-          ),
-          eq(chatMessages.role, 'user'),
-        ),
-      )
-      .orderBy(asc(chatMessages.createdAt));
-
+    const missingTitleIds = rows.filter((row) => !row.title).map((row) => row.id);
     const titleByConversation = new Map<string, string>();
-    for (const message of firstUserMessages) {
-      if (titleByConversation.has(message.conversationId)) continue;
-      titleByConversation.set(message.conversationId, titleFromParts(parseParts(message.parts)));
+
+    if (missingTitleIds.length > 0) {
+      const firstUserMessages = await this.db
+        .select({
+          conversationId: chatMessages.conversationId,
+          parts: chatMessages.parts,
+        })
+        .from(chatMessages)
+        .where(
+          and(inArray(chatMessages.conversationId, missingTitleIds), eq(chatMessages.role, 'user')),
+        )
+        .orderBy(asc(chatMessages.createdAt));
+
+      for (const message of firstUserMessages) {
+        if (titleByConversation.has(message.conversationId)) continue;
+        titleByConversation.set(message.conversationId, titleFromParts(parseParts(message.parts)));
+      }
     }
 
     return rows.map((row) => ({
@@ -171,7 +173,7 @@ export class ChatService {
       cardId: row.cardId,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
-      title: titleByConversation.get(row.id) ?? 'New chat',
+      title: row.title?.trim() || titleByConversation.get(row.id) || 'New chat',
     }));
   }
 
@@ -201,7 +203,41 @@ export class ChatService {
   }
 
   async appendUserMessage(conversationId: string, text: string) {
-    return this.appendMessage(conversationId, 'user', [{ type: 'text', text }]);
+    const [conversation] = await this.db
+      .select({ title: chatConversations.title })
+      .from(chatConversations)
+      .where(eq(chatConversations.id, conversationId))
+      .limit(1);
+    const needsTitle = Boolean(conversation) && !conversation.title;
+
+    const result = await this.appendMessage(conversationId, 'user', [{ type: 'text', text }]);
+    if (needsTitle) {
+      void this.ensureTitle(conversationId, text);
+    }
+    return result;
+  }
+
+  /** Fire-and-forget LLM title; never throws into the WS path. */
+  async ensureTitle(conversationId: string, userText: string): Promise<void> {
+    try {
+      const [row] = await this.db
+        .select({ title: chatConversations.title })
+        .from(chatConversations)
+        .where(eq(chatConversations.id, conversationId))
+        .limit(1);
+      if (!row || row.title) return;
+
+      const title = await this.titles.generate(userText);
+      await this.db
+        .update(chatConversations)
+        .set({ title })
+        .where(and(eq(chatConversations.id, conversationId), isNull(chatConversations.title)));
+    } catch (error) {
+      this.logger.warn(
+        { event: 'chat.title.ensure_failed', conversationId, err: error },
+        'Failed to persist conversation title',
+      );
+    }
   }
 
   async appendAssistantMessage(conversationId: string, parts: ChatPart[]) {
@@ -289,10 +325,6 @@ const titleFromParts = (parts: ChatPart[]): string => {
     .filter((part): part is Extract<ChatPart, { type: 'text' }> => part.type === 'text')
     .map((part) => part.text.trim())
     .filter(Boolean)
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (!text) return 'New chat';
-  if (text.length <= CHAT_CONVERSATION_TITLE_MAX) return text;
-  return `${text.slice(0, CHAT_CONVERSATION_TITLE_MAX - 1).trimEnd()}…`;
+    .join(' ');
+  return clampConversationTitle(text);
 };

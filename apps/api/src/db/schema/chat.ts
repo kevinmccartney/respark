@@ -23,6 +23,7 @@ export const chatConversations = appSchema.table(
       .references(() => users.id, { onDelete: 'cascade' }),
     deckId: uuid('deck_id').references(() => decks.id, { onDelete: 'set null' }),
     cardId: uuid('card_id').references(() => cards.id, { onDelete: 'set null' }),
+    title: text('title'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
