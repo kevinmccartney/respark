@@ -1,3 +1,4 @@
+import { useAuth } from '@clerk/react';
 import { History, Plus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -7,6 +8,7 @@ import { Badge, Button, Textarea } from '@respark/ui/lib';
 
 import { ApiError, isNotFound } from '@respark-client/core';
 
+import { fetchChatConversation } from '../api/chat';
 import { CATALOG_CHAT_PROMPT, CHAT_STATUS_LABEL, DECK_CHAT_PROMPT } from '../constants';
 import { useChatConversation, useChatLive, useChatSession } from '../hooks';
 import { toLocalChatMessage } from '../lib/chat-events';
@@ -16,6 +18,7 @@ import { ChatHistoryPanel } from './ChatHistoryPanel';
 import { ChatMarkdown } from './ChatMarkdown';
 
 export const GlobalChat = () => {
+  const { getToken } = useAuth();
   const { pathname, search } = useLocation();
   const view = chatViewFromLocation(pathname, search);
   const {
@@ -155,6 +158,37 @@ export const GlobalChat = () => {
     setShowHistory(false);
   };
 
+  const selectFromHistory = async (id: string) => {
+    loadGen.current += 1;
+    const gen = loadGen.current;
+    clearPending();
+    setError(null);
+    setStatus(null);
+    setStreamingText('');
+    setStreamingParts([]);
+    setMessages([]);
+    setBusy(true);
+    setReady(false);
+    setShowHistory(false);
+    try {
+      const loaded = await fetchChatConversation(getToken, id);
+      if (loadGen.current !== gen) return;
+      setConversationId(loaded.id);
+      hydrateDeck(loaded.deckId);
+      hydrateCard(loaded.cardId);
+      setMessages(loaded.messages.map(toLocalChatMessage));
+    } catch (err) {
+      if (loadGen.current !== gen) return;
+      if (err instanceof ApiError) setError(err.message);
+      else setError('Could not load conversation');
+    } finally {
+      if (loadGen.current === gen) {
+        setBusy(false);
+        setReady(true);
+      }
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -194,7 +228,11 @@ export const GlobalChat = () => {
       </div>
 
       {showHistory ? (
-        <ChatHistoryPanel onBack={() => setShowHistory(false)} />
+        <ChatHistoryPanel
+          activeId={conversationId}
+          onSelect={(id) => void selectFromHistory(id)}
+          onBack={() => setShowHistory(false)}
+        />
       ) : (
         <>
           <div ref={listRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">

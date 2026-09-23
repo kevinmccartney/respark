@@ -1,5 +1,10 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 
+import {
+  CHAT_CONVERSATION_LIST_DEFAULT_LIMIT,
+  chatConversationListQuerySchema,
+  type ChatConversationListQuery,
+} from '@respark/schemas/chat';
 import { uuidSchema } from '@respark/schemas/primitives';
 
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard';
@@ -14,6 +19,19 @@ export class ChatController {
   constructor(private readonly chat: ChatService) {}
 
   @Get('conversations')
+  async list(
+    @CurrentUserId() userId: string,
+    @Query(zodPipe(chatConversationListQuerySchema)) query: ChatConversationListQuery,
+  ) {
+    return {
+      conversations: await this.chat.listConversations(
+        userId,
+        query.limit ?? CHAT_CONVERSATION_LIST_DEFAULT_LIMIT,
+      ),
+    };
+  }
+
+  @Get('conversations/latest')
   async latest(@CurrentUserId() userId: string) {
     return { conversation: await this.chat.getLatest(userId) };
   }

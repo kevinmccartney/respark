@@ -1,10 +1,13 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 
 import {
+  CHAT_CONVERSATION_LIST_DEFAULT_LIMIT,
+  CHAT_CONVERSATION_TITLE_MAX,
   chatConversationSchema,
   chatPartSchema,
   type ChatConversation,
+  type ChatConversationSummary,
   type ChatPart,
   type ChatVisibleMessage,
 } from '@respark/schemas/chat';
@@ -118,6 +121,60 @@ export class ChatService {
     return this.toConversation(row);
   }
 
+  async listConversations(
+    clerkUserId: string,
+    limit = CHAT_CONVERSATION_LIST_DEFAULT_LIMIT,
+  ): Promise<ChatConversationSummary[]> {
+    const userId = await this.users.resolveLocalId(clerkUserId);
+    const rows = await this.db
+      .select({
+        id: chatConversations.id,
+        deckId: chatConversations.deckId,
+        cardId: chatConversations.cardId,
+        createdAt: chatConversations.createdAt,
+        updatedAt: chatConversations.updatedAt,
+      })
+      .from(chatConversations)
+      .where(eq(chatConversations.userId, userId))
+      .orderBy(desc(chatConversations.updatedAt))
+      .limit(limit);
+
+    if (rows.length === 0) return [];
+
+    const firstUserMessages = await this.db
+      .select({
+        conversationId: chatMessages.conversationId,
+        parts: chatMessages.parts,
+        createdAt: chatMessages.createdAt,
+      })
+      .from(chatMessages)
+      .where(
+        and(
+          inArray(
+            chatMessages.conversationId,
+            rows.map((row) => row.id),
+          ),
+          eq(chatMessages.role, 'user'),
+        ),
+      )
+      .orderBy(asc(chatMessages.createdAt));
+
+    const titleByConversation = new Map<string, string>();
+    for (const message of firstUserMessages) {
+      if (titleByConversation.has(message.conversationId)) continue;
+      titleByConversation.set(message.conversationId, titleFromParts(parseParts(message.parts)));
+    }
+
+    return rows.map((row) => ({
+      id: row.id,
+      deckId: row.deckId,
+      cardId: row.cardId,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      title: titleByConversation.get(row.id) ?? 'New chat',
+    }));
+  }
+
   async loadHistory(conversationId: string) {
     const rows = await this.db
       .select()
@@ -225,4 +282,17 @@ export class ChatService {
 const parseParts = (raw: ChatPart[]): ChatPart[] => {
   const parsed = chatPartSchema.array().safeParse(raw);
   return parsed.success ? parsed.data : [];
+};
+
+const titleFromParts = (parts: ChatPart[]): string => {
+  const text = parts
+    .filter((part): part is Extract<ChatPart, { type: 'text' }> => part.type === 'text')
+    .map((part) => part.text.trim())
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text) return 'New chat';
+  if (text.length <= CHAT_CONVERSATION_TITLE_MAX) return text;
+  return `${text.slice(0, CHAT_CONVERSATION_TITLE_MAX - 1).trimEnd()}…`;
 };

@@ -24,7 +24,7 @@ WebSocket (Clerk token) → ChatGateway → orchestrator (tool loop) → domain 
 
 WebSocket at `/chat/ws` (a second gateway; do **not** multiplex onto `/admin/etl-syncs/ws`). Same envelope convention as admin: `{ event, data }`. Auth: Clerk JWT on connect (`?token=`, same browser `WebSocket` constraint — no custom headers). Player sessions need a logged-in user, **not** `assertAdminUser`.
 
-HTTP is for CRUD only: `GET /chat/conversations` (latest for the user) and `GET /chat/conversations/:id` to reload history after refresh. Sending a turn is a WS `chat.send`, not `POST /chat` SSE.
+HTTP is for CRUD only: `GET /chat/conversations` (list summaries for the user), `GET /chat/conversations/latest` (most recently updated thread), and `GET /chat/conversations/:id` to reload a thread after refresh or from history. Sending a turn is a WS `chat.send`, not `POST /chat` SSE.
 
 **Context:** `chat.send` `context` has two layers:
 

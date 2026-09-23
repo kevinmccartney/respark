@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { CARD_SEARCH_SCRYFALL_QUERY_MAX, cardSearchSortSchema } from './cards.js';
 import { colorIdentitySchema, deckFormatSchema } from './decks.js';
-import { isoDateTimeSchema, uuidSchema } from './primitives.js';
+import { isoDateTimeSchema, queryIntSchema, uuidSchema } from './primitives.js';
 
 export const SEARCH_CARDS_TOOL_DEFAULT_LIMIT = 25;
 export const SEARCH_CARDS_TOOL_DEFAULT_SORT = 'edhrecRank' as const;
@@ -195,6 +195,33 @@ export const chatLatestResponseSchema = z.object({
 });
 
 export type ChatLatestResponse = z.infer<typeof chatLatestResponseSchema>;
+
+export const CHAT_CONVERSATION_LIST_DEFAULT_LIMIT = 50;
+export const CHAT_CONVERSATION_LIST_MAX_LIMIT = 100;
+export const CHAT_CONVERSATION_TITLE_MAX = 60;
+
+export const chatConversationSummarySchema = z.object({
+  id: uuidSchema,
+  deckId: uuidSchema.nullable(),
+  cardId: uuidSchema.nullable(),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+  title: z.string().min(1),
+});
+
+export type ChatConversationSummary = z.infer<typeof chatConversationSummarySchema>;
+
+export const chatConversationListQuerySchema = z.object({
+  limit: queryIntSchema(1, CHAT_CONVERSATION_LIST_MAX_LIMIT),
+});
+
+export type ChatConversationListQuery = z.infer<typeof chatConversationListQuerySchema>;
+
+export const chatConversationListResponseSchema = z.object({
+  conversations: z.array(chatConversationSummarySchema),
+});
+
+export type ChatConversationListResponse = z.infer<typeof chatConversationListResponseSchema>;
 
 export const getDeckInputSchema = z
   .object({
