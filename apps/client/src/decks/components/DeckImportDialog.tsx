@@ -1,4 +1,3 @@
-import { useAuth } from '@clerk/react';
 import { useState } from 'react';
 
 import {
@@ -13,52 +12,48 @@ import {
   Label,
 } from '@respark/ui/lib';
 
-import { ApiError } from '@/core';
+import { ApiError } from '@respark-client/core';
 
-import { importDeckList, type DeckDetail, type DeckImportUnmatched } from '../lib/decks';
+import { useImportDeckList } from '../hooks';
+import type { DeckImportUnmatched } from '../types';
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   deckId: string;
-  onImported: (detail: DeckDetail) => void;
 };
 
-export const DeckImportDialog = ({ open, onOpenChange, deckId, onImported }: Props) => {
-  const { getToken } = useAuth();
+export const DeckImportDialog = ({ open, onOpenChange, deckId }: Props) => {
+  const importMutation = useImportDeckList(deckId);
   const [text, setText] = useState('');
-  const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [unmatched, setUnmatched] = useState<DeckImportUnmatched[] | null>(null);
   const [importedCount, setImportedCount] = useState<number | null>(null);
+
+  const importing = importMutation.isPending;
 
   const resetState = () => {
     setText('');
     setError(null);
     setUnmatched(null);
     setImportedCount(null);
-    setImporting(false);
   };
 
   const handleImport = async () => {
     if (!text.trim() || importing) return;
-    setImporting(true);
     setError(null);
     setUnmatched(null);
     setImportedCount(null);
     try {
-      const result = await importDeckList(getToken, deckId, text);
+      const result = await importMutation.mutateAsync(text);
       setImportedCount(result.imported);
       setUnmatched(result.unmatched);
-      onImported(result.detail);
       if (result.unmatched.length === 0) {
         onOpenChange(false);
         resetState();
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not import deck list');
-    } finally {
-      setImporting(false);
     }
   };
 

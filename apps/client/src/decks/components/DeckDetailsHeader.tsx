@@ -1,10 +1,12 @@
 import { useState } from 'react';
 
+import { DECK_FORMATS } from '@respark/schemas/decks';
 import { Button, Input, Label } from '@respark/ui/lib';
 
-import { ColorIdentity } from '@/cards';
+import { ColorIdentity } from '@respark-client/cards';
 
-import { DECK_FORMAT_LABELS, DECK_FORMATS, type Deck, type DeckFormat } from '../lib/decks';
+import { DECK_FORMAT_LABELS } from '../constants';
+import type { Deck, DeckFormat } from '../types';
 
 import { CommanderPicker } from './CommanderPicker';
 

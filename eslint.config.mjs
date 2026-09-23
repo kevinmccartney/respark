@@ -72,7 +72,7 @@ export default tseslint.config(
       // 1. Node stdlib
       // 2. Third-party (not @respark/*)
       // 3. Workspace packages (@respark/*)
-      // 4. App aliases (@respark-*, @/)
+      // 4. App aliases (@respark-*)
       // 5. Parent
       // 6. Sibling
       // 7. Everything else (index / unknown)
@@ -88,11 +88,6 @@ export default tseslint.config(
             },
             {
               pattern: '@respark-*/**',
-              group: 'internal',
-              position: 'before',
-            },
-            {
-              pattern: '@/**',
               group: 'internal',
               position: 'before',
             },

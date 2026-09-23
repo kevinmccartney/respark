@@ -1,11 +1,11 @@
 import { Show } from '@clerk/react';
 import { Route, Routes } from 'react-router-dom';
 
-import { GuestOnly, RequireAuth } from '@/auth';
-import { CardDetailPage, SearchPage } from '@/cards';
-import { ChatSessionProvider, ChatToggle, GlobalChat } from '@/chat';
-import { AppShell, NotFoundPage, WelcomePage } from '@/core';
-import { DeckDetailPage, DeckListPage, NewDeckPage } from '@/decks';
+import { GuestOnly, RequireAuth } from '@respark-client/auth';
+import { CardDetailPage, SearchPage } from '@respark-client/cards';
+import { ChatSessionProvider, ChatToggle, GlobalChat } from '@respark-client/chat';
+import { AppShell, NotFoundPage, WelcomePage } from '@respark-client/core';
+import { DeckDetailPage, DeckListPage, NewDeckPage } from '@respark-client/decks';
 
 export default function App() {
   return (

@@ -1,14 +1,15 @@
-import { useAuth } from '@clerk/react';
 import { useEffect, useState } from 'react';
 
 import { Input } from '@respark/ui/lib';
 
-import { suggestCardNames, type CardNameSuggestion } from '@/cards';
-import { isAbortError } from '@/core';
+import {
+  CARD_SUGGESTION_DEBOUNCE_MS,
+  CARD_SUGGESTION_MIN_CHARS,
+  useCardSuggestions,
+  type CardNameSuggestion,
+} from '@respark-client/cards';
 
-import type { ColorIdentityPip, DeckFormat } from '../lib/decks';
-
-const SUGGEST_DEBOUNCE_MS = 200;
+import type { ColorIdentityPip, DeckFormat } from '../types';
 
 type Props = {
   format: DeckFormat;
@@ -17,46 +18,21 @@ type Props = {
 };
 
 export const DeckAddCardSearch = ({ format, colorIdentity, onAdd }: Props) => {
-  const { getToken } = useAuth();
   const [query, setQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<CardNameSuggestion[]>([]);
-  const [suggesting, setSuggesting] = useState(false);
+  const [debouncedQ, setDebouncedQ] = useState('');
   const [addingId, setAddingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const trimmed = query.trim();
-    if (trimmed.length < 2) {
-      setSuggestions([]);
-      setSuggesting(false);
-      return;
-    }
+    const timer = window.setTimeout(() => setDebouncedQ(query.trim()), CARD_SUGGESTION_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
-    const controller = new AbortController();
-    const handle = window.setTimeout(() => {
-      setSuggesting(true);
-      void suggestCardNames(
-        getToken,
-        trimmed,
-        { signal: controller.signal },
-        { legalIn: format, colorIdentity: format === 'commander' ? colorIdentity : undefined },
-      )
-        .then((rows) => {
-          if (!controller.signal.aborted) setSuggestions(rows);
-        })
-        .catch((err) => {
-          if (isAbortError(err) || controller.signal.aborted) return;
-          setSuggestions([]);
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setSuggesting(false);
-        });
-    }, SUGGEST_DEBOUNCE_MS);
-
-    return () => {
-      controller.abort();
-      window.clearTimeout(handle);
-    };
-  }, [colorIdentity, format, getToken, query]);
+  const suggestionsQuery = useCardSuggestions(debouncedQ, {
+    legalIn: format,
+    colorIdentity: format === 'commander' ? colorIdentity : undefined,
+  });
+  const suggestions = suggestionsQuery.data ?? [];
+  const suggesting = suggestionsQuery.isFetching;
 
   const handleAdd = async (suggestion: CardNameSuggestion) => {
     if (addingId) return;
@@ -65,7 +41,6 @@ export const DeckAddCardSearch = ({ format, colorIdentity, onAdd }: Props) => {
       const added = await onAdd(suggestion);
       if (added) {
         setQuery('');
-        setSuggestions([]);
       }
     } finally {
       setAddingId(null);
@@ -89,7 +64,7 @@ export const DeckAddCardSearch = ({ format, colorIdentity, onAdd }: Props) => {
           Searching…
         </p>
       ) : null}
-      {!suggesting && query.trim().length >= 2 && suggestions.length === 0 ? (
+      {!suggesting && debouncedQ.length >= CARD_SUGGESTION_MIN_CHARS && suggestions.length === 0 ? (
         <p className="absolute top-full z-10 mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm">
           No matching names.
         </p>

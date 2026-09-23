@@ -1,3 +1,4 @@
+import { Moon, Sun } from 'lucide-react';
 import {
   createContext,
   useCallback,
@@ -8,36 +9,21 @@ import {
   type ReactNode,
 } from 'react';
 
-export type Theme = 'light' | 'dark' | 'system';
+import { Button } from './lib/button.js';
+
+export type Theme = 'light' | 'dark';
 
 type ThemeContextValue = {
   theme: Theme;
-  resolvedTheme: 'light' | 'dark';
   setTheme: (theme: Theme) => void;
   cycleTheme: () => void;
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-const readStoredTheme = (storageKey: string): Theme => {
-  try {
-    const stored = localStorage.getItem(storageKey);
-    if (stored === 'light' || stored === 'dark' || stored === 'system') {
-      return stored;
-    }
-  } catch {
-    // ignore
-  }
-  return 'system';
-};
-
 const systemPrefersDark = (): boolean => window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-const applyThemeClass = (resolved: 'light' | 'dark') => {
-  const root = document.documentElement;
-  root.classList.toggle('dark', resolved === 'dark');
-  root.style.colorScheme = resolved;
-};
+const themeFromSystem = (): Theme => (systemPrefersDark() ? 'dark' : 'light');
 
 const persistTheme = (storageKey: string, theme: Theme) => {
   try {
@@ -45,6 +31,25 @@ const persistTheme = (storageKey: string, theme: Theme) => {
   } catch {
     // ignore
   }
+};
+
+/** Stored light/dark wins; missing or legacy `system` → read OS preference and persist it. */
+const readOrSeedTheme = (storageKey: string): Theme => {
+  try {
+    const stored = localStorage.getItem(storageKey);
+    if (stored === 'light' || stored === 'dark') return stored;
+  } catch {
+    // ignore
+  }
+  const seeded = themeFromSystem();
+  persistTheme(storageKey, seeded);
+  return seeded;
+};
+
+const applyThemeClass = (theme: Theme) => {
+  const root = document.documentElement;
+  root.classList.toggle('dark', theme === 'dark');
+  root.style.colorScheme = theme;
 };
 
 export const ThemeProvider = ({
@@ -55,13 +60,8 @@ export const ThemeProvider = ({
   storageKey: string;
 }) => {
   const [theme, setThemeState] = useState<Theme>(() =>
-    typeof window === 'undefined' ? 'system' : readStoredTheme(storageKey),
+    typeof window === 'undefined' ? 'light' : readOrSeedTheme(storageKey),
   );
-  const [systemDark, setSystemDark] = useState(
-    () => typeof window !== 'undefined' && systemPrefersDark(),
-  );
-  const resolvedTheme: 'light' | 'dark' =
-    theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
 
   const setTheme = useCallback(
     (next: Theme) => {
@@ -73,29 +73,17 @@ export const ThemeProvider = ({
 
   const cycleTheme = useCallback(() => {
     setThemeState((current) => {
-      const next: Theme = current === 'system' ? 'light' : current === 'light' ? 'dark' : 'system';
+      const next: Theme = current === 'light' ? 'dark' : 'light';
       persistTheme(storageKey, next);
       return next;
     });
   }, [storageKey]);
 
   useEffect(() => {
-    applyThemeClass(resolvedTheme);
-  }, [resolvedTheme]);
-
-  useEffect(() => {
-    if (theme !== 'system') return;
-
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = () => setSystemDark(media.matches);
-    media.addEventListener('change', onChange);
-    return () => media.removeEventListener('change', onChange);
+    applyThemeClass(theme);
   }, [theme]);
 
-  const value = useMemo(
-    () => ({ theme, resolvedTheme, setTheme, cycleTheme }),
-    [theme, resolvedTheme, setTheme, cycleTheme],
-  );
+  const value = useMemo(() => ({ theme, setTheme, cycleTheme }), [theme, setTheme, cycleTheme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
@@ -106,4 +94,21 @@ export const useTheme = (): ThemeContextValue => {
     throw new Error('useTheme must be used within ThemeProvider');
   }
   return ctx;
+};
+
+export const ThemeToggle = () => {
+  const { theme, cycleTheme } = useTheme();
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="icon-sm"
+      onClick={cycleTheme}
+      aria-label={`Theme: ${theme}. Click to switch.`}
+      title={`Theme: ${theme}`}
+    >
+      {theme === 'light' ? <Sun /> : <Moon />}
+    </Button>
+  );
 };

@@ -4,7 +4,7 @@ import {
   type ChatConversation,
 } from '@respark/schemas/chat';
 
-import { apiFetchJson, type GetToken } from '@/core';
+import { apiFetchJson, type GetToken } from '@respark-client/core';
 
 export type { ChatConversation };
 

@@ -1,5 +1,4 @@
-import { useAuth } from '@clerk/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import {
@@ -15,12 +14,14 @@ import {
   TableRow,
 } from '@respark/ui/lib';
 
-import { ColorIdentity } from '@/cards';
-import { useChatSession } from '@/chat';
-import { ApiError, isAbortError } from '@/core';
+import { ColorIdentity } from '@respark-client/cards';
+import { useChatSession } from '@respark-client/chat';
+import { ApiError } from '@respark-client/core';
 
-import { DECK_FORMAT_LABELS, deleteDeck, fetchDecks, type Deck } from '../lib/decks';
+import { DECK_FORMAT_LABELS } from '../constants';
+import { useDecks, useDeleteDeck } from '../hooks';
 import { formatRelativeTime } from '../lib/format';
+import type { Deck } from '../types';
 
 type SortKey = 'name' | 'colors' | 'format' | 'updatedAt';
 type SortDir = 'asc' | 'desc';
@@ -70,39 +71,21 @@ const SortHeader = ({
 };
 
 export const DeckListPage = () => {
-  const { getToken } = useAuth();
   const navigate = useNavigate();
   const { deckId: stickyDeckId, setDeck } = useChatSession();
+  const { data: decks = [], isPending: loading, error: queryError } = useDecks();
+  const deleteMutation = useDeleteDeck();
 
-  const [decks, setDecks] = useState<Deck[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const error =
+    queryError instanceof ApiError
+      ? queryError.message
+      : queryError
+        ? 'Could not load decks'
+        : null;
   const [actionError, setActionError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('updatedAt');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    const loadDecks = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const list = await fetchDecks(getToken, { signal: controller.signal });
-        if (!controller.signal.aborted) setDecks(list);
-      } catch (err) {
-        if (isAbortError(err) || controller.signal.aborted) return;
-        setError(err instanceof ApiError ? err.message : 'Could not load decks');
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    };
-
-    void loadDecks();
-    return () => controller.abort();
-  }, [getToken]);
 
   const onSort = (key: SortKey) => {
     if (key === sortKey) {
@@ -114,19 +97,15 @@ export const DeckListPage = () => {
   };
 
   const removeDeck = async (deck: Deck) => {
-    if (deletingId) return;
+    if (deleteMutation.isPending) return;
     const confirmed = window.confirm(`Delete "${deck.name}"? This cannot be undone.`);
     if (!confirmed) return;
-    setDeletingId(deck.id);
     setActionError(null);
     try {
-      await deleteDeck(getToken, deck.id);
-      setDecks((current) => current.filter((row) => row.id !== deck.id));
+      await deleteMutation.mutateAsync(deck.id);
       if (stickyDeckId === deck.id) setDeck(null);
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : 'Could not delete deck');
-    } finally {
-      setDeletingId(null);
     }
   };
 
@@ -135,6 +114,8 @@ export const DeckListPage = () => {
     const matched = q ? decks.filter((deck) => deck.name.toLowerCase().includes(q)) : decks;
     return sortDecks(matched, sortKey, sortDir);
   }, [decks, query, sortKey, sortDir]);
+
+  const deletingId = deleteMutation.isPending ? deleteMutation.variables : null;
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-5 px-6 py-8 text-left">

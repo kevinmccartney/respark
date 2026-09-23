@@ -1,7 +1,6 @@
-import { useAuth } from '@clerk/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-import { printingHasFoilTreatment } from '@respark/schemas/cards';
+import { printingHasFoilTreatment, type CardPrintingSummary } from '@respark/schemas/cards';
 import type { DeckCard } from '@respark/schemas/decks';
 import {
   Alert,
@@ -14,9 +13,9 @@ import {
   DialogTitle,
 } from '@respark/ui/lib';
 
-import { ApiError, isAbortError } from '@/core';
+import { ApiError } from '@respark-client/core';
 
-import { fetchCard, type CardPrintingSummary } from '../lib/cards';
+import { useCard } from '../hooks/cards';
 
 import { PrintingFinishes } from './FoilMark';
 
@@ -28,41 +27,23 @@ type Props = {
 };
 
 export const PrintingPickerDialog = ({ open, onOpenChange, deckCard, onSelect }: Props) => {
-  const { getToken } = useAuth();
-  const [printings, setPrintings] = useState<CardPrintingSummary[]>([]);
-  const [loading, setLoading] = useState(false);
+  const cardId = deckCard?.cardId ?? '';
+  const {
+    data,
+    isPending: loading,
+    error: queryError,
+  } = useCard(cardId, open && Boolean(deckCard));
+  const printings = data?.printings ?? [];
+  const loadError =
+    queryError instanceof ApiError
+      ? queryError.message
+      : queryError
+        ? 'Could not load printings'
+        : null;
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!open || !deckCard) {
-      setPrintings([]);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-
-    void fetchCard(getToken, deckCard.cardId, { signal: controller.signal })
-      .then((detail) => {
-        if (!controller.signal.aborted) {
-          setPrintings(detail.printings);
-        }
-      })
-      .catch((err) => {
-        if (isAbortError(err) || controller.signal.aborted) return;
-        setError(err instanceof ApiError ? err.message : 'Could not load printings');
-        setPrintings([]);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-
-    return () => controller.abort();
-  }, [open, deckCard, getToken]);
+  const displayError = error ?? loadError;
 
   const handleSelect = async (printing: CardPrintingSummary) => {
     if (!deckCard || savingId) return;
@@ -102,12 +83,12 @@ export const PrintingPickerDialog = ({ open, onOpenChange, deckCard, onSelect }:
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
           {loading ? <p className="text-sm text-muted-foreground">Loading printings…</p> : null}
-          {error ? (
+          {displayError ? (
             <Alert variant="destructive" className="mb-3">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{displayError}</AlertDescription>
             </Alert>
           ) : null}
-          {!loading && printings.length === 0 && !error ? (
+          {!loading && printings.length === 0 && !displayError ? (
             <p className="text-sm text-muted-foreground">No printings found.</p>
           ) : null}
           {printings.length > 0 ? (

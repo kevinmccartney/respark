@@ -30,10 +30,19 @@ Style is enforced by Prettier + ESLint (`task format`, `task lint`). Do not bike
 - **Zod at boundaries**: parse REST/WS with schemas that match the **wire format**, not the DB type. Shared primitives (`z.uuid()`, `z.iso.datetime()`, log levels) live in `packages/schemas/src/primitives.ts` — import those from `schemas/primitives`; don’t redefine them in domain schemas. JSON timestamps are ISO-8601 strings — use `z.iso.datetime()` (Zod 4), not `z.string()` or `z.date()`. Entity IDs that are Postgres `uuid` — use `z.uuid()`, not `z.string()`; serial/bigserial PKs stay `z.number()`. External/provider ids (`externalId`, set codes) stay `z.string()` unless the column is actually uuid. Prefer enums/unions over loose `string`. Infer TS types from schemas (`z.infer<typeof schema>`). Get the model right before wiring UI.
 - **Shared wire schemas** live in `packages/schemas` (import `schemas/decks`, `schemas/cards`, `schemas/etl-sync`). Nest validates requests with `zodPipe`; client/admin parse responses. Do not share Scryfall/MTGJSON ETL source schemas.
 - **Early returns** over deep nesting; keep functions focused.
-- **Import from the defining module**: don’t re-export types/values as a convenience barrel. Callers import `EtlSync` from `schemas/etl-sync`, fetch helpers from `syncs.ts`, etc. Exception: Vite feature folders (`apps/client/src/<feature>`, `apps/admin/src/<feature>`) expose a root `index.ts` façade. Outside the feature, import `@/decks` / `@/etl-syncs`. Inside the feature, import from the defining file so the barrel cannot cycle.
-- Client/admin features use kind subfolders (`pages/`, `components/`, `hooks/`, `lib/`, `api/`, `types/` when needed). No app-root `lib` / `pages` / `hooks` / `components`. Shadcn primitives live in `packages/ui/src/lib` (import `@respark/ui/lib`).
+- **Import from the defining module**: don’t re-export types/values as a convenience barrel. Callers import `EtlSync` from `schemas/etl-sync`, fetch helpers from `syncs.ts`, etc. Exception: Vite feature folders (`apps/client/src/<feature>`, `apps/admin/src/<feature>`) expose a root `index.ts` façade. Outside the feature, import `@respark-client/decks` / `@respark-admin/etl-syncs`. Inside the feature, import from the defining file so the barrel cannot cycle.
 - **Arrow functions**: prefer `const fn = () => {}` / `export const Foo = () => {}` over `function` declarations. Class methods stay as methods (Nest services/controllers). Generators and `this`-bound functions may keep `function`. Enforced by ESLint (`prefer-arrow-functions`, `prefer-arrow-callback`).
-- React: arrow-function components; hooks at top level; don’t add `useMemo` / `useCallback` unless the codebase already needs them for a measured reason.
 - Nest: keep business logic in services; controllers stay thin; inject `PinoLogger` for structured logs.
 - ETL: keep stages/jobs aligned with `docs/etl/`; repository functions named after the table/domain they touch.
 - Don’t fight generated `packages/ui/src/lib/**` (shadcn) unless fixing a real bug.
+
+## Vite React apps (`apps/client`, `apps/admin`)
+
+Required architecture for both Vite apps. Admin (`cards`, `sets`, `etl-syncs`) is the reference; client must match.
+
+- **Feature folders by domain** — kind subfolders `pages/`, `components/`, `hooks/`, `api/`, `lib/` (pure only), plus root `types.ts` / `constants.ts` and a barrel `index.ts`. Align module names with core data models; no leftover umbrella folders. No app-root `lib` / `pages` / `hooks` / `components`.
+- **Layer split** — `api/` = HTTP/WS + Zod (no React); `hooks/` = TanStack Query keys/queries/mutations (+ thin live façades); `lib/` = pure helpers only; pages/components stay presentational and never import `api/` directly.
+- **TanStack Query for server state** — `QueryClientProvider` in `main.tsx` (defaults: `staleTime: 30_000`, `retry: false`, `refetchOnWindowFocus: false`); hierarchical query keys; mutations invalidate; live/WS patches use `setQueryData` via pure apply helpers. Client session/UI state (e.g. chat sticky deck) stays React context/local state — not Query.
+- **Shared UI** — shadcn only via `@respark/ui/lib`; no per-app `core/ui` copies.
+- **Imports** — app alias across features (`@respark-client` client, `@respark-admin` admin); inside a feature, import from the defining file (barrels for outside only).
+- **React basics** — arrow-function components; hooks at top level; don’t add `useMemo` / `useCallback` unless already needed for a measured reason.

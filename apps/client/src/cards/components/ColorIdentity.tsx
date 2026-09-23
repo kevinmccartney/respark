@@ -10,12 +10,6 @@ export const ColorIdentity = ({
   className?: string;
   size?: number;
 }) => {
-  if (colors.length === 0) return null;
-  return (
-    <ManaCost
-      cost={colors.map((color) => `{${color}}`).join('')}
-      className={className}
-      size={size}
-    />
-  );
+  const cost = colors.length === 0 ? '{C}' : colors.map((color) => `{${color}}`).join('');
+  return <ManaCost cost={cost} className={className} size={size} />;
 };

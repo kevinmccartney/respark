@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 
-const STORAGE_KEY = 'respark.chat';
+import { CHAT_SESSION_STORAGE_KEY } from '../constants';
 
 type StoredSession = {
   conversationId?: string;
@@ -34,7 +34,7 @@ const ChatSessionContext = createContext<ChatSessionValue | null>(null);
 
 const readSession = (): StoredSession => {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(CHAT_SESSION_STORAGE_KEY);
     if (!raw) return {};
     if (!raw.startsWith('{')) return { conversationId: raw };
     const parsed: unknown = JSON.parse(raw);
@@ -52,10 +52,10 @@ const readSession = (): StoredSession => {
 const writeSession = (session: StoredSession) => {
   try {
     if (!session.conversationId && !session.open) {
-      sessionStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(CHAT_SESSION_STORAGE_KEY);
       return;
     }
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    sessionStorage.setItem(CHAT_SESSION_STORAGE_KEY, JSON.stringify(session));
   } catch {
     // ignore quota / private mode
   }

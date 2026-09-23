@@ -1,35 +1,14 @@
-import { useAuth } from '@clerk/react';
 import { Link as LinkIcon } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@respark/ui/lib';
 
-import { fetchCard, type CardDetail } from '@/cards';
-import { isAbortError } from '@/core';
+import { useCard } from '@respark-client/cards';
 
 export const ChatCardLink = ({ cardId, children }: { cardId: string; children: ReactNode }) => {
-  const { getToken } = useAuth();
   const [open, setOpen] = useState(false);
-  const [card, setCard] = useState<CardDetail | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    if (!open || card || failed) return;
-    const controller = new AbortController();
-    const load = async () => {
-      try {
-        const detail = await fetchCard(getToken, cardId, { signal: controller.signal });
-        if (!controller.signal.aborted) setCard(detail);
-      } catch (err) {
-        if (isAbortError(err) || controller.signal.aborted) return;
-        setFailed(true);
-      }
-    };
-    void load();
-    return () => controller.abort();
-  }, [open, card, failed, cardId, getToken]);
-
+  const { data: card, isError: failed } = useCard(cardId, open);
   const src = card?.printings[0]?.imageNormal ?? null;
 
   return (

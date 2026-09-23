@@ -1,49 +1,19 @@
-import { useAuth } from '@clerk/react';
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import {
-  chatViewFromLocation,
-  type ChatPart,
-  type ChatServerEvent,
-  type ChatStatusCode,
-  type ChatVisibleMessage,
-} from '@respark/schemas/chat';
+import { chatViewFromLocation, type ChatPart, type ChatStatusCode } from '@respark/schemas/chat';
 import { Badge, Button, Input } from '@respark/ui/lib';
 
-import { ApiError, isAbortError, isNotFound } from '@/core';
+import { ApiError, isNotFound } from '@respark-client/core';
 
-import { fetchChatConversation, fetchLatestChatConversation } from '../lib/chat';
-import { useChatSession } from '../lib/chat-session';
-import { connectChatWs } from '../lib/chat-ws';
+import { CATALOG_CHAT_PROMPT, CHAT_STATUS_LABEL, DECK_CHAT_PROMPT } from '../constants';
+import { useChatConversation, useChatLive, useChatSession } from '../hooks';
+import { toLocalChatMessage } from '../lib/chat-events';
+import type { LocalChatMessage } from '../types';
 
 import { ChatMarkdown } from './ChatMarkdown';
 
-const DECK_PROMPT = 'What would be a good add to this deck?';
-const CATALOG_PROMPT = 'Suggest some cards';
-
-const STATUS_LABEL: Record<ChatStatusCode, string> = {
-  thinking: 'Thinking',
-  listDecks: 'Listing decks',
-  getDeck: 'Reading deck',
-  searchCards: 'Searching catalog',
-  getCard: 'Looking up card',
-  lookupCombos: 'Checking combos',
-  presentRecommendations: 'Picking cards',
-};
-
-type LocalMessage = {
-  id: string;
-  role: 'user' | 'assistant';
-  parts: ChatPart[];
-};
-
 export const GlobalChat = () => {
-  const { getToken } = useAuth();
-  const getTokenRef = useRef(getToken);
-  useEffect(() => {
-    getTokenRef.current = getToken;
-  }, [getToken]);
   const { pathname, search } = useLocation();
   const view = chatViewFromLocation(pathname, search);
   const {
@@ -59,7 +29,8 @@ export const GlobalChat = () => {
     hydrateCard,
     resetConversation,
   } = useChatSession();
-  const [messages, setMessages] = useState<LocalMessage[]>([]);
+
+  const [messages, setMessages] = useState<LocalChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [status, setStatus] = useState<ChatStatusCode | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,72 +38,70 @@ export const GlobalChat = () => {
   const [streamingParts, setStreamingParts] = useState<ChatPart[]>([]);
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
-  const sendRef = useRef<ReturnType<typeof connectChatWs>['send'] | null>(null);
-  const pendingSend = useRef<Parameters<ReturnType<typeof connectChatWs>['send']>[0] | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const loadGen = useRef(0);
-  const prompt = deckId ? DECK_PROMPT : CATALOG_PROMPT;
+  const prompt = deckId ? DECK_CHAT_PROMPT : CATALOG_CHAT_PROMPT;
 
-  const initialConversationId = useRef(conversationId);
+  // Freeze the hydrate target at mount so later setConversationId does not retarget the query.
+  const [hydrateConversationId] = useState(conversationId);
+  const conversationQuery = useChatConversation(hydrateConversationId);
+
+  const liveHandlers = useMemo(
+    () => ({
+      setConversationId,
+      setDeck,
+      setCard,
+      setMessages: (updater: (current: LocalChatMessage[]) => LocalChatMessage[]) => {
+        setMessages(updater);
+      },
+      setStatus,
+      setError,
+      setStreamingText: (updater: (current: string) => string) => {
+        setStreamingText(updater);
+      },
+      setStreamingParts: (updater: (current: ChatPart[]) => ChatPart[]) => {
+        setStreamingParts(updater);
+      },
+      setBusy,
+    }),
+    [setCard, setConversationId, setDeck],
+  );
+
+  const { send, clearPending } = useChatLive(liveHandlers);
 
   useEffect(() => {
     const gen = loadGen.current;
-    const controller = new AbortController();
-    const load = async () => {
-      try {
-        const storedId = initialConversationId.current;
-        const token = () => getTokenRef.current();
-        const loaded = storedId
-          ? await fetchChatConversation(token, storedId, { signal: controller.signal })
-          : await fetchLatestChatConversation(token, { signal: controller.signal });
-        if (controller.signal.aborted || loadGen.current !== gen) return;
-        if (loaded) {
-          setConversationId(loaded.id);
-          hydrateDeck(loaded.deckId);
-          hydrateCard(loaded.cardId);
-          setMessages(loaded.messages.map(toLocal));
-        }
-      } catch (err) {
-        if (isAbortError(err) || controller.signal.aborted || loadGen.current !== gen) return;
-        if (isNotFound(err)) {
-          resetConversation();
-          return;
-        }
-        if (err instanceof ApiError) setError(err.message);
-      } finally {
-        if (!controller.signal.aborted && loadGen.current === gen) setReady(true);
+    if (conversationQuery.isPending) return;
+    if (conversationQuery.isError) {
+      if (loadGen.current !== gen) return;
+      if (isNotFound(conversationQuery.error)) {
+        resetConversation();
+        setReady(true);
+        return;
       }
-    };
-    void load();
-    return () => controller.abort();
-  }, [hydrateCard, hydrateDeck, resetConversation, setConversationId]);
-
-  useEffect(() => {
-    const ws = connectChatWs(() => getTokenRef.current(), {
-      onEvent: (event) =>
-        handleEvent(
-          event,
-          setConversationId,
-          setDeck,
-          setCard,
-          setMessages,
-          setStatus,
-          setError,
-          setStreamingText,
-          setStreamingParts,
-          setBusy,
-        ),
-    });
-    sendRef.current = ws.send;
-    if (pendingSend.current) {
-      ws.send(pendingSend.current);
-      pendingSend.current = null;
+      if (conversationQuery.error instanceof ApiError) setError(conversationQuery.error.message);
+      setReady(true);
+      return;
     }
-    return () => {
-      sendRef.current = null;
-      ws.close();
-    };
-  }, [setConversationId, setDeck, setCard]);
+    const loaded = conversationQuery.data;
+    if (loadGen.current !== gen) return;
+    if (loaded) {
+      setConversationId(loaded.id);
+      hydrateDeck(loaded.deckId);
+      hydrateCard(loaded.cardId);
+      setMessages(loaded.messages.map(toLocalChatMessage));
+    }
+    setReady(true);
+  }, [
+    conversationQuery.data,
+    conversationQuery.error,
+    conversationQuery.isError,
+    conversationQuery.isPending,
+    hydrateCard,
+    hydrateDeck,
+    resetConversation,
+    setConversationId,
+  ]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' });
@@ -150,20 +119,18 @@ export const GlobalChat = () => {
       ...current,
       { id: `local-${Date.now()}`, role: 'user', parts: [{ type: 'text', text: message }] },
     ]);
-    const payload = {
+    send({
       conversationId,
       message,
       context: { deckId, cardId, view },
-    };
-    if (sendRef.current) sendRef.current(payload);
-    else pendingSend.current = payload;
+    });
     setDraft('');
     if (!isOpen) setOpen(true);
   };
 
   const newConversation = () => {
     loadGen.current += 1;
-    pendingSend.current = null;
+    clearPending();
     resetConversation();
     setMessages([]);
     setStreamingText('');
@@ -208,7 +175,7 @@ export const GlobalChat = () => {
           <div ref={bottomRef} />
         </div>
 
-        {status && busy ? <Badge variant="secondary">{STATUS_LABEL[status]}</Badge> : null}
+        {status && busy ? <Badge variant="secondary">{CHAT_STATUS_LABEL[status]}</Badge> : null}
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
         <Button
@@ -244,13 +211,7 @@ export const GlobalChat = () => {
   );
 };
 
-const toLocal = (message: ChatVisibleMessage): LocalMessage => ({
-  id: message.id,
-  role: message.role,
-  parts: message.parts,
-});
-
-const ChatBubble = ({ message }: { message: LocalMessage }) => (
+const ChatBubble = ({ message }: { message: LocalChatMessage }) => (
   <div className={message.role === 'user' ? 'ml-6' : 'mr-6'}>
     <p className="mb-1 text-xs font-medium text-muted-foreground">
       {message.role === 'user' ? 'You' : 'Respark'}
@@ -266,57 +227,4 @@ const ChatBubble = ({ message }: { message: LocalMessage }) => (
 const ChatPartView = ({ part }: { part: ChatPart }) => {
   if (part.type !== 'text') return null;
   return <ChatMarkdown text={part.text} />;
-};
-
-const handleEvent = (
-  event: ChatServerEvent,
-  setConversationId: (id: string | undefined) => void,
-  setDeck: (deckId: string | null) => void,
-  setCard: (cardId: string | null) => void,
-  setMessages: Dispatch<SetStateAction<LocalMessage[]>>,
-  setStatus: (code: ChatStatusCode | null) => void,
-  setError: (message: string | null) => void,
-  setStreamingText: Dispatch<SetStateAction<string>>,
-  setStreamingParts: Dispatch<SetStateAction<ChatPart[]>>,
-  setBusy: (busy: boolean) => void,
-) => {
-  if (event.type === 'conversation') {
-    setConversationId(event.conversationId);
-    setDeck(event.deckId);
-    setCard(event.cardId);
-    return;
-  }
-  if (event.type === 'status') {
-    setStatus(event.code);
-    return;
-  }
-  if (event.type === 'text') {
-    setStreamingText((current) => current + event.delta);
-    return;
-  }
-  if (event.type === 'part') {
-    if (event.part.type === 'card' || event.part.type === 'card-list') return;
-    setStreamingParts((current) => [...current, event.part]);
-    return;
-  }
-  if (event.type === 'error') {
-    setError(event.message);
-    setStatus(null);
-    setStreamingText('');
-    setStreamingParts([]);
-    setBusy(false);
-    return;
-  }
-  if (event.type === 'done') {
-    setDeck(event.deckId);
-    setCard(event.cardId);
-    setMessages((current) => [
-      ...current,
-      { id: event.messageId, role: 'assistant', parts: event.parts },
-    ]);
-    setStreamingText('');
-    setStreamingParts([]);
-    setStatus(null);
-    setBusy(false);
-  }
 };

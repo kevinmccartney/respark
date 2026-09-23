@@ -1,69 +1,21 @@
-import type { ColorIdentityPip, DeckCard } from './decks';
+import type { ColorIdentityPip, DeckCard } from '@respark/schemas/decks';
 
-export const DECK_GROUP_MODES = ['type', 'color', 'cmc'] as const;
-export type DeckGroupMode = (typeof DECK_GROUP_MODES)[number];
+import {
+  DECK_COLOR_GROUP_LABELS,
+  DECK_COLOR_GROUP_ORDER,
+  DECK_TYPE_PRIORITY,
+  type DeckGroupMode,
+  type DeckSortMode,
+} from '../constants';
+import type { DeckCardGroup } from '../types';
 
-export const DECK_GROUP_LABELS: Record<DeckGroupMode, string> = {
-  type: 'Type',
-  color: 'Color identity',
-  cmc: 'CMC',
-};
-
-export const DECK_SORT_MODES = ['name', 'cmc', 'color'] as const;
-export type DeckSortMode = (typeof DECK_SORT_MODES)[number];
-
-export const DECK_SORT_LABELS: Record<DeckSortMode, string> = {
-  name: 'Name',
-  cmc: 'CMC',
-  color: 'Color',
-};
-
-export const DECK_VIEW_MODES = ['list', 'visual'] as const;
-export type DeckViewMode = (typeof DECK_VIEW_MODES)[number];
-
-export const DECK_VIEW_LABELS: Record<DeckViewMode, string> = {
-  list: 'List',
-  visual: 'Visual',
-};
-
-export type DeckCardGroup = {
-  key: string;
-  label: string;
-  cards: DeckCard[];
-  totalQuantity: number;
-  colorIdentity?: ColorIdentityPip[];
-};
-
-const TYPE_PRIORITY = [
-  'Planeswalker',
-  'Creature',
-  'Battle',
-  'Instant',
-  'Sorcery',
-  'Enchantment',
-  'Artifact',
-  'Land',
-] as const;
-
-const TYPE_SORT_INDEX = new Map(TYPE_PRIORITY.map((type, index) => [type, index]));
-
-const COLOR_GROUP_ORDER = ['W', 'U', 'B', 'R', 'G', 'multicolor', 'colorless'] as const;
-const COLOR_GROUP_INDEX = new Map(COLOR_GROUP_ORDER.map((key, index) => [key, index]));
-
-const COLOR_GROUP_LABELS: Record<(typeof COLOR_GROUP_ORDER)[number], string> = {
-  W: 'White',
-  U: 'Blue',
-  B: 'Black',
-  R: 'Red',
-  G: 'Green',
-  multicolor: 'Multicolor',
-  colorless: 'Colorless',
-};
+const TYPE_SORT_INDEX = new Map(DECK_TYPE_PRIORITY.map((type, index) => [type, index]));
+const COLOR_GROUP_INDEX = new Map(DECK_COLOR_GROUP_ORDER.map((key, index) => [key, index]));
 
 export const primaryCardType = (typeLine: string | null | undefined): string => {
   if (!typeLine?.trim()) return 'Other';
   const front = typeLine.split('—')[0] ?? typeLine;
-  for (const type of TYPE_PRIORITY) {
+  for (const type of DECK_TYPE_PRIORITY) {
     if (new RegExp(`\\b${type}\\b`, 'i').test(front)) {
       return type;
     }
@@ -88,8 +40,8 @@ const colorGroupKey = (card: DeckCard): string => {
 };
 
 const colorGroupLabel = (key: string): string => {
-  if (key in COLOR_GROUP_LABELS) {
-    return COLOR_GROUP_LABELS[key as (typeof COLOR_GROUP_ORDER)[number]];
+  if (key in DECK_COLOR_GROUP_LABELS) {
+    return DECK_COLOR_GROUP_LABELS[key as (typeof DECK_COLOR_GROUP_ORDER)[number]];
   }
   return key;
 };
@@ -149,15 +101,15 @@ const compareByColor = (a: DeckCard, b: DeckCard): number => {
 };
 
 const compareTypeKeys = (a: string, b: string): number => {
-  const ai = TYPE_SORT_INDEX.get(a as (typeof TYPE_PRIORITY)[number]) ?? 99;
-  const bi = TYPE_SORT_INDEX.get(b as (typeof TYPE_PRIORITY)[number]) ?? 99;
+  const ai = TYPE_SORT_INDEX.get(a as (typeof DECK_TYPE_PRIORITY)[number]) ?? 99;
+  const bi = TYPE_SORT_INDEX.get(b as (typeof DECK_TYPE_PRIORITY)[number]) ?? 99;
   if (ai !== bi) return ai - bi;
   return a.localeCompare(b);
 };
 
 const compareColorGroupKeys = (a: string, b: string): number => {
-  const ai = COLOR_GROUP_INDEX.get(a as (typeof COLOR_GROUP_ORDER)[number]) ?? 99;
-  const bi = COLOR_GROUP_INDEX.get(b as (typeof COLOR_GROUP_ORDER)[number]) ?? 99;
+  const ai = COLOR_GROUP_INDEX.get(a as (typeof DECK_COLOR_GROUP_ORDER)[number]) ?? 99;
+  const bi = COLOR_GROUP_INDEX.get(b as (typeof DECK_COLOR_GROUP_ORDER)[number]) ?? 99;
   if (ai !== bi) return ai - bi;
   return a.localeCompare(b);
 };

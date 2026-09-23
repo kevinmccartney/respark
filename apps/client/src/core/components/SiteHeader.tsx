@@ -3,8 +3,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Button } from '@respark/ui/lib';
-
-import { ThemeToggle } from './ThemeToggle';
+import { ThemeToggle } from '@respark/ui/theme';
 
 type SiteHeaderProps = {
   showAuthActions?: boolean;

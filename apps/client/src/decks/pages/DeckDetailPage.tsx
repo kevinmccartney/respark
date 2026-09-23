@@ -3,9 +3,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { Alert, AlertDescription, Button } from '@respark/ui/lib';
 
-import { PrintingPickerDialog } from '@/cards';
-import { useChatSession } from '@/chat';
-import { NotFoundPage } from '@/core';
+import { PrintingPickerDialog } from '@respark-client/cards';
+import { useChatSession } from '@respark-client/chat';
+import { NotFoundPage } from '@respark-client/core';
 
 import { DeckAddCardSearch } from '../components/DeckAddCardSearch';
 import { BoardSection, CardPreview } from '../components/DeckBoard';
@@ -13,14 +13,8 @@ import { DeckDetailsHeader } from '../components/DeckDetailsHeader';
 import { DeckImportDialog } from '../components/DeckImportDialog';
 import { DeckListToolbar } from '../components/DeckListToolbar';
 import { useDeckDetail } from '../hooks/useDeckDetail';
-import {
-  commanderDeckGroup,
-  groupDeckCards,
-  type DeckGroupMode,
-  type DeckSortMode,
-  type DeckViewMode,
-} from '../lib/deck-grouping';
-import type { DeckCard } from '../lib/decks';
+import { commanderDeckGroup, groupDeckCards } from '../lib/deck-grouping';
+import type { DeckCard, DeckGroupMode, DeckSortMode, DeckViewMode } from '../types';
 
 export const DeckDetailPage = () => {
   const { id = '' } = useParams<{ id: string }>();
@@ -28,7 +22,6 @@ export const DeckDetailPage = () => {
   const { deckId: stickyDeckId, setDeck } = useChatSession();
   const {
     detail,
-    setDetail,
     loading,
     error,
     notFound,
@@ -277,7 +270,6 @@ export const DeckDetailPage = () => {
             open={importOpen}
             onOpenChange={setImportOpen}
             deckId={detail.deck.id}
-            onImported={(next) => setDetail(next)}
           />
         </>
       ) : null}

@@ -1,13 +1,15 @@
-import { useAuth } from '@clerk/react';
 import { useEffect, useState } from 'react';
 
 import { isLeadershipCommander } from '@respark/schemas/cards';
 import { Button, Input } from '@respark/ui/lib';
 
-import { fetchCard, suggestCardNames, type CardNameSuggestion } from '@/cards';
-import { isAbortError } from '@/core';
-
-const SUGGEST_DEBOUNCE_MS = 200;
+import {
+  CARD_SUGGESTION_DEBOUNCE_MS,
+  CARD_SUGGESTION_MIN_CHARS,
+  useCard,
+  useCardSuggestions,
+  type CardNameSuggestion,
+} from '@respark-client/cards';
 
 type Props = {
   printingId: string | null;
@@ -17,72 +19,55 @@ type Props = {
 };
 
 export const CommanderPicker = ({ printingId, name, disabled, onChange }: Props) => {
-  const { getToken } = useAuth();
   const [query, setQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<CardNameSuggestion[]>([]);
-  const [suggesting, setSuggesting] = useState(false);
+  const [debouncedQ, setDebouncedQ] = useState('');
   const [pickingId, setPickingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const trimmed = query.trim();
-    if (trimmed.length < 2 || printingId) {
-      setSuggestions([]);
-      setSuggesting(false);
+    const timer = window.setTimeout(() => setDebouncedQ(query.trim()), CARD_SUGGESTION_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [query]);
+
+  const suggestionsQuery = useCardSuggestions(
+    debouncedQ,
+    { legalIn: 'commander', commanderEligible: true },
+    !printingId,
+  );
+  const suggestions = suggestionsQuery.data ?? [];
+  const suggesting = suggestionsQuery.isFetching;
+
+  const pickQuery = useCard(pickingId ?? '', Boolean(pickingId));
+
+  useEffect(() => {
+    if (!pickingId) return;
+    if (pickQuery.isPending) return;
+    if (pickQuery.isError) {
+      setError('Could not load that commander');
+      setPickingId(null);
       return;
     }
+    const card = pickQuery.data;
+    if (!card) return;
 
-    const controller = new AbortController();
-    const handle = window.setTimeout(() => {
-      setSuggesting(true);
-      void suggestCardNames(
-        getToken,
-        trimmed,
-        { signal: controller.signal },
-        { legalIn: 'commander', commanderEligible: true },
-      )
-        .then((rows) => {
-          if (!controller.signal.aborted) setSuggestions(rows);
-        })
-        .catch((err) => {
-          if (isAbortError(err) || controller.signal.aborted) return;
-          setSuggestions([]);
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setSuggesting(false);
-        });
-    }, SUGGEST_DEBOUNCE_MS);
-
-    return () => {
-      controller.abort();
-      window.clearTimeout(handle);
-    };
-  }, [getToken, printingId, query]);
-
-  const pick = async (suggestion: CardNameSuggestion) => {
-    if (pickingId) return;
-    setPickingId(suggestion.id);
-    setError(null);
-    try {
-      const card = await fetchCard(getToken, suggestion.id);
-      if (!isLeadershipCommander(card.leadershipSkills)) {
-        setError('That card cannot be a commander');
-        return;
-      }
-      const printing = card.printings[0];
-      if (!printing) {
-        setError('That card has no printings');
-        return;
-      }
-      onChange({ printingId: printing.id, name: card.name });
-      setQuery('');
-      setSuggestions([]);
-    } catch (err) {
-      if (isAbortError(err)) return;
-      setError('Could not load that commander');
-    } finally {
-      setPickingId(null);
+    setPickingId(null);
+    if (!isLeadershipCommander(card.leadershipSkills)) {
+      setError('That card cannot be a commander');
+      return;
     }
+    const printing = card.printings[0];
+    if (!printing) {
+      setError('That card has no printings');
+      return;
+    }
+    onChange({ printingId: printing.id, name: card.name });
+    setQuery('');
+  }, [onChange, pickQuery.data, pickQuery.isError, pickQuery.isPending, pickingId]);
+
+  const pick = (suggestion: CardNameSuggestion) => {
+    if (pickingId) return;
+    setError(null);
+    setPickingId(suggestion.id);
   };
 
   if (printingId && name) {
@@ -121,7 +106,7 @@ export const CommanderPicker = ({ printingId, name, disabled, onChange }: Props)
           Searching…
         </p>
       ) : null}
-      {!suggesting && query.trim().length >= 2 && suggestions.length === 0 ? (
+      {!suggesting && debouncedQ.length >= CARD_SUGGESTION_MIN_CHARS && suggestions.length === 0 ? (
         <p className="absolute top-full z-10 mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm">
           No matching names.
         </p>
@@ -133,8 +118,8 @@ export const CommanderPicker = ({ printingId, name, disabled, onChange }: Props)
               <button
                 type="button"
                 className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted/60 disabled:opacity-50"
-                onClick={() => void pick(suggestion)}
-                disabled={pickingId === suggestion.id}
+                onClick={() => pick(suggestion)}
+                disabled={Boolean(pickingId)}
               >
                 <span className="font-medium">{suggestion.name}</span>
                 <span className="text-muted-foreground">

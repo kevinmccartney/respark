@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
-        '@': path.resolve(dirname, './src'),
+        '@respark-client': path.resolve(dirname, './src'),
       },
     },
     server: {

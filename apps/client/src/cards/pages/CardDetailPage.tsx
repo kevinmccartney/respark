@@ -1,19 +1,21 @@
-import { useAuth } from '@clerk/react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
-import { isLeadershipCommander, printingHasFoilTreatment } from '@respark/schemas/cards';
+import {
+  isLeadershipCommander,
+  printingHasFoilTreatment,
+  type CardPrintingSummary,
+} from '@respark/schemas/cards';
 import { DECK_FORMATS, type DeckFormat } from '@respark/schemas/decks';
-import { uuidSchema } from '@respark/schemas/primitives';
 import { Alert, AlertDescription, Badge, Button } from '@respark/ui/lib';
 import { ManaCost, ManaText } from '@respark/ui/mana';
 
-import { ApiError, goBackOrHome, isAbortError, isNotFound, NotFoundPage } from '@/core';
+import { ApiError, goBackOrHome, isNotFound, NotFoundPage } from '@respark-client/core';
 
 import { FlippableCardImage } from '../components/FlippableCardImage';
 import { PrintingFinishes } from '../components/FoilMark';
+import { useCard } from '../hooks/cards';
 import { resolveCardFace } from '../lib/card-faces';
-import { fetchCard, type CardDetail, type CardPrintingSummary } from '../lib/cards';
 
 const DECK_FORMAT_LABELS: Record<DeckFormat, string> = {
   standard: 'Standard',
@@ -24,48 +26,18 @@ const DECK_FORMAT_LABELS: Record<DeckFormat, string> = {
 export const CardDetailPage = () => {
   const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getToken } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const printingParam = searchParams.get('printing');
 
-  const [card, setCard] = useState<CardDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notFound, setNotFound] = useState(false);
+  const { data: card, isPending: loading, error: queryError } = useCard(id);
+  const notFound = Boolean(queryError && isNotFound(queryError));
+  const error =
+    queryError && !isNotFound(queryError)
+      ? queryError instanceof ApiError
+        ? queryError.message
+        : 'Could not load card'
+      : null;
   const [faceIndex, setFaceIndex] = useState(0);
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      setNotFound(false);
-      setCard(null);
-      if (!uuidSchema.safeParse(id).success) {
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
-      try {
-        const detail = await fetchCard(getToken, id, { signal: controller.signal });
-        if (controller.signal.aborted) return;
-        setCard(detail);
-      } catch (err) {
-        if (isAbortError(err) || controller.signal.aborted) return;
-        if (isNotFound(err)) {
-          setNotFound(true);
-          return;
-        }
-        setError(err instanceof ApiError ? err.message : 'Could not load card');
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    };
-
-    if (id) void load();
-    return () => controller.abort();
-  }, [getToken, id]);
 
   const selectedPrinting = useMemo(() => {
     if (!card || card.printings.length === 0) return null;

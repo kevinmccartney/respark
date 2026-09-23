@@ -1,6 +1,8 @@
 import { chatWsEnvelopeSchema, type ChatSend, type ChatServerEvent } from '@respark/schemas/chat';
 
-import { apiBaseUrl, type GetToken } from '@/core';
+import { apiBaseUrl, type GetToken } from '@respark-client/core';
+
+import { CHAT_WS_RECONNECT_BASE_MS, CHAT_WS_RECONNECT_MAX_MS } from '../constants';
 
 export type ChatWsHandlers = {
   onEvent?: (event: ChatServerEvent) => void;
@@ -102,7 +104,10 @@ export const connectChatWs = (
   const scheduleReconnect = () => {
     if (closed) return;
     if (reconnectTimer) clearTimeout(reconnectTimer);
-    const delay = Math.min(30_000, 1000 * 2 ** reconnectAttempt);
+    const delay = Math.min(
+      CHAT_WS_RECONNECT_MAX_MS,
+      CHAT_WS_RECONNECT_BASE_MS * 2 ** reconnectAttempt,
+    );
     reconnectAttempt += 1;
     reconnectTimer = setTimeout(() => {
       void connect();

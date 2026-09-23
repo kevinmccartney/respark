@@ -11,14 +11,14 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev -w client",
+    "dev": "npm run dev -w @respark/client",
     "dev:api": "npm run start:dev -w api",
     "dev:admin": "npm run dev -w @respark/admin",
-    "build": "npm run build -w client && npm run build -w api",
-    "build:client": "npm run build -w client",
+    "build": "npm run build -w @respark/client && npm run build -w api",
+    "build:client": "npm run build -w @respark/client",
     "build:api": "npm run build -w api",
     "build:admin": "npm run build -w @respark/admin",
-    "preview": "npm run preview -w client",
+    "preview": "npm run preview -w @respark/client",
     "prepare": "test \"$HUSKY\" = 0 || husky",
     "prettier:write": "prettier --write .",
     "prettier:check": "prettier --check .",

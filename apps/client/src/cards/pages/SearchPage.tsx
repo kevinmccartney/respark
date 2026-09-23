@@ -1,19 +1,14 @@
-import { useAuth } from '@clerk/react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { Alert, AlertDescription, Button, Input, Label } from '@respark/ui/lib';
 
-import { ApiError, isAbortError } from '@/core';
+import { ApiError } from '@respark-client/core';
 
 import { ScryfallSyntaxDialog } from '../components/ScryfallSyntaxDialog';
-import { searchCards, type CardSearchResult } from '../lib/cards';
-
-const PAGE_SIZE_OPTIONS = [24, 60, 100] as const;
-const DEFAULT_PAGE_SIZE = 60;
-const DEBOUNCE_MS = 300;
-
-type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, SEARCH_DEBOUNCE_MS } from '../constants';
+import { useSearchCards } from '../hooks/cards';
+import type { PageSize } from '../types';
 
 const parsePageSize = (raw: string | null): PageSize => {
   const n = Number.parseInt(raw ?? '', 10);
@@ -26,20 +21,34 @@ const parsePage = (raw: string | null): number => {
 };
 
 export const SearchPage = () => {
-  const { getToken } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const scryfallParam = searchParams.get('scryfall') ?? '';
   const pageSize = parsePageSize(searchParams.get('pageSize'));
   const pageParam = parsePage(searchParams.get('page'));
 
   const [scryfallInput, setScryfallInput] = useState(scryfallParam);
-  const [cards, setCards] = useState<CardSearchResult[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(pageParam);
-  const [totalPages, setTotalPages] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [syntaxOpen, setSyntaxOpen] = useState(false);
+
+  const {
+    data,
+    isPending,
+    error: queryError,
+  } = useSearchCards({
+    scryfall: scryfallParam || undefined,
+    limit: pageSize,
+    page: pageParam,
+  });
+
+  const cards = data?.cards ?? [];
+  const total = data?.total ?? 0;
+  const page = data?.page ?? pageParam;
+  const totalPages = data?.totalPages ?? 0;
+  const error =
+    queryError instanceof ApiError
+      ? queryError.message
+      : queryError
+        ? 'Could not search cards'
+        : null;
 
   useEffect(() => {
     setScryfallInput(scryfallParam);
@@ -55,53 +64,17 @@ export const SearchPage = () => {
       else next.delete('scryfall');
       next.delete('page');
       setSearchParams(next, { replace: true });
-    }, DEBOUNCE_MS);
+    }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(handle);
   }, [scryfallInput, searchParams, setSearchParams]);
 
   useEffect(() => {
-    const controller = new AbortController();
-
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await searchCards(
-          getToken,
-          {
-            scryfall: scryfallParam || undefined,
-            limit: pageSize,
-            page: pageParam,
-          },
-          { signal: controller.signal },
-        );
-        if (controller.signal.aborted) return;
-        setCards(result.cards);
-        setTotal(result.total);
-        setPage(result.page);
-        setTotalPages(result.totalPages);
-        if (result.page !== pageParam && result.totalPages > 0) {
-          const next = new URLSearchParams(searchParams);
-          if (result.page <= 1) next.delete('page');
-          else next.set('page', String(result.page));
-          setSearchParams(next, { replace: true });
-        }
-      } catch (err) {
-        if (isAbortError(err) || controller.signal.aborted) return;
-        setError(err instanceof ApiError ? err.message : 'Could not search cards');
-        setCards([]);
-        setTotal(0);
-        setPage(1);
-        setTotalPages(0);
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    };
-
-    void load();
-    return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
-  }, [getToken, scryfallParam, pageSize, pageParam]);
+    if (!data || data.page === pageParam || data.totalPages === 0) return;
+    const next = new URLSearchParams(searchParams);
+    if (data.page <= 1) next.delete('page');
+    else next.set('page', String(data.page));
+    setSearchParams(next, { replace: true });
+  }, [data, pageParam, searchParams, setSearchParams]);
 
   const updateParams = (mutate: (next: URLSearchParams) => void) => {
     const next = new URLSearchParams(searchParams);
@@ -183,19 +156,19 @@ export const SearchPage = () => {
         </Alert>
       ) : null}
 
-      {loading ? (
+      {isPending ? (
         <p className="text-muted-foreground" aria-live="polite">
           Searching…
         </p>
       ) : null}
 
-      {!loading && !error && cards.length === 0 ? (
+      {!isPending && !error && cards.length === 0 ? (
         <p className="text-muted-foreground">
           {hasQuery ? 'No cards match this search.' : 'No cards in the catalog yet.'}
         </p>
       ) : null}
 
-      {!loading && cards.length > 0 ? (
+      {!isPending && cards.length > 0 ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-muted-foreground" aria-live="polite">

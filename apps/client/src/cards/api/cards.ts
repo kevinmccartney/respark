@@ -7,11 +7,12 @@ import {
   type CardPrintingSummary,
   type CardSearchPage,
   type CardSearchResult,
-  type CardSearchSort,
 } from '@respark/schemas/cards';
-import type { ColorIdentityPip, DeckFormat } from '@respark/schemas/decks';
 
-import { apiFetchJson, type GetToken } from '@/core';
+import { apiFetchJson, type GetToken } from '@respark-client/core';
+
+import { CARD_SUGGESTION_LIMIT } from '../constants';
+import type { CardSearchOpts, CardSuggestionOpts } from '../types';
 
 export type {
   CardDetail,
@@ -21,17 +22,9 @@ export type {
   CardSearchResult,
 };
 
-export const searchCards = (
+export const fetchCardsSearch = (
   getToken: GetToken,
-  opts: {
-    scryfall?: string;
-    legalIn?: DeckFormat;
-    colorIdentity?: ColorIdentityPip[];
-    commanderEligible?: boolean;
-    sort?: CardSearchSort;
-    limit?: number;
-    page?: number;
-  },
+  opts: CardSearchOpts,
   init?: RequestInit,
 ): Promise<CardSearchPage> => {
   const params = new URLSearchParams();
@@ -52,18 +45,13 @@ export const fetchCard = (
   init?: RequestInit,
 ): Promise<CardDetail> => apiFetchJson(`/cards/${id}`, getToken, cardDetailSchema, init);
 
-export const suggestCardNames = (
+export const fetchCardSuggestions = (
   getToken: GetToken,
   q: string,
   init?: RequestInit,
-  opts?: {
-    limit?: number;
-    legalIn?: DeckFormat;
-    colorIdentity?: ColorIdentityPip[];
-    commanderEligible?: boolean;
-  },
+  opts?: CardSuggestionOpts,
 ): Promise<CardNameSuggestion[]> => {
-  const params = new URLSearchParams({ q, limit: String(opts?.limit ?? 15) });
+  const params = new URLSearchParams({ q, limit: String(opts?.limit ?? CARD_SUGGESTION_LIMIT) });
   if (opts?.legalIn) params.set('legalIn', opts.legalIn);
   if (opts?.colorIdentity) params.set('colorIdentity', opts.colorIdentity.join(','));
   if (opts?.commanderEligible) params.set('commanderEligible', 'true');

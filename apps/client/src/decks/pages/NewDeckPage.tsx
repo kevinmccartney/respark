@@ -1,7 +1,7 @@
-import { useAuth } from '@clerk/react';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+import { DECK_FORMATS } from '@respark/schemas/decks';
 import {
   Alert,
   AlertDescription,
@@ -14,33 +14,34 @@ import {
   Label,
 } from '@respark/ui/lib';
 
-import { ApiError } from '@/core';
+import { ApiError } from '@respark-client/core';
 
 import { CommanderPicker } from '../components/CommanderPicker';
-import { createDeck, DECK_FORMAT_LABELS, DECK_FORMATS, type DeckFormat } from '../lib/decks';
+import { DECK_FORMAT_LABELS } from '../constants';
+import { useCreateDeck } from '../hooks';
+import type { DeckFormat } from '../types';
 
 export const NewDeckPage = () => {
-  const { getToken } = useAuth();
   const navigate = useNavigate();
+  const createMutation = useCreateDeck();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [format, setFormat] = useState<DeckFormat>('standard');
   const [commander, setCommander] = useState<{ printingId: string; name: string } | null>(null);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const trimmedName = name.trim();
+  const saving = createMutation.isPending;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!trimmedName || saving) return;
     if (format === 'commander' && !commander) return;
 
-    setSaving(true);
     setError(null);
     try {
-      const deck = await createDeck(getToken, {
+      const deck = await createMutation.mutateAsync({
         name: trimmedName,
         description: description.trim() || undefined,
         format,
@@ -49,7 +50,6 @@ export const NewDeckPage = () => {
       navigate(`/decks/${deck.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not create deck');
-      setSaving(false);
     }
   };
 

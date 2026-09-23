@@ -6,8 +6,10 @@ alwaysApply: false
 
 # Client & admin UI
 
-- **Client** (`apps/client`): player-facing Vite + React + Clerk.
-- **Admin** (`apps/admin`): ops dashboard; same Clerk app; requires user public metadata `{ "role": "admin" }`.
+- **Client** (`apps/client`): player-facing Vite + React + Clerk. Features: `core`, `auth`, `cards`, `decks`, `chat`.
+- **Admin** (`apps/admin`): ops dashboard; same Clerk app; requires user public metadata `{ "role": "admin" }`. Features: `core`, `auth`, `cards`, `sets`, `etl-syncs`.
+
+Architecture (feature folders, `api`/`hooks`/`lib`, TanStack Query, `@respark/ui/lib`): see **Vite React apps** in [`js-ts-quality`](js-ts-quality.mdc).
 
 READMEs: [`apps/client`](../../apps/client) (via root README), [`apps/admin/README.md`](../../apps/admin/README.md).
 
@@ -20,7 +22,6 @@ READMEs: [`apps/client`](../../apps/client) (via root README), [`apps/admin/READ
 ## Conventions
 
 - Only `VITE_CLERK_PUBLISHABLE_KEY` in Vite apps — never the secret key.
-- Feature folders (`core`, `auth`, `cards`, `decks`, `chat` on client; `core`, `auth`, `cards`, `sets`, `etl-syncs` on admin) with kind subfolders (`pages/`, `components/`, `hooks/`, `lib/`, `api/` when needed) and a root `index.ts` barrel. Shared chrome lives in `packages/ui` (`ui/theme`, `ui/auth`, `ui/health`, `ui/mana`); shadcn primitives in `packages/ui/src/lib` (`@respark/ui/lib`).
 - Prefer existing UI primitives from `@respark/ui/lib`; avoid one-off card chrome in heroes/marketing unless the design system requires it.
 - Match Prettier (no semicolons, single quotes) and ESLint flat config at repo root.
 - ESLint ignores generated `packages/ui/src/lib/**`; don’t fight shadcn output unless necessary. Add new shadcn components via `packages/ui/components.json`.

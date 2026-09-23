@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@respark/ui/lib';
 
-import type { DeckCard } from '../lib/decks';
+import type { DeckCard } from '../types';
 
 type DeckCardMenuHandlers = {
   onPreview: (cardId: string) => void;
