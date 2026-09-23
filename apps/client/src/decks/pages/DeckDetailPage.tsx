@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
-import { Alert, AlertDescription, Button } from '@respark/ui/lib';
+import { BackButton } from '@respark/ui/back-button';
+import { Alert, AlertDescription } from '@respark/ui/lib';
 
 import { PrintingPickerDialog } from '@respark-client/cards';
 import { useChatSession } from '@respark-client/chat';
@@ -136,9 +137,7 @@ export const DeckDetailPage = () => {
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-6 py-8 text-left">
       <div>
-        <Button variant="default" size="sm" render={<Link to="/home" />}>
-          Back to decks
-        </Button>
+        <BackButton fallbackTo="/home" />
       </div>
 
       {loading ? (

@@ -9,7 +9,6 @@ export {
   isNotFound,
   type GetToken,
 } from './lib/api';
-export { goBackOrHome } from './lib/navigation';
 export {
   setPaginationFooterVisible,
   usePaginationFooterVisible,

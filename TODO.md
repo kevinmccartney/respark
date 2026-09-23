@@ -6,8 +6,8 @@ Writing down ideas for the future
 
 ### Features
 
-- update theme
 - Prod env
+- printing legality
 - changelog for decks
 - bulk actions
 - (admin) ai cost management

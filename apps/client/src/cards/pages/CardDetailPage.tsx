@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 
 import {
   isLeadershipCommander,
@@ -7,10 +7,11 @@ import {
   type CardPrintingSummary,
 } from '@respark/schemas/cards';
 import { DECK_FORMATS, type DeckFormat } from '@respark/schemas/decks';
-import { Alert, AlertDescription, Badge, Button } from '@respark/ui/lib';
+import { BackButton } from '@respark/ui/back-button';
+import { Alert, AlertDescription, Badge } from '@respark/ui/lib';
 import { ManaCost, ManaText } from '@respark/ui/mana';
 
-import { ApiError, goBackOrHome, isNotFound, NotFoundPage } from '@respark-client/core';
+import { ApiError, isNotFound, NotFoundPage } from '@respark-client/core';
 
 import { ColorIdentity } from '../components/ColorIdentity';
 import { FlippableCardImage } from '../components/FlippableCardImage';
@@ -26,7 +27,6 @@ const DECK_FORMAT_LABELS: Record<DeckFormat, string> = {
 
 export const CardDetailPage = () => {
   const { id = '' } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const printingParam = searchParams.get('printing');
 
@@ -82,9 +82,7 @@ export const CardDetailPage = () => {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-8 text-left">
       <div>
-        <Button type="button" variant="default" size="sm" onClick={() => goBackOrHome(navigate)}>
-          Back
-        </Button>
+        <BackButton fallbackTo="/home" />
       </div>
 
       {loading ? (

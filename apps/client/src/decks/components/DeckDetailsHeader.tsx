@@ -135,7 +135,7 @@ export const DeckDetailsHeader = ({
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={onImport}>
+            <Button type="button" variant="chart" size="sm" onClick={onImport}>
               Import
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={() => openEdit(true)}>

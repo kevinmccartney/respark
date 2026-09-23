@@ -194,7 +194,7 @@ export const GlobalChat = () => {
   return (
     <aside
       id="global-chat-drawer"
-      className="flex h-svh max-h-svh w-[min(100vw,24rem)] shrink-0 flex-col overflow-hidden border-l border-border bg-card"
+      className="fixed inset-0 z-50 flex h-svh max-h-svh w-full flex-col overflow-hidden border-border bg-card md:static md:z-auto md:w-[min(100vw,24rem)] md:shrink-0 md:border-l"
     >
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-3">
         <h2 className="font-heading text-lg">Chat</h2>
@@ -217,7 +217,7 @@ export const GlobalChat = () => {
         </Button>
         <Button
           type="button"
-          variant="secondary"
+          variant="chart"
           size="sm"
           aria-pressed={showHistory}
           onClick={() => setShowHistory((open) => !open)}
@@ -261,7 +261,7 @@ export const GlobalChat = () => {
 
             <Button
               type="button"
-              variant="outline"
+              variant="chart"
               size="sm"
               disabled={busy || !ready}
               onClick={() => submit(prompt)}

@@ -1,8 +1,7 @@
 import { cn } from 'cn';
 import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 
-import { Button } from '@respark/ui/lib';
+import { BackButton } from '@respark/ui/back-button';
 
 import { AdminLoadErrorAlert } from '@respark-admin/core/components';
 import { NotFoundPage } from '@respark-admin/core/pages';
@@ -34,8 +33,6 @@ export const DetailShell = ({
   loadingLabel = 'Loading…',
   children,
 }: DetailShellProps) => {
-  const navigate = useNavigate();
-
   if (notFound) {
     return <NotFoundPage title={notFound.title} description={notFound.description} />;
   }
@@ -49,9 +46,7 @@ export const DetailShell = ({
       )}
     >
       <div className={cn('mb-4', fill && 'shrink-0')}>
-        <Button type="button" variant="outline" size="sm" onClick={() => navigate(-1)}>
-          Back
-        </Button>
+        <BackButton fallbackTo="/" />
       </div>
 
       <div className={cn(fill && 'shrink-0')}>

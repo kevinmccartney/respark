@@ -1,25 +1,25 @@
 {
   "$schema": "https://ui.shadcn.com/schema.json",
-  "style": "base-rhea",
+  "style": "base-mira",
   "rsc": false,
   "tsx": true,
   "tailwind": {
     "config": "",
-    "css": "../../apps/admin/src/index.css",
-    "baseColor": "neutral",
+    "css": "./src/styles/theme.css",
+    "baseColor": "mauve",
     "cssVariables": true,
     "prefix": ""
   },
   "iconLibrary": "lucide",
   "rtl": false,
   "aliases": {
-    "components": "./src",
-    "utils": "./src/lib/utils",
-    "ui": "./src/lib",
-    "lib": "./src/lib",
-    "hooks": "./src"
+    "components": "#lib",
+    "utils": "#lib/utils",
+    "ui": "#lib",
+    "lib": "#lib",
+    "hooks": "#lib"
   },
   "menuColor": "default",
-  "menuAccent": "subtle",
+  "menuAccent": "bold",
   "registries": {}
 }
