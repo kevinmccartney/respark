@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 import { ConventionalChangelog } from 'conventional-changelog';
 import { Bumper } from 'conventional-recommended-bump';
+import prettier from 'prettier';
 
 const rootDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 const changelogPath = join(rootDir, 'CHANGELOG.md');
@@ -28,6 +29,11 @@ const run = (file, args, opts = {}) =>
   });
 
 const captured = (file, args) => (run(file, args, { capture: true }) ?? '').trim();
+
+const formatChangelog = async (content) => {
+  const config = (await prettier.resolveConfig(changelogPath)) ?? {};
+  return prettier.format(content, { ...config, filepath: changelogPath });
+};
 
 const readRootVersion = () => {
   const parsed = JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf8'));
@@ -149,7 +155,7 @@ const bumpRelease = async () => {
   }
 
   const existing = existsSync(changelogPath) ? readFileSync(changelogPath, 'utf8') : '';
-  writeFileSync(changelogPath, prependChangelog(existing, section));
+  writeFileSync(changelogPath, await formatChangelog(prependChangelog(existing, section)));
 
   configureGitIdentity();
   run('git', ['add', 'package.json', 'package-lock.json', 'CHANGELOG.md']);

@@ -110,7 +110,7 @@ Authoring:
 Release (CI `release` job on push to `main` after every project job succeeds or is skipped; skipped for `chore(release):` commits):
 
 1. No `v*` tags yet: tag `v0.1.0` from the current root version and create a GitHub Release (does not rewrite history into the changelog).
-2. Otherwise: `conventional-recommended-bump` + `conventional-changelog` (`conventionalcommits` preset) via `task release` ([`scripts/release.mjs`](../scripts/release.mjs)): bump root `package.json` / lockfile, prepend [`CHANGELOG.md`](../CHANGELOG.md), commit `chore(release): vX.Y.Z`, tag, push, `gh release create`.
+2. Otherwise: `conventional-recommended-bump` + `conventional-changelog` (`conventionalcommits` preset) via `task release` ([`scripts/release.mjs`](../scripts/release.mjs)): bump root `package.json` / lockfile, prepend [`CHANGELOG.md`](../CHANGELOG.md) (Prettier-formatted), commit `chore(release): vX.Y.Z`, tag, push, `gh release create`.
 3. Later jobs check out that SHA. Locally: `task release -- --dry-run` (does not tag or push).
 
 If `main` is protected, allow GitHub Actions to push so the job can tag.
