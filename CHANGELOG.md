@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/kevinmccartney/respark/compare/v0.4.0...v0.4.1) (2026-09-24)
+
+### Bug Fixes
+
+- badge import on set details page ([19ef925](https://github.com/kevinmccartney/respark/commit/19ef92552cded1fafcabc4fe0b3cd359648b7270))
+- ui upgrade table props ([b423ae5](https://github.com/kevinmccartney/respark/commit/b423ae557d193878208e6e02e0703a6fa327984e))
+
 ## [0.4.0](https://github.com/kevinmccartney/respark/compare/v0.3.0...v0.4.0) (2026-09-23)
 
 ### Features
