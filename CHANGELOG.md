@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.3](https://github.com/kevinmccartney/respark/compare/v0.4.2...v0.4.3) (2026-09-24)
+
+### Bug Fixes
+
+- actually unused import in shadcn pagination ([072add4](https://github.com/kevinmccartney/respark/commit/072add423e80f56d5fea463b60f6914c856efb97))
+
 ## [0.4.2](https://github.com/kevinmccartney/respark/compare/v0.4.1...v0.4.2) (2026-09-24)
 
 ### Bug Fixes
