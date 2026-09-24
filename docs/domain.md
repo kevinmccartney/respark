@@ -17,7 +17,7 @@ If you have a diagrams.net architecture file, drop `architecture.drawio` (and an
 | **Clerk**    | Authentication and profile source of truth. Local `app.users` is a cache                  |
 | **Postgres** | One database, four live schemas (`raw`, `catalog`, `ops`, `app`). `market` is reserved    |
 
-Deployed develop hosts the SPAs and API behind CloudFront; RDS is private to the API instance. See [`docs/ci-cd.md`](ci-cd.md) and [`infra/envs/develop`](../infra/envs/develop/README.md).
+Deployed develop hosts the SPAs and API behind CloudFront; RDS is private to the API instance. Production uses the same pattern in the same AWS account (`infra/envs/production`). See [`docs/ci-cd.md`](ci-cd.md), [`infra/envs/develop`](../infra/envs/develop/README.md), and [`infra/envs/production`](../infra/envs/production/README.md).
 
 ## Postgres schemas
 

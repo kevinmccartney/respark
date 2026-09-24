@@ -29,7 +29,29 @@ Prettier covers JS/TS/JSON/MD/YAML/CSS; ESLint covers apps, packages, and script
 | Push to `main`                | `develop`                          | changed-project `*:ci` → platform release (if needed) → `apply` → `deploy-api` → `deploy-client` ∥ `deploy-admin`                    |
 | `workflow_dispatch` on `main` | choice (`develop` or `production`) | **Force all** projects for the selected env (full `*:ci` + plan/apply + deploy)                                                      |
 
-Production deploys are intentional: use **Actions → CI / CD → Run workflow** and pick `production`.
+Production deploys are intentional: use **Actions → CI / CD → Run workflow** and pick `production`. Push to `main` always targets **develop**.
+
+### First-time production bring-up
+
+Terraform root: [`infra/envs/production`](../infra/envs/production/). Same AWS account as develop; resources are named `respark-production-*` and tagged `Environment=production`. State key: `envs/production/terraform.tfstate`.
+
+1. Ensure GitHub Environment **`production`** exists with:
+   - `AWS_ROLE_ARN` (OIDC role that trusts `environment:production`)
+   - `VITE_CLERK_PUBLISHABLE_KEY` from a **separate Clerk production instance**
+   - `COMPILE_CHECK_API_URL=https://api.respark.kevinmccartney.is`
+   - Optional: required reviewers before deploy
+2. Clerk production dashboard: allow origins for `https://respark.kevinmccartney.is` and `https://admin.respark.kevinmccartney.is` (webhook → prod API when ready).
+3. Apply infra and push secrets (Clerk secret never enters Terraform state):
+
+```bash
+task infra:init ENV=production
+task infra:plan ENV=production
+task infra:apply ENV=production
+task api:secrets:push ENV=production
+```
+
+4. Deploy apps: **Run workflow → `production`**, or `task deploy ENV=production`.
+5. Confirm `site_url` / `admin_site_url` / `api_url` outputs, `/healthz` + `/info`, and sign-in. Prod DB starts empty — catalog ETL/sync is a follow-on.
 
 ## Change detection
 
@@ -128,9 +150,11 @@ bash scripts/bootstrap-tf-backend.sh
 task infra:init ENV=develop
 # If migrating from local state:
 terraform -chdir=infra/envs/develop init -migrate-state
+# Production (same account, separate state key):
+task infra:init ENV=production
 ```
 
-This creates `respark-tfstate` (S3) and `respark-tfstate-lock` (DynamoDB) in `us-east-1`. Each env’s `versions.tf` should use a distinct state key (e.g. `envs/develop/terraform.tfstate`). Laptop Compose IAM lives in [`infra/envs/local`](../infra/envs/local/README.md) (`task infra:apply ENV=local`) and is not a GitHub Environment.
+This creates `respark-tfstate` (S3) and `respark-tfstate-lock` (DynamoDB) in `us-east-1`. Each env’s `versions.tf` uses a distinct state key (`envs/develop/terraform.tfstate`, `envs/production/terraform.tfstate`, `envs/local/terraform.tfstate`). Laptop Compose IAM lives in [`infra/envs/local`](../infra/envs/local/README.md) (`task infra:apply ENV=local`) and is not a GitHub Environment.
 
 ### 2. GitHub Environments
 
@@ -138,11 +162,11 @@ Create GitHub Environments named **`develop`** and **`production`** (names must 
 
 Per environment, set:
 
-| Kind     | Name                         | Purpose                                                                                                                       |
-| -------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Variable | `AWS_ROLE_ARN`               | IAM role ARN assumed via OIDC for this env                                                                                    |
-| Variable | `COMPILE_CHECK_API_URL`      | Placeholder `VITE_API_URL` for compile-check `task client:ci` / `admin:ci` (e.g. `https://dev.api.respark.kevinmccartney.is`) |
-| Variable | `VITE_CLERK_PUBLISHABLE_KEY` | Clerk **publishable** key for that Clerk instance (dev vs prod). Public; baked into the client/admin bundle.                  |
+| Kind     | Name                         | Purpose                                                                                                                                                                                |
+| -------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Variable | `AWS_ROLE_ARN`               | IAM role ARN assumed via OIDC for this env                                                                                                                                             |
+| Variable | `COMPILE_CHECK_API_URL`      | Placeholder `VITE_API_URL` for compile-check `task client:ci` / `admin:ci` (develop: `https://dev.api.respark.kevinmccartney.is`; production: `https://api.respark.kevinmccartney.is`) |
+| Variable | `VITE_CLERK_PUBLISHABLE_KEY` | Clerk **publishable** key for that Clerk instance (dev vs prod). Public; baked into the client/admin bundle.                                                                           |
 
 Clerk **secret** keys stay in SSM (`task api:secrets:push ENV=…`); the workflow does not push them.
 

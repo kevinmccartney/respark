@@ -1,13 +1,18 @@
 # Infrastructure
 
-Terraform is organized by **environment** (roots) and **modules** (reusable building blocks).
+Terraform is organized by **environment** (roots) and **modules** (reusable building blocks). Environments share one AWS account; isolation is via `Environment` tags, `respark-<env>-*` names, and distinct state keys.
 
 ```plaintext
 infra/
 ├── envs/
-│   └── develop/     # Terraform root for develop — run init/plan/apply here
+│   ├── develop/      # Pre-prod (dev.*.kevinmccartney.is)
+│   ├── production/   # Prod (respark / admin.respark / api.respark)
+│   └── local/        # Laptop Compose IAM only
 └── modules/
-    └── ui/          # S3 + CloudFront + ACM + Route53 for the React app
+    ├── api/
+    ├── db/
+    ├── ui/
+    └── bedrock_invoke/
 ```
 
-**develop** uses `dev.respark.kevinmccartney.is`. Add **prod** (and other envs) as sibling directories under `envs/` when you ship 1.0, each calling the same modules with different `domain_name` values.
+Use `ENV=develop` (default) or `ENV=production` with Task (`task infra:plan`, `task deploy`, …). Production deploys are intentional — see [`envs/production/README.md`](envs/production/README.md) and [`docs/ci-cd.md`](../docs/ci-cd.md).

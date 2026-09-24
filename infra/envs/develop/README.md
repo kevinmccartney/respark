@@ -1,6 +1,6 @@
 # develop environment
 
-Terraform root for the **develop** AWS environment (0.x): S3 origin, CloudFront, ACM (HTTPS), and Route53 for `dev.respark.kevinmccartney.is`. Production (`respark.kevinmccartney.is` or similar) will get a separate env later.
+Terraform root for the **develop** AWS environment (0.x): S3 origin, CloudFront, ACM (HTTPS), and Route53 for `dev.respark.kevinmccartney.is`. Production lives alongside in [`../production`](../production/) (same account, separate state key and tags).
 
 ## Prerequisites
 

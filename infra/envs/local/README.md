@@ -4,7 +4,7 @@ IAM-only Terraform root for the **laptop Compose API**. It does not create EC2, 
 
 The runtime identity is IAM user `respark-local-api`, allowed to `bedrock:InvokeModel` / `InvokeModelWithResponseStream` on US inference profiles and their destination-Region foundation models, plus Marketplace subscribe for Haiku 4.5. Access keys are **not** in Terraform state — write them with Task after apply. IAM is evaluated in AWS; recreating Compose does not refresh it.
 
-Develop's API uses the EC2 instance role instead (`infra/envs/develop`). Production will get its own env later.
+Develop's API uses the EC2 instance role instead (`infra/envs/develop`). Production uses the same pattern under [`../production`](../production/).
 
 ## Apply
 

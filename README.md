@@ -20,6 +20,8 @@ respark/
 ├── docs/                       # Product / pipeline documentation
 ├── infra/
 │   ├── envs/develop/           # Terraform root (develop)
+│   ├── envs/production/        # Terraform root (production, same account)
+│   ├── envs/local/             # Laptop Compose IAM
 │   └── modules/ui/             # S3 + CloudFront + HTTPS UI module
 ├── docker-compose.yml          # Local Postgres + API + client + admin
 ├── package.json                # npm workspaces root
@@ -126,7 +128,7 @@ For a GUI client: host `127.0.0.1`, port `15432`, user `respark`, SSL require, p
 
 ### AWS hosting (Terraform)
 
-Develop client (0.x) is at **https://dev.respark.kevinmccartney.is**; admin at **https://dev.admin.respark.kevinmccartney.is** — see [`infra/envs/develop`](infra/envs/develop/README.md) (S3, CloudFront, ACM, Route53). Full stack: `task deploy` (Terraform apply → API → client → admin), or run the pieces separately (`task infra:apply`, `task client:deploy`, `task admin:deploy`). GitHub Actions CI/CD: [`docs/ci-cd.md`](docs/ci-cd.md).
+Develop client (0.x) is at **https://dev.respark.kevinmccartney.is**; admin at **https://dev.admin.respark.kevinmccartney.is** — see [`infra/envs/develop`](infra/envs/develop/README.md). Production: **https://respark.kevinmccartney.is** / **https://admin.respark.kevinmccartney.is** — see [`infra/envs/production`](infra/envs/production/README.md). Full stack: `task deploy` (Terraform apply → API → client → admin), or run the pieces separately (`task infra:apply`, `task client:deploy`, `task admin:deploy`). Pass `ENV=production` for prod. GitHub Actions CI/CD: [`docs/ci-cd.md`](docs/ci-cd.md).
 
 Both deploy tasks inject **`VITE_API_URL`** from the Terraform `api_url` output at build time. Build either SPA any other way for deployment and the bundle will target `http://localhost:3000`, so each visitor would call their own machine — production builds now fail loudly instead.
 

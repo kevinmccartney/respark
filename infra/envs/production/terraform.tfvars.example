@@ -1,0 +1,10 @@
+# Copy to terraform.tfvars and adjust as needed.
+#
+# aws_region         = "us-east-1"
+# domain_name        = "respark.kevinmccartney.is"
+# admin_domain_name  = "admin.respark.kevinmccartney.is"
+# api_domain_name    = "api.respark.kevinmccartney.is"
+# hosted_zone_name   = "kevinmccartney.is"
+# Player client bucket names still use "web" (Terraform component) so naming stays consistent.
+# bucket_name        = "respark-production-web-example"
+# admin_bucket_name  = "respark-production-admin-example"

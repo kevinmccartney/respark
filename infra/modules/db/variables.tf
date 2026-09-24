@@ -60,3 +60,9 @@ variable "deletion_protection" {
   type        = bool
   default     = false
 }
+
+variable "skip_final_snapshot" {
+  description = "Skip a final snapshot when destroying the instance. Leave true for pre-prod; false for production."
+  type        = bool
+  default     = true
+}
