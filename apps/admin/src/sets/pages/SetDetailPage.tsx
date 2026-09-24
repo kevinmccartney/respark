@@ -9,6 +9,7 @@ import {
   uuidSchema,
 } from '@respark/schemas';
 import {
+  Badge,
   Pagination,
   Table,
   TableBody,
