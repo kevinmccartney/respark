@@ -7,6 +7,7 @@
 | [AI chat](ai-chat.md)                 | Global assistant: sticky context, tools, Bedrock, WebSocket        |
 | [Commander stats](commander-stats.md) | Layer A rank/salt vs future per-commander inclusion (Option B)     |
 | [CI / CD](ci-cd.md)                   | GitHub Actions, Task isomorphism, OIDC, change detection, releases |
+| [Deployments](deployments.md)         | Modules + Helm models (Pi → EC2 all-in-one → EC2+SaaS → ALB/EKS)   |
 | [ETL overview](etl/overview.md)       | Sync / stage / job model, architecture, sources of truth           |
 | [ETL data model](etl/data-model.md)   | Compact Postgres schema/table list                                 |
 | [ETL operations](etl/operations.md)   | Running syncs (CLI + admin), reports, env                          |

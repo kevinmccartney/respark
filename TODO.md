@@ -12,9 +12,11 @@ Writing down ideas for the future
 
 ### Features
 
+- deployment models — see [docs/deployments.md](docs/deployments.md) (Helm on Pi / EC2 / EKS; budget = all-in-one EC2, optimized = managed DB + CF/S3, scaled = ALB+EKS); remaining work is implementing charts + Terraform per model
+- cost management
+  - cost endpoint
 - changelog for decks
 - bulk actions
-- (admin) ai cost management
 - stacks
 - collection
 - (admin/etl) failed rows don't stream into the UI
