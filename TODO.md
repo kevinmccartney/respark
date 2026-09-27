@@ -12,6 +12,7 @@ Writing down ideas for the future
 
 ### Features
 
+- life tracker mvp
 - deployment models — see [docs/deployments.md](docs/deployments.md) (Helm on Pi / EC2 / EKS; budget = all-in-one EC2, optimized = managed DB + CF/S3, scaled = ALB+EKS); remaining work is implementing charts + Terraform per model
 - cost management
   - cost endpoint
@@ -50,6 +51,7 @@ Writing down ideas for the future
 
 ### Tech Debt
 
+- hot reload in containers
 - mdc AI agent docs guidance and refresh
 - (api) refactor/cleanup
 - (etl) refactor/cleanup

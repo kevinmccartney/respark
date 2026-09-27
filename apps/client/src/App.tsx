@@ -6,6 +6,7 @@ import { CardDetailPage, SearchPage } from '@respark-client/cards';
 import { ChatSessionProvider, ChatToggle, GlobalChat } from '@respark-client/chat';
 import { AppShell, NotFoundPage, WelcomePage, type AppRouteHandle } from '@respark-client/core';
 import { DeckDetailPage, DeckListPage, NewDeckPage } from '@respark-client/decks';
+import { LifeTrackerPage } from '@respark-client/life';
 
 const searchHandle = { hasPagination: true } satisfies AppRouteHandle;
 
@@ -72,6 +73,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireAuth>
             <DeckDetailPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: '/life',
+        element: (
+          <RequireAuth>
+            <LifeTrackerPage />
           </RequireAuth>
         ),
       },

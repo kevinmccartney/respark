@@ -33,6 +33,12 @@ export const SiteHeader = ({ showAuthActions = true, headerExtra }: SiteHeaderPr
           >
             Decks
           </Link>
+          <Link
+            to="/life"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Life tracker
+          </Link>
         </nav>
       </Show>
       <Show when="signed-out">
