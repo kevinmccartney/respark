@@ -21,9 +21,12 @@ respark/
 ├── infra/
 │   ├── envs/develop/           # Terraform root (develop)
 │   ├── envs/production/        # Terraform root (production, same account)
-│   ├── envs/local/             # Laptop Compose IAM
+│   ├── envs/local/             # Laptop API IAM (Bedrock)
 │   └── modules/ui/             # S3 + CloudFront + HTTPS UI module
-├── docker-compose.yml          # Local Postgres + API + client + admin
+├── deploy/
+│   ├── charts/                 # Helm charts: respark-api, respark-web, respark-postgres
+│   └── envs/local/             # Helm values for local Kubernetes (Docker Desktop)
+├── docker-compose.yml          # Deprecated local stack (use task k8s:up)
 ├── package.json                # npm workspaces root
 ├── Taskfile.yml                # [Task](https://taskfile.dev/) runner
 └── README.md
@@ -80,9 +83,11 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 | `task client:build`          | Production build of the player client                                                                          |
 | `task admin:build`           | Production build of the admin app                                                                              |
 | `task api:build`             | Compile the NestJS API (runs `etl:build` first)                                                                |
-| `task docker:up`             | Start local Postgres + API + client + admin (Compose watch mode)                                               |
-| `task docker:down`           | Stop the local Compose stack (keeps DB volume)                                                                 |
-| `task docker:logs`           | Follow local API + client + admin container logs                                                               |
+| `task k8s:up`                | Local Kubernetes: ingress, images, Secrets, Postgres, API, client, admin                                       |
+| `task k8s:sync`              | Rebuild images, refresh Secrets, roll out API + client + admin                                                 |
+| `task k8s:down`              | Remove local releases (keeps the Postgres volume)                                                              |
+| `task k8s:logs`              | Follow local API + client + admin pod logs                                                                     |
+| `task k8s:ps`                | Local pods, services, and ingresses                                                                            |
 | `task api:dev`               | API watch mode on the host (`PORT`, default 3000)                                                              |
 | `task admin:dev`             | Admin Vite app on port 4000                                                                                    |
 | `task api:debug`             | Host API watch + inspector on 9229                                                                             |
@@ -90,7 +95,7 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 | `task infra:plan`            | `terraform` fmt/validate/plan in `infra/envs/$ENV` (default develop)                                           |
 | `task infra:apply`           | Apply plan file if present, else interactive apply (`ENV=…`)                                                   |
 | `task deploy`                | Apply Terraform, deploy API, then client+admin in parallel (`ENV=…`)                                           |
-| `task db:up`                 | Start local Postgres only                                                                                      |
+| `task db:up`                 | Start local Postgres only (Helm release)                                                                       |
 | `task db:migrate`            | Apply Drizzle migrations                                                                                       |
 | `task etl -- <cmd>`          | MTG ETL CLI — see [`docs/etl/operations.md`](docs/etl/operations.md)                                           |
 | `task db:tunnel`             | SSM tunnel to RDS for `$ENV` (`localhost:15432`)                                                               |
@@ -103,7 +108,7 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 
 Pass `ENV=production` (or `ENV=develop`) on any infra/deploy task; CI uses the same commands. List all tasks with `task --list`.
 
-Local Docker stack: `task docker:up` brings up Postgres, API (:3000), client (:5173), and admin (:4000). Details in [`apps/api/README.md`](apps/api/README.md).
+Local stack: `task k8s:up` deploys Postgres, API (:3000), client (:5173), and admin (:4000) to Docker Desktop's built-in Kubernetes with Helm. It needs Docker Desktop with Kubernetes enabled (kubectl context `docker-desktop`) and [Helm](https://helm.sh/) (`brew install helm`). Details in [`apps/api/README.md`](apps/api/README.md). The Compose stack (`task docker:up`) is deprecated.
 
 #### Connect a local Postgres client to develop RDS
 

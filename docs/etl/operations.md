@@ -8,7 +8,7 @@ task db:up
 task db:migrate
 ```
 
-API/admin syncs use the API’s `DATABASE_URL` (Compose or `apps/api/.env`). The API loads the compiled `etl` package (`apps/etl/dist`). Nest `--watch` does not rebuild it — run `task etl:build` (or `task docker:up`) after changing pipeline source, then restart the API. The CLI (`task etl -- …`) runs TypeScript via `tsx` and does not need that rebuild.
+API/admin syncs use the API’s `DATABASE_URL` (the local cluster release or `apps/api/.env`). The API loads the compiled `etl` package (`apps/etl/dist`). Nest `--watch` does not rebuild it — run `task etl:build` and restart a host API, or `task k8s:sync` to rebuild and roll the cluster API, after changing pipeline source. The CLI (`task etl -- …`) runs TypeScript via `tsx` and does not need that rebuild.
 
 ## CLI (report / break-glass)
 
@@ -38,7 +38,7 @@ Useful flags (global): `--limit`, `--dry-run`, `--verbose`, `--store-raw` / `--n
 
 ## Admin UI
 
-1. Open the admin app (`http://localhost:4000` via Compose).
+1. Open the admin app (`http://localhost:4000` via `task k8s:up` or `task admin:dev`).
 2. Ensure Clerk `publicMetadata.role === "admin"`.
 3. On **ETL syncs**, choose Catalog and/or Enrichment → **Start sync**.
 4. List and detail pages update live over WebSocket (see [streaming](streaming.md)).
@@ -77,7 +77,7 @@ task db:purge-non-playable     # counts only
 task db:purge-non-playable -- apply
 ```
 
-Printings still listed on a deck stay (`RESTRICT`). Pass `local` to hit Compose instead of RDS (`task db:purge-non-playable -- local`).
+Printings still listed on a deck stay (`RESTRICT`). Pass `local` to hit local Postgres (`localhost:5432`) instead of RDS (`task db:purge-non-playable -- local`).
 
 ## One-off: purge digital-only sets
 
@@ -89,7 +89,7 @@ task db:purge-digital       # counts only
 task db:purge-digital -- apply
 ```
 
-Printings still listed on a deck (or as a commander) stay. Pass `local` for Compose Postgres.
+Printings still listed on a deck (or as a commander) stay. Pass `local` for local Postgres.
 
 ## Env knobs
 

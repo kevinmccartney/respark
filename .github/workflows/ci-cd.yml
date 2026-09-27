@@ -105,6 +105,7 @@ jobs:
               - '.husky/**'
               - 'commitlint.config.mjs'
               - 'docker-compose.yml'
+              - 'deploy/**'
               - 'tech-debt-analysis-prompt.md'
               - '.prettierignore.shared'
               - 'scripts/**'

@@ -16,7 +16,7 @@
 -- Or via Task (tunnel first for develop RDS):
 --   task db:purge-digital            # dry-run
 --   task db:purge-digital -- apply
---   task db:purge-digital -- local   # Compose Postgres
+--   task db:purge-digital -- local   # local Postgres
 --
 -- Preview always. Deletes only when psql is invoked with `-v apply=1`.
 

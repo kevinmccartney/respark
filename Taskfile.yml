@@ -12,6 +12,11 @@ vars:
   API_IMAGE_TAG: latest
   AWS_REGION: us-east-1
   COMPOSE_FILE: docker-compose.yml
+  # Local stack runs on Docker Desktop's built-in Kubernetes (kubeadm mode).
+  K8S_CONTEXT: docker-desktop
+  K8S_NAMESPACE: respark
+  K8S_LOCAL_VALUES: deploy/envs/local
+  TRAEFIK_CHART_VERSION: 41.6.0
   # Set DOCKER_BUILDX=1 in CI to build+push linux/arm64 via buildx (native on ubuntu-24.04-arm).
   DOCKER_BUILDX: '0'
   # Local interactive apply unless set (e.g. TF_APPLY_FLAGS=-auto-approve).
@@ -61,10 +66,11 @@ tasks:
       - terraform fmt -check -recursive infra/
 
   lint:
-    desc: Run ESLint + terraform validate
+    desc: Run ESLint + terraform validate + helm lint
     deps:
       - lint:eslint
       - infra:validate
+      - k8s:lint
 
   lint:eslint:
     desc: Lint JS/TS with ESLint
@@ -146,8 +152,124 @@ tasks:
     cmds:
       - npm run build -w api
 
+  k8s:check:
+    desc: Fail unless kubectl targets Docker Desktop's local Kubernetes
+    run: once
+    silent: true
+    cmds:
+      - |
+        set -euo pipefail
+        ctx="$(kubectl config current-context 2>/dev/null || true)"
+        if [ "$ctx" != "{{.K8S_CONTEXT}}" ]; then
+          echo "kubectl context is '${ctx:-<none>}', expected '{{.K8S_CONTEXT}}'." >&2
+          echo "Enable Kubernetes in Docker Desktop, then: kubectl config use-context {{.K8S_CONTEXT}}" >&2
+          exit 1
+        fi
+        if ! kubectl get node docker-desktop >/dev/null 2>&1; then
+          echo "No 'docker-desktop' node. Use Docker Desktop's kubeadm cluster; kind mode cannot see locally built images." >&2
+          exit 1
+        fi
+
+  k8s:up:
+    desc: Start the local stack on Docker Desktop Kubernetes (Traefik + Postgres + API + client + admin)
+    cmds:
+      - task: k8s:check
+      - task: k8s:ingress
+      - task: k8s:sync
+
+  k8s:sync:
+    desc: Rebuild local images, refresh Secrets from .env files, and roll out the app releases
+    cmds:
+      - task: k8s:check
+      - task: k8s:images
+      - task: k8s:secrets
+      - task: db:up
+      - task: k8s:deploy
+
+  k8s:ingress:
+    desc: Install the Traefik ingress controller into the local cluster
+    cmds:
+      - task: k8s:check
+      - >-
+        helm upgrade --install traefik traefik
+        --repo https://traefik.github.io/charts
+        --version {{.TRAEFIK_CHART_VERSION}}
+        --namespace traefik --create-namespace --wait
+
+  k8s:images:
+    desc: Build the local dev images into Docker Desktop's image store
+    deps:
+      - schemas:build
+      - scryfall-query:build
+      - ui:build
+      - etl:build
+    cmds:
+      - docker build -f apps/api/Dockerfile.dev -t respark-api-dev:local .
+      - docker build -f apps/client/Dockerfile.dev -t respark-client-dev:local .
+      - docker build -f apps/admin/Dockerfile.dev -t respark-admin-dev:local .
+
+  k8s:secrets:
+    desc: Load apps/*/.env + .env.local into local cluster Secrets (re-run k8s:sync after editing them)
+    env:
+      K8S_NAMESPACE: '{{.K8S_NAMESPACE}}'
+    cmds:
+      - task: k8s:check
+      - bash scripts/k8s-local-secrets.sh
+
+  k8s:deploy:
+    internal: true
+    vars:
+      # Changes on every run so pods restart onto the freshly built :local images.
+      RESTARTED_AT:
+        sh: date +%s
+    cmds:
+      - task: k8s:check
+      - >-
+        helm upgrade --install respark-api deploy/charts/respark-api
+        --namespace {{.K8S_NAMESPACE}} -f {{.K8S_LOCAL_VALUES}}/api.yaml
+        --set-string podAnnotations.respark/restarted-at={{.RESTARTED_AT}} --wait
+      - >-
+        helm upgrade --install respark-client deploy/charts/respark-web
+        --namespace {{.K8S_NAMESPACE}} -f {{.K8S_LOCAL_VALUES}}/client.yaml
+        --set-string podAnnotations.respark/restarted-at={{.RESTARTED_AT}} --wait
+      - >-
+        helm upgrade --install respark-admin deploy/charts/respark-web
+        --namespace {{.K8S_NAMESPACE}} -f {{.K8S_LOCAL_VALUES}}/admin.yaml
+        --set-string podAnnotations.respark/restarted-at={{.RESTARTED_AT}} --wait
+
+  k8s:down:
+    desc: Remove the local app releases (Postgres data volume is preserved)
+    cmds:
+      - task: k8s:check
+      - >-
+        helm uninstall respark-admin respark-client respark-api respark-postgres
+        --namespace {{.K8S_NAMESPACE}} --ignore-not-found
+
+  k8s:logs:
+    desc: Follow local API + client + admin pod logs
+    cmds:
+      - task: k8s:check
+      - >-
+        kubectl logs -f --namespace {{.K8S_NAMESPACE}}
+        -l 'app.kubernetes.io/name in (respark-api,respark-web)'
+        --all-containers --prefix --max-log-requests 10
+
+  k8s:ps:
+    desc: Show local pods, services, and ingresses
+    cmds:
+      - task: k8s:check
+      - kubectl get pods,svc,ingress --namespace {{.K8S_NAMESPACE}}
+
+  k8s:lint:
+    desc: Lint the Helm charts against the local values
+    cmds:
+      - helm lint deploy/charts/respark-postgres -f {{.K8S_LOCAL_VALUES}}/postgres.yaml
+      - helm lint deploy/charts/respark-api -f {{.K8S_LOCAL_VALUES}}/api.yaml
+      - helm lint deploy/charts/respark-web -f {{.K8S_LOCAL_VALUES}}/client.yaml
+      - helm lint deploy/charts/respark-web -f {{.K8S_LOCAL_VALUES}}/admin.yaml
+
   docker:up:
-    desc: Start local app stack via Docker Compose
+    desc: 'Deprecated: start the old Docker Compose stack (use k8s:up)'
     deps:
       - schemas:build
       - scryfall-query:build
@@ -157,34 +279,40 @@ tasks:
       - docker compose -f {{.COMPOSE_FILE}} up -d --build --wait
 
   docker:down:
-    desc: Stop the local Compose stack (DB volume is preserved)
+    desc: 'Deprecated: stop the old Compose stack (use k8s:down)'
     cmds:
       - docker compose -f {{.COMPOSE_FILE}} down
 
   docker:logs:
-    desc: Follow local API + client + admin container logs
+    desc: 'Deprecated: follow Compose logs (use k8s:logs)'
     cmds:
       - docker compose -f {{.COMPOSE_FILE}} logs -f api client admin
 
   docker:ps:
-    desc: Show local Compose service status
+    desc: 'Deprecated: show Compose status (use k8s:ps)'
     cmds:
       - docker compose -f {{.COMPOSE_FILE}} ps
 
   db:up:
-    desc: Start the local Postgres container and wait until it accepts connections
+    desc: Install/start local Postgres on Docker Desktop Kubernetes and wait until it accepts connections
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} up -d --wait db
+      - task: k8s:check
+      - >-
+        helm upgrade --install respark-postgres deploy/charts/respark-postgres
+        --namespace {{.K8S_NAMESPACE}} --create-namespace
+        -f {{.K8S_LOCAL_VALUES}}/postgres.yaml --wait
 
   db:down:
-    desc: Stop the local Postgres container (data volume is preserved)
+    desc: Stop local Postgres (data volume is preserved)
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} stop db
+      - task: k8s:check
+      - helm uninstall respark-postgres --namespace {{.K8S_NAMESPACE}} --ignore-not-found
 
   db:reset:
-    desc: Destroy the local Compose stack and the Postgres data volume
+    desc: Remove the local stack and delete the Postgres data volume
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} down -v
+      - task: k8s:down
+      - kubectl delete pvc data-respark-postgres-0 --namespace {{.K8S_NAMESPACE}} --ignore-not-found
 
   db:generate:
     desc: Generate a SQL migration from the Drizzle schema
@@ -290,7 +418,7 @@ tasks:
       - infra:validate
 
   shared:ci:
-    desc: Format-check and lint repo-root, docs, and scripts
+    desc: Format-check and lint repo-root, docs, scripts, and Helm charts
     cmds:
       - |
         npx prettier --check . \
@@ -298,6 +426,7 @@ tasks:
           --ignore-path .prettierignore \
           --ignore-path .prettierignore.shared
       - npx eslint scripts commitlint.config.mjs eslint.config.mjs
+      - task: k8s:lint
 
   docs:diagrams:
     desc: Render docs/**/*.mmd Mermaid sources to sibling .svg files

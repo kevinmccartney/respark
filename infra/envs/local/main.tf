@@ -10,7 +10,7 @@ locals {
   }
 }
 
-# Laptop Compose API identity. Access keys are created outside Terraform
+# Laptop API identity. Access keys are created outside Terraform
 # (`task api:local-aws:write`) so secrets never land in state.
 resource "aws_iam_user" "api" {
   name = local.name_prefix

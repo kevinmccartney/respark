@@ -1,0 +1,22 @@
+# Local values for the respark-client release (respark-web chart, Vite dev server).
+image:
+  repository: respark-client-dev
+  tag: local
+  pullPolicy: Never
+
+containerPort: 5173
+
+env:
+  # The browser calls the API on the host, not the in-cluster Service name.
+  VITE_API_URL: http://localhost:3000
+
+# apps/client/.env + .env.local (VITE_CLERK_PUBLISHABLE_KEY), written by `task k8s:secrets`.
+envFromSecret: respark-client-env
+
+service:
+  type: LoadBalancer
+  port: 5173
+
+ingress:
+  enabled: true
+  host: respark.localhost

@@ -1,8 +1,10 @@
 # respark API (NestJS)
 
-## Local dev (Docker Compose)
+## Local dev (Kubernetes)
 
-Preferred path: Postgres + API + client + admin in Compose.
+Preferred path: Postgres + API + client + admin as Helm releases on Docker Desktop's built-in Kubernetes. Charts live in [`deploy/charts/`](../../deploy/charts/), local values in [`deploy/envs/local/`](../../deploy/envs/local/).
+
+Prerequisites (one-time): Docker Desktop → Settings → Kubernetes → **Enable Kubernetes** (default kubeadm cluster), `kubectl config use-context docker-desktop`, and `brew install helm`.
 
 1. Copy `apps/api/.env.example` → `apps/api/.env` and set `CLERK_SECRET_KEY` (and optionally `CLERK_WEBHOOK_SIGNING_SECRET`).
 2. Copy `apps/client/.env.example` → `apps/client/.env.local` and set `VITE_CLERK_PUBLISHABLE_KEY`.
@@ -10,26 +12,37 @@ Preferred path: Postgres + API + client + admin in Compose.
 
 ```bash
 # from repo root
-task docker:up      # builds Dockerfiles, starts db + api + client + admin, migrates on boot
-task docker:logs    # follow API + client + admin logs
+task k8s:up      # Traefik ingress, dev images, Secrets from .env files, Postgres, API, client, admin
+task k8s:logs    # follow API + client + admin logs
+task k8s:ps      # pods, services, ingresses
 ```
 
 - Client: http://localhost:5173
 - Admin: http://localhost:4000
 - API: http://localhost:3000
 
-Compose overrides the API `DATABASE_URL` to `postgres://respark:respark@db:5432/respark` so the container reaches Postgres on the Compose network (your `.env` can keep `localhost` for host-side tools like Drizzle Studio). The client and admin containers get `VITE_API_URL=http://localhost:3000` because the browser runs on your machine, not inside the Compose network.
+Docker Desktop publishes LoadBalancer Services on localhost, so the ports match the old Compose stack. The same apps are also routed through the Traefik ingress at http://respark.localhost, http://admin.respark.localhost, and http://api.respark.localhost, which is the path develop and production use.
 
-`RUN_MIGRATIONS=true` is set on the API service, so a fresh DB volume gets schema on first boot. `apps/api/src`, `apps/client/src`, and `apps/admin/src` are bind-mounted; Nest/Vite reload on save. The API also mounts the repo root `package.json` so `GET /info` can read the platform version. API inspector is on **9229** (`start:debug`).
+`task k8s:up` fails fast unless kubectl's current context is `docker-desktop`, so it can never deploy to a remote cluster. The API release sets `DATABASE_URL` to the in-cluster `respark-postgres` Service and `RUN_MIGRATIONS=true`, so a fresh volume gets schema on first boot. Everything else comes from `apps/api/.env` and `.env.local` (`.env.local` wins), loaded into the `respark-api-env` Secret. The client and admin get `VITE_API_URL=http://localhost:3000` because the browser runs on your machine. API inspector is on **9229** (`start:debug`).
+
+Source is baked into the dev images, not mounted, so saving a file does **not** reload the cluster. After code or `.env` changes:
 
 ```bash
-task docker:down    # stop stack, keep DB volume
-task db:reset       # wipe volume too
+task k8s:sync    # rebuild images, refresh Secrets, roll out API + client + admin
 ```
+
+For tight edit–reload loops, run the app you are changing on the host (next section) against the cluster's Postgres.
+
+```bash
+task k8s:down    # remove releases, keep the Postgres volume
+task db:reset    # also delete the Postgres volume
+```
+
+The old Compose stack (`task docker:up`) still works but is deprecated.
 
 ## Local dev (Node on the host)
 
-Same env files as above. Run only Postgres in Compose, API with Nest on the host:
+Same env files as above. Run only Postgres in the local cluster, API with Nest on the host:
 
 ```bash
 task db:up && task db:migrate
@@ -44,20 +57,20 @@ Logs are **JSON** in production (`NODE_ENV=production`). Local dev uses pretty-p
 
 ## Database (Postgres + Drizzle)
 
-Local Postgres is the `db` service in `docker-compose.yml` (the `pgvector` image, so embeddings are possible later without swapping images). The API connects via **`DATABASE_URL`**.
+Local Postgres is the `respark-postgres` Helm release (the `pgvector` image, so embeddings are possible later without swapping images), reachable from the host on `localhost:5432`. The API connects via **`DATABASE_URL`**.
 
 ```bash
 task db:up        # start Postgres only
 task db:migrate   # apply pending migrations (host → localhost:5432)
 task db:studio    # browse data in Drizzle Studio
-task db:reset     # destroy the Compose stack and its data volume
+task db:reset     # remove the local stack and its data volume
 ```
 
 Schema lives in `src/db/schema/` (one file per domain) and generated SQL in `drizzle/`. After changing the schema:
 
 ```bash
 task db:generate  # writes a new migration to drizzle/
-task db:migrate   # or restart the Compose API (migrate-on-boot)
+task db:migrate   # or `task k8s:sync` (the cluster API migrates on boot)
 ```
 
 Current tables:
@@ -68,7 +81,7 @@ Current tables:
 - **`GET /cards/type-suggestions`** — legacy type-token autocomplete (unused by current catalog UI).
 - **`GET /cards/:id`** — card detail plus printings (set, collector number, images).
 - **`GET/POST /decks`**, **`GET/PATCH/DELETE /decks/:id`**, **`POST /decks/:id/import`**, **`POST/PATCH/DELETE /decks/:id/cards…`** — deck CRUD + Moxfield-style list import (incl. `SIDEBOARD:` / `SB:`; `COMMANDER:` and copies of the current commander are ignored) + card lines (`POST` accepts `cardId`; deck `PATCH` applies any provided fields — `name`, `description`, `format`; card `PATCH` accepts `quantity`, `printingId`, `foil`, and/or `sideboard`; `foil: true` is rejected when the printing’s `finishes` are known and lack `foil`/`etched`; etched and foil-only printings are always foil; `hasFoil` means the foil flag can be toggled; lines are unique per printing + foil + board).
-- **Chat** — player WebSocket `/chat/ws` (Clerk `?token=`) plus `GET /chat/conversations` (list), `/latest`, and `/:id` for thread reload. Sticky `deckId` is optional context (omit / set / clear). Tools call decks/cards services; the model is Bedrock. Local Compose authenticates as IAM user `respark-local-api` (`task api:local-aws:write`). Develop uses the API EC2 instance role. See [`docs/ai-chat.md`](../../docs/ai-chat.md).
+- **Chat** — player WebSocket `/chat/ws` (Clerk `?token=`) plus `GET /chat/conversations` (list), `/latest`, and `/:id` for thread reload. Sticky `deckId` is optional context (omit / set / clear). Tools call decks/cards services; the model is Bedrock. The local API authenticates as IAM user `respark-local-api` (`task api:local-aws:write`). Develop uses the API EC2 instance role. See [`docs/ai-chat.md`](../../docs/ai-chat.md).
 - **Pipeline schemas** — `raw`, `catalog`, `market`, `ops`, plus `ops.etl_sync` / `ops.etl_job_run` for ETL sync tracking. Admin starts syncs in-process via the `etl` lib and streams events on `/admin/etl-syncs/ws`. See [`apps/etl/README.md`](../etl/README.md) and `task etl -- --help`.
 
 ## Clerk webhooks
@@ -96,11 +109,11 @@ clerk webhooks listen --token "$(clerk webhooks token)" --forward-to http://loca
 
 ### Migrations in deployed environments
 
-Deployed containers run with **`RUN_MIGRATIONS=true`** and apply pending migrations on boot (the `drizzle/` folder ships in the image; `drizzle-orm` includes the migrator, so `drizzle-kit` is not installed at runtime). This is safe for the current single instance — revisit if the API ever scales out. Local Compose sets the same flag; host-side `task api:dev` leaves it unset so `task db:migrate` stays the explicit step.
+Deployed containers run with **`RUN_MIGRATIONS=true`** and apply pending migrations on boot (the `drizzle/` folder ships in the image; `drizzle-orm` includes the migrator, so `drizzle-kit` is not installed at runtime). This is safe for the current single instance — revisit if the API ever scales out. The local cluster API sets the same flag; host-side `task api:dev` leaves it unset so `task db:migrate` stays the explicit step.
 
 ## VS Code debug
 
-**Compose API:** set breakpoints and use **API: attach (port 9229)** — Compose already runs `start:debug`.
+**Cluster API:** set breakpoints and use **API: attach (port 9229)** — the local release already runs `start:debug` and publishes 9229 on localhost.
 
 **Host API:** **Run and Debug → API: debug (launch)**, or `task api:debug` then attach.
 

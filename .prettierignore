@@ -13,3 +13,5 @@ yarn.lock
 reports
 apps/**/dist
 *.sh
+# Go templates, not YAML
+deploy/charts/*/templates/

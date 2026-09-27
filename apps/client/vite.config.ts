@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      // Reachable from the host when Vite runs inside Compose.
+      // Reachable from the host when Vite runs in a container (local Kubernetes).
       host: true,
       port: 5173,
     },

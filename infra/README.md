@@ -7,7 +7,7 @@ infra/
 ├── envs/
 │   ├── develop/      # Pre-prod (dev.*.kevinmccartney.is)
 │   ├── production/   # Prod (respark / admin.respark / api.respark)
-│   └── local/        # Laptop Compose IAM only
+│   └── local/        # Laptop API IAM only
 └── modules/
     ├── api/
     ├── db/

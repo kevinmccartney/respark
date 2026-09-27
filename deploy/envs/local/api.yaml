@@ -1,0 +1,32 @@
+# Local values for the respark-api release (Docker Desktop Kubernetes).
+image:
+  repository: respark-api-dev
+  tag: local
+  # Built into Docker Desktop's image store by `task k8s:sync`; never pulled.
+  pullPolicy: Never
+
+command: ['npm', 'run', 'start:debug']
+
+env:
+  # In-cluster Service name; overrides localhost from apps/api/.env.
+  DATABASE_URL: postgres://respark:respark@respark-postgres:5432/respark
+  # Apply drizzle/ on boot so a fresh volume is usable immediately.
+  RUN_MIGRATIONS: 'true'
+
+# apps/api/.env + .env.local (Clerk, Bedrock IAM keys), written by `task k8s:secrets`.
+envFromSecret: respark-api-env
+
+service:
+  # localhost:3000 (API) and localhost:9229 (VS Code "API: attach").
+  type: LoadBalancer
+
+debug:
+  enabled: true
+
+waitForDatabase:
+  enabled: true
+  host: respark-postgres
+
+ingress:
+  enabled: true
+  host: api.respark.localhost

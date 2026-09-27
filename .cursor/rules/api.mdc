@@ -1,5 +1,5 @@
 ---
-description: NestJS API, Drizzle, Clerk backend, and local Compose conventions
+description: NestJS API, Drizzle, Clerk backend, and local Kubernetes conventions
 globs: apps/api/**
 alwaysApply: false
 ---
@@ -17,7 +17,7 @@ Package README: [`apps/api/README.md`](../../apps/api/README.md). ETL that the A
 
 - Dev: `task api:dev` / `task api:debug`
 - Build: `task api:build` (depends on `etl:build`)
-- Local stack: `task docker:up`
+- Local stack: `task k8s:up` (Helm on Docker Desktop Kubernetes; `task k8s:sync` after code changes). Compose is deprecated.
 - Deployed DB: `task db:tunnel` + `task db:url` (never open RDS publicly)
 
 ## Conventions

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: respark-web
+description: Respark web app (client or admin); one release per app
+type: application
+version: 0.1.0

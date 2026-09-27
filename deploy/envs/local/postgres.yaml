@@ -1,0 +1,8 @@
+# Local values for the respark-postgres release (Docker Desktop Kubernetes).
+auth:
+  password: respark
+
+service:
+  # Docker Desktop binds LoadBalancer services to localhost, so host tools
+  # (task db:migrate, db:studio, the ETL CLI) reach Postgres on localhost:5432.
+  type: LoadBalancer

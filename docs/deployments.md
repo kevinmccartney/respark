@@ -123,6 +123,8 @@ All four models standardize on **Kubernetes + Helm** for the API (and for in-clu
 
 **Events** are omitted until the product needs a broker.
 
+**Local** runs the budget shape on Docker Desktop's built-in Kubernetes: the same charts from [`deploy/charts/`](../deploy/charts/) (API, web, Postgres) plus Traefik ingress, with dev values in [`deploy/envs/local/`](../deploy/envs/local/). Start it with `task k8s:up`.
+
 ### minimal: Helm on Raspberry Pi
 
 Existing Pi; install a lightweight cluster (e.g. k3s) over SSH, then `helm upgrade` the Respark charts. No cloud provision for compute.

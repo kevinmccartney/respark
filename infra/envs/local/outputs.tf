@@ -1,10 +1,10 @@
 output "api_user_name" {
-  description = "IAM user the local Compose API should authenticate as."
+  description = "IAM user the local API should authenticate as."
   value       = aws_iam_user.api.name
 }
 
 output "api_user_arn" {
-  description = "ARN of the local Compose API IAM user."
+  description = "ARN of the local API IAM user."
   value       = aws_iam_user.api.arn
 }
 

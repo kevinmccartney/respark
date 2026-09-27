@@ -1,3 +1,6 @@
+# DEPRECATED — use `task k8s:up` (Helm on Docker Desktop Kubernetes). Kept as a
+# fallback; do not run it alongside the local cluster (same localhost ports).
+#
 # Local development stack — Postgres + API + client + admin (watch mode).
 #
 #   task docker:up      # build + start

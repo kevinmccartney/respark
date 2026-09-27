@@ -57,17 +57,17 @@ task api:secrets:push ENV=production
 
 [`dorny/paths-filter`](https://github.com/dorny/paths-filter) maps the git diff to flags. `changes` depends only on `config` (not on format or release). Checkout SHA is `github.sha`.
 
-| Flag        | Paths                                                                                                                                                                |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `shared`    | `docs/**`, root markdown, `.github/**`, `.husky/**`, `commitlint.config.mjs`, `docker-compose.yml`, `.prettierignore.shared`, `scripts/**` except API deploy scripts |
-| `toolchain` | root `package.json`, `package-lock.json`, `Taskfile.yml`, `tsconfig*.json`, `eslint.config.mjs`, `.prettierrc.json`, `.prettierignore`                               |
-| `schemas`   | `packages/schemas/**`                                                                                                                                                |
-| `ui`        | `packages/ui/**`                                                                                                                                                     |
-| `etl`       | `apps/etl/**`                                                                                                                                                        |
-| `api`       | `apps/api/**`, API deploy scripts                                                                                                                                    |
-| `client`    | `apps/client/**`                                                                                                                                                     |
-| `admin`     | `apps/admin/**`                                                                                                                                                      |
-| `infra`     | `infra/**`, TF backend bootstrap script                                                                                                                              |
+| Flag        | Paths                                                                                                                                                                             |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shared`    | `docs/**`, root markdown, `.github/**`, `.husky/**`, `commitlint.config.mjs`, `docker-compose.yml`, `deploy/**`, `.prettierignore.shared`, `scripts/**` except API deploy scripts |
+| `toolchain` | root `package.json`, `package-lock.json`, `Taskfile.yml`, `tsconfig*.json`, `eslint.config.mjs`, `.prettierrc.json`, `.prettierignore`                                            |
+| `schemas`   | `packages/schemas/**`                                                                                                                                                             |
+| `ui`        | `packages/ui/**`                                                                                                                                                                  |
+| `etl`       | `apps/etl/**`                                                                                                                                                                     |
+| `api`       | `apps/api/**`, API deploy scripts                                                                                                                                                 |
+| `client`    | `apps/client/**`                                                                                                                                                                  |
+| `admin`     | `apps/admin/**`                                                                                                                                                                   |
+| `infra`     | `infra/**`, TF backend bootstrap script                                                                                                                                           |
 
 Job `if` (plus `workflow_dispatch` `force=true`, which sets every flag):
 
@@ -82,7 +82,7 @@ Job `if` (plus `workflow_dispatch` `force=true`, which sets every flag):
 | `admin`   | `admin` or `schemas` or `ui` or `toolchain`                                     |
 | `infra`   | `infra`                                                                         |
 
-`toolchain` fans out to every JS project so a lockfile or ESLint config change rebuilds consumers. `shared` does **not** fan out to apps; it runs `task shared:ci` (Prettier on `.` with [`.prettierignore.shared`](../.prettierignore.shared) skipping trees other `*:ci` jobs already check, plus ESLint on root/scripts).
+`toolchain` fans out to every JS project so a lockfile or ESLint config change rebuilds consumers. `shared` does **not** fan out to apps; it runs `task shared:ci` (Prettier on `.` with [`.prettierignore.shared`](../.prettierignore.shared) skipping trees other `*:ci` jobs already check, plus ESLint on root/scripts, plus `task k8s:lint` — `helm lint` of every chart in `deploy/charts/` with its local values; Helm is preinstalled on `ubuntu-latest`).
 
 Each project job is self-contained: checkout `changes.sha`, `task install`, `task <project>:ci`. Package jobs do not upload artifacts for app jobs — consumers still compile schemas/ui themselves. The package jobs still exist so a schemas-only lint failure fails the workflow even if a consumer `tsc` happens to pass.
 
@@ -154,7 +154,7 @@ terraform -chdir=infra/envs/develop init -migrate-state
 task infra:init ENV=production
 ```
 
-This creates `respark-tfstate` (S3) and `respark-tfstate-lock` (DynamoDB) in `us-east-1`. Each env’s `versions.tf` uses a distinct state key (`envs/develop/terraform.tfstate`, `envs/production/terraform.tfstate`, `envs/local/terraform.tfstate`). Laptop Compose IAM lives in [`infra/envs/local`](../infra/envs/local/README.md) (`task infra:apply ENV=local`) and is not a GitHub Environment.
+This creates `respark-tfstate` (S3) and `respark-tfstate-lock` (DynamoDB) in `us-east-1`. Each env’s `versions.tf` uses a distinct state key (`envs/develop/terraform.tfstate`, `envs/production/terraform.tfstate`, `envs/local/terraform.tfstate`). Laptop API IAM lives in [`infra/envs/local`](../infra/envs/local/README.md) (`task infra:apply ENV=local`) and is not a GitHub Environment.
 
 ### 2. GitHub Environments
 

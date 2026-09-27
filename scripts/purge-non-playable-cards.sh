@@ -53,7 +53,7 @@ PY
 
 if [[ "$USE_LOCAL" -eq 1 ]]; then
   DATABASE_URL="${DATABASE_URL:-postgres://respark:respark@localhost:5432/respark}"
-  TARGET="local Compose Postgres"
+  TARGET="local Postgres"
 else
   DATABASE_URL_PARAM="$(terraform -chdir="$TF_DIR" output -raw db_database_url_parameter)"
   SSM_URL="$(aws ssm get-parameter \

@@ -1,0 +1,45 @@
+replicaCount: 1
+
+image:
+  repository: respark-api
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Overrides the image CMD when set, e.g. ['npm', 'run', 'start:debug'].
+command: []
+
+containerPort: 3000
+
+# Plain env vars. Take precedence over keys in envFromSecret.
+env: {}
+
+# Secret holding the rest of the env (Clerk keys, AWS creds, DATABASE_URL, …).
+envFromSecret: ''
+
+podAnnotations: {}
+
+service:
+  type: ClusterIP
+  port: 3000
+
+# Node inspector (`nest start --debug 0.0.0.0:9229`).
+debug:
+  enabled: false
+  port: 9229
+
+# Init container that blocks until Postgres accepts connections.
+waitForDatabase:
+  enabled: false
+  image: pgvector/pgvector:pg17
+  host: ''
+  port: 5432
+
+ingress:
+  enabled: false
+  className: traefik
+  host: ''
+  annotations: {}
+  # Secret with the TLS cert for host; empty serves plain HTTP.
+  tlsSecretName: ''
+
+resources: {}

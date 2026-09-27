@@ -18,14 +18,14 @@ cp apps/admin/.env.example apps/admin/.env.local
 { "role": "admin" }
 ```
 
-4. Ensure the API is running with `CLERK_SECRET_KEY` and `DATABASE_URL` configured (`task api:dev` or Compose).
+4. Ensure the API is running with `CLERK_SECRET_KEY` and `DATABASE_URL` configured (`task api:dev` or the local cluster).
 
 ## Run
 
-Via Compose (with the rest of the stack):
+Via local Kubernetes (with the rest of the stack):
 
 ```bash
-task docker:up
+task k8s:up
 ```
 
 Or on the host only:

@@ -188,7 +188,7 @@ type ChatProvider = {
 
 Events: `text-delta`, `tool-call`, `tool-call-end`, `usage`, `stop`.
 
-Production: AWS SDK v3 `BedrockRuntimeClient` `ConverseStream` in `bedrock.provider.ts` as the **develop EC2 instance role**. Local Compose uses a dedicated IAM user (`respark-local-api`) from `infra/envs/local` — not the `terraform` operator user. Keys: `task api:local-aws:write` → `apps/api/.env.local`. `CHAT_PROVIDER=mock` is opt-in. CI evals use `ScriptedChatProvider`, not the live mock.
+Production: AWS SDK v3 `BedrockRuntimeClient` `ConverseStream` in `bedrock.provider.ts` as the **develop EC2 instance role**. The local API uses a dedicated IAM user (`respark-local-api`) from `infra/envs/local` — not the `terraform` operator user. Keys: `task api:local-aws:write` → `apps/api/.env.local`. `CHAT_PROVIDER=mock` is opt-in. CI evals use `ScriptedChatProvider`, not the live mock.
 
 **MVP model: Haiku 4.5** via the US inference profile (`us.anthropic.claude-haiku-4-5-20251001-v1:0`). On-demand foundation-model ids are rejected for this model. Quality bar is "ids from our catalog that pass identity + legality," which is mostly tools + gates. Model id is SSM / `BEDROCK_MODEL_ID` so we can switch to Sonnet without a code rewrite. Record the resolved id on every `chat.turn`.
 
@@ -208,7 +208,7 @@ One structured Pino object per turn: `event: 'chat.turn'` with `conversationId`,
 
 ## Infra (chat identities)
 
-- **Local** — IAM user `respark-local-api` (`infra/envs/local`). Keys in `apps/api/.env.local`, not Terraform state. Recreating Compose does not change this IAM policy.
+- **Local** — IAM user `respark-local-api` (`infra/envs/local`). Keys in `apps/api/.env.local`, not Terraform state. Redeploying the local API does not change this IAM policy.
 - **Develop** — API EC2 instance role (`respark-develop-api-ec2`) with the same Bedrock invoke policy. IMDS hop limit **2** so the container can use the instance profile.
 - Invoke policy covers foundation-model and inference-profile ARNs in every US CRIS destination Region (`us-east-1`, `us-east-2`, `us-west-2`), including model ids that end in `:0`. Haiku 4.5 also needs Marketplace `Subscribe` / `ViewSubscriptions` so Bedrock can complete the third-party model agreement.
 - **Production** — later; same pattern as develop.
@@ -218,10 +218,10 @@ One structured Pino object per turn: `event: 'chat.turn'` with `conversationId`,
 ## Local workflow
 
 ```text
-task docker:up                 # Postgres + API
+task k8s:up                    # Postgres + API + client + admin (local Kubernetes)
 task infra:apply ENV=local     # IAM user respark-local-api (once)
 task api:local-aws:write       # keys → apps/api/.env.local (gitignored)
-docker compose up -d api --force-recreate
+task k8s:sync                  # reload the API Secret and roll the pod
 header chat toggle (left of theme)
 watch Pino: chat.turn          # model is the Bedrock id; identity is respark-local-api
 ```

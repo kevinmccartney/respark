@@ -1,0 +1,22 @@
+# Local values for the respark-admin release (respark-web chart, Vite dev server).
+image:
+  repository: respark-admin-dev
+  tag: local
+  pullPolicy: Never
+
+containerPort: 4000
+
+env:
+  # The browser calls the API on the host, not the in-cluster Service name.
+  VITE_API_URL: http://localhost:3000
+
+# apps/admin/.env + .env.local (VITE_CLERK_PUBLISHABLE_KEY), written by `task k8s:secrets`.
+envFromSecret: respark-admin-env
+
+service:
+  type: LoadBalancer
+  port: 4000
+
+ingress:
+  enabled: true
+  host: admin.respark.localhost

@@ -1,0 +1,19 @@
+image:
+  # pgvector image so embeddings can be added later without swapping images
+  repository: pgvector/pgvector
+  tag: pg17
+  pullPolicy: IfNotPresent
+
+auth:
+  database: respark
+  username: respark
+  password: ''
+
+service:
+  type: ClusterIP
+  port: 5432
+
+persistence:
+  size: 5Gi
+  # Empty uses the cluster default StorageClass.
+  storageClassName: ''

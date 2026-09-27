@@ -1,0 +1,30 @@
+replicaCount: 1
+
+image:
+  repository: ''
+  tag: latest
+  pullPolicy: IfNotPresent
+
+containerPort: 8080
+
+# Plain env vars. Take precedence over keys in envFromSecret.
+env: {}
+
+# Secret holding the rest of the env (e.g. VITE_CLERK_PUBLISHABLE_KEY).
+envFromSecret: ''
+
+podAnnotations: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: traefik
+  host: ''
+  annotations: {}
+  # Secret with the TLS cert for host; empty serves plain HTTP.
+  tlsSecretName: ''
+
+resources: {}

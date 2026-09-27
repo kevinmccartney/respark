@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Create (or rotate) access keys for the local Compose API IAM user and write
-# them to gitignored apps/api/.env.local. Keys stay out of Terraform state.
+# Create (or rotate) access keys for the local API IAM user and write them to
+# gitignored apps/api/.env.local. Keys stay out of Terraform state.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -82,4 +82,4 @@ path.write_text(text)
 PY
 
 echo "Wrote AWS keys for $USER_NAME to $ENV_LOCAL"
-echo "Recreate the API container: docker compose up -d api --force-recreate"
+echo "Load them into the local cluster: task k8s:sync"
