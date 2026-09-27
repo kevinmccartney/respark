@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.0](https://github.com/kevinmccartney/respark/compare/v0.4.3...v0.5.0) (2026-09-27)
+
+### Features
+
+- lifetracker ([6145c92](https://github.com/kevinmccartney/respark/commit/6145c92323825eed7b2ea0322a883cf07af0f044))
+
 ## [0.4.3](https://github.com/kevinmccartney/respark/compare/v0.4.2...v0.4.3) (2026-09-24)
 
 ### Bug Fixes
