@@ -52,8 +52,9 @@ Add the admin origin to Clerk allowed origins / redirect URLs (same Clerk app as
 
 Signed-in chrome is a left nav (header only when signed out):
 
+- **Home** — `/` dashboard: catalog/user totals, latest ETL sync, recent syncs
 - **Catalog** — `/catalog/cards` (+ `/:id?printing=`), `/catalog/sets` (+ `/:id`), `/catalog/goodstuff` — browse + goodstuff policy; see [`docs/admin-catalog.md`](../../docs/admin-catalog.md)
-- **ETL Syncs** — `/` list + **Start sync** (catalog / enrichment → `POST /admin/etl-syncs`); live via WebSocket. `/syncs/:id` is sync detail (stages/jobs, live log, reconciliation, failed rows)
+- **ETL Syncs** — `/etl-syncs` list + **Start sync** (catalog / enrichment → `POST /admin/etl-syncs`); live via WebSocket. `/operations/etl-syncs/:id` is sync detail (stages/jobs, live log, reconciliation, failed rows);
 - **Users** — `/users/management` (list + detail via Clerk)
 
 WebSocket: `ws://<api>/admin/etl-syncs/ws?token=<clerk_jwt>` (admin role required). Subscribe with `{ "event": "subscribe", "data": { "channel": "list" } }` or `{ "channel": "sync", "syncId": "…" }`.

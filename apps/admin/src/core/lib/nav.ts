@@ -43,8 +43,8 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       {
         label: 'ETL Syncs',
-        to: '/',
-        match: (pathname) => pathname === '/' || pathname.startsWith('/syncs'),
+        to: '/operations/etl-syncs',
+        match: (pathname) => pathname.startsWith('/operations/etl-syncs'),
       },
     ],
   },

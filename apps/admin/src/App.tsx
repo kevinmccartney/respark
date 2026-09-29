@@ -6,6 +6,7 @@ import { CardDetailPage, CardsListPage, GoodstuffsPage } from '@respark-admin/ca
 import { AppShell } from '@respark-admin/core/components';
 import { NotFoundPage } from '@respark-admin/core/pages';
 import { SyncDetailPage, SyncsListPage } from '@respark-admin/etl-syncs/pages';
+import { HomePage } from '@respark-admin/home';
 import { SetDetailPage, SetsListPage } from '@respark-admin/sets/pages';
 import { UserDetailPage, UsersListPage } from '@respark-admin/users/pages';
 
@@ -25,12 +26,20 @@ export default function App() {
           path="/"
           element={
             <RequireAuth>
+              <HomePage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/operations/etl-syncs"
+          element={
+            <RequireAuth>
               <SyncsListPage />
             </RequireAuth>
           }
         />
         <Route
-          path="/syncs/:id"
+          path="/operations/etl-syncs/:id"
           element={
             <RequireAuth>
               <SyncDetailPage />
