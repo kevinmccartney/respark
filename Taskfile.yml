@@ -227,15 +227,18 @@ tasks:
       - >-
         helm upgrade --install respark-api deploy/charts/respark-api
         --namespace {{.K8S_NAMESPACE}} -f {{.K8S_LOCAL_VALUES}}/api.yaml
-        --set-string podAnnotations.respark/restarted-at={{.RESTARTED_AT}} --wait
+        --set-string podAnnotations.respark/restarted-at={{.RESTARTED_AT}}
+        --set-string repoRoot={{.ROOT_DIR}} --wait
       - >-
         helm upgrade --install respark-client deploy/charts/respark-web
         --namespace {{.K8S_NAMESPACE}} -f {{.K8S_LOCAL_VALUES}}/client.yaml
-        --set-string podAnnotations.respark/restarted-at={{.RESTARTED_AT}} --wait
+        --set-string podAnnotations.respark/restarted-at={{.RESTARTED_AT}}
+        --set-string repoRoot={{.ROOT_DIR}} --wait
       - >-
         helm upgrade --install respark-admin deploy/charts/respark-web
         --namespace {{.K8S_NAMESPACE}} -f {{.K8S_LOCAL_VALUES}}/admin.yaml
-        --set-string podAnnotations.respark/restarted-at={{.RESTARTED_AT}} --wait
+        --set-string podAnnotations.respark/restarted-at={{.RESTARTED_AT}}
+        --set-string repoRoot={{.ROOT_DIR}} --wait
 
   k8s:down:
     desc: Remove the local app releases (Postgres data volume is preserved)
@@ -264,9 +267,9 @@ tasks:
     desc: Lint the Helm charts against the local values
     cmds:
       - helm lint deploy/charts/respark-postgres -f {{.K8S_LOCAL_VALUES}}/postgres.yaml
-      - helm lint deploy/charts/respark-api -f {{.K8S_LOCAL_VALUES}}/api.yaml
-      - helm lint deploy/charts/respark-web -f {{.K8S_LOCAL_VALUES}}/client.yaml
-      - helm lint deploy/charts/respark-web -f {{.K8S_LOCAL_VALUES}}/admin.yaml
+      - helm lint deploy/charts/respark-api -f {{.K8S_LOCAL_VALUES}}/api.yaml --set-string repoRoot={{.ROOT_DIR}}
+      - helm lint deploy/charts/respark-web -f {{.K8S_LOCAL_VALUES}}/client.yaml --set-string repoRoot={{.ROOT_DIR}}
+      - helm lint deploy/charts/respark-web -f {{.K8S_LOCAL_VALUES}}/admin.yaml --set-string repoRoot={{.ROOT_DIR}}
 
   docker:up:
     desc: 'Deprecated: start the old Docker Compose stack (use k8s:up)'

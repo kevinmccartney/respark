@@ -42,7 +42,9 @@ spec:
             tcpSocket:
               port: http
             periodSeconds: 5
+          {{- include "respark-web.devVolumeMounts" . | nindent 10 }}
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+      {{- include "respark-web.devVolumes" . | nindent 6 }}

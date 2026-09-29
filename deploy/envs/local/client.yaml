@@ -13,6 +13,16 @@ env:
 # apps/client/.env + .env.local (VITE_CLERK_PUBLISHABLE_KEY), written by `task k8s:secrets`.
 envFromSecret: respark-client-env
 
+# Host source for Vite HMR; repoRoot is set by Task. Vite imports the shared
+# packages from src/, so edits there reload too.
+devMounts:
+  - apps/client/src
+  - apps/client/index.html
+  - apps/client/vite.config.ts
+  - packages/ui/src
+  - packages/schemas/src
+  - packages/scryfall-query/src
+
 service:
   type: LoadBalancer
   port: 5173

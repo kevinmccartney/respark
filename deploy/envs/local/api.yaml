@@ -23,6 +23,13 @@ service:
 debug:
   enabled: true
 
+# Host source for `nest --watch`; repoRoot is set by Task. Shared packages
+# (schemas, scryfall-query, etl) load from dist, so changes there need `task k8s:sync`.
+devMounts:
+  - package.json
+  - apps/api/src
+  - apps/api/drizzle
+
 waitForDatabase:
   enabled: true
   host: respark-postgres

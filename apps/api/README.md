@@ -25,13 +25,11 @@ Docker Desktop publishes LoadBalancer Services on localhost, so the ports match 
 
 `task k8s:up` fails fast unless kubectl's current context is `docker-desktop`, so it can never deploy to a remote cluster. The API release sets `DATABASE_URL` to the in-cluster `respark-postgres` Service and `RUN_MIGRATIONS=true`, so a fresh volume gets schema on first boot. Everything else comes from `apps/api/.env` and `.env.local` (`.env.local` wins), loaded into the `respark-api-env` Secret. The client and admin get `VITE_API_URL=http://localhost:3000` because the browser runs on your machine. API inspector is on **9229** (`start:debug`).
 
-Source is baked into the dev images, not mounted, so saving a file does **not** reload the cluster. After code or `.env` changes:
+Your working copy is `hostPath`-mounted into the pods (`devMounts` in [`deploy/envs/local/`](../../deploy/envs/local/)), so saving a file reloads like Compose did: `nest --watch` recompiles the API, and Vite hot-reloads the client and admin, including edits to `packages/ui`, `packages/schemas`, and `packages/scryfall-query` source. Rebuild when the change is outside those mounts — dependencies or `package-lock.json`, `.env` files, Dockerfiles, or shared packages the API loads compiled (`schemas`, `scryfall-query`, `etl`):
 
 ```bash
 task k8s:sync    # rebuild images, refresh Secrets, roll out API + client + admin
 ```
-
-For tight edit–reload loops, run the app you are changing on the host (next section) against the cluster's Postgres.
 
 ```bash
 task k8s:down    # remove releases, keep the Postgres volume

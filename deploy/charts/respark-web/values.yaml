@@ -19,6 +19,12 @@ service:
   type: ClusterIP
   port: 8080
 
+# Local dev only: hostPath-mount source from repoRoot (absolute host path) to
+# the same relative path under /repo in the container, for Vite HMR.
+# Never set on shared clusters.
+repoRoot: ''
+devMounts: []
+
 ingress:
   enabled: false
   className: traefik

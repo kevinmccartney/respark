@@ -62,7 +62,9 @@ spec:
               port: http
             periodSeconds: 5
             failureThreshold: 3
+          {{- include "respark-api.devVolumeMounts" . | nindent 10 }}
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+      {{- include "respark-api.devVolumes" . | nindent 6 }}

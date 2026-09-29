@@ -34,6 +34,12 @@ waitForDatabase:
   host: ''
   port: 5432
 
+# Local dev only: hostPath-mount source from repoRoot (absolute host path) to
+# the same relative path under /repo in the container, for watch-mode reload.
+# Never set on shared clusters.
+repoRoot: ''
+devMounts: []
+
 ingress:
   enabled: false
   className: traefik
