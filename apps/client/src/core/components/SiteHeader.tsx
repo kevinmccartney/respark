@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom';
 import { Button } from '@respark/ui/lib';
 import { ThemeToggle } from '@respark/ui/theme';
 
+import { DesktopNav, MobileNav } from './PrimaryNav';
+
 type SiteHeaderProps = {
   showAuthActions?: boolean;
   headerExtra?: ReactNode;
@@ -12,7 +14,7 @@ type SiteHeaderProps = {
 
 export const SiteHeader = ({ showAuthActions = true, headerExtra }: SiteHeaderProps) => (
   <header className="flex items-center justify-between gap-4 border-b bg-card px-5 py-3">
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-2 md:gap-4">
       <Show when="signed-in">
         <Link
           to="/home"
@@ -20,26 +22,7 @@ export const SiteHeader = ({ showAuthActions = true, headerExtra }: SiteHeaderPr
         >
           respark
         </Link>
-        <nav className="flex items-center gap-3" aria-label="Primary">
-          <Link
-            to="/search"
-            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Search
-          </Link>
-          <Link
-            to="/home"
-            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Decks
-          </Link>
-          <Link
-            to="/life"
-            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Life tracker
-          </Link>
-        </nav>
+        <DesktopNav />
       </Show>
       <Show when="signed-out">
         <Link to="/" className="font-heading text-base font-semibold tracking-tight text-secondary">
@@ -49,10 +32,10 @@ export const SiteHeader = ({ showAuthActions = true, headerExtra }: SiteHeaderPr
     </div>
     <div className="flex items-center gap-2">
       {headerExtra}
-      <ThemeToggle />
-      {showAuthActions ? (
-        <nav className="flex items-center gap-2" aria-label="Account">
-          <Show when="signed-out">
+      <Show when="signed-out">
+        <ThemeToggle />
+        {showAuthActions ? (
+          <nav className="flex items-center gap-2" aria-label="Account">
             <SignInButton mode="modal">
               <Button type="button" variant="outline">
                 Sign in
@@ -61,12 +44,20 @@ export const SiteHeader = ({ showAuthActions = true, headerExtra }: SiteHeaderPr
             <SignUpButton mode="modal">
               <Button type="button">Sign up</Button>
             </SignUpButton>
-          </Show>
-          <Show when="signed-in">
-            <UserButton />
-          </Show>
-        </nav>
-      ) : null}
+          </nav>
+        ) : null}
+      </Show>
+      <Show when="signed-in">
+        <div className="hidden items-center gap-2 md:flex">
+          <ThemeToggle />
+          {showAuthActions ? (
+            <nav className="flex items-center gap-2" aria-label="Account">
+              <UserButton />
+            </nav>
+          ) : null}
+        </div>
+        <MobileNav />
+      </Show>
     </div>
   </header>
 );

@@ -136,7 +136,7 @@ export const NewDeckPage = () => {
             ) : null}
 
             <div className="mt-2 flex justify-end gap-2">
-              <Button variant="outline" render={<Link to="/home" />}>
+              <Button variant="outline" nativeButton={false} render={<Link to="/home" />}>
                 Cancel
               </Button>
               <Button

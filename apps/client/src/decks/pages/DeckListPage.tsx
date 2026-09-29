@@ -130,7 +130,11 @@ export const DeckListPage = () => {
           </p>
         </div>
         <div className="flex w-full items-center gap-2 sm:w-auto sm:gap-3">
-          <Button className="hidden sm:inline-flex" render={<Link to="/decks/new" />}>
+          <Button
+            className="hidden sm:inline-flex"
+            nativeButton={false}
+            render={<Link to="/decks/new" />}
+          >
             New deck
           </Button>
           <Input
@@ -144,6 +148,7 @@ export const DeckListPage = () => {
           <Button
             className="shrink-0 sm:hidden"
             size="icon"
+            nativeButton={false}
             render={<Link to="/decks/new" />}
             aria-label="New deck"
             title="New deck"
