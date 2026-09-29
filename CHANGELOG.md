@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/kevinmccartney/respark/compare/v0.5.0...v0.6.0) (2026-09-29)
+
+### Features
+
+- **client:** homepage ([bf628a6](https://github.com/kevinmccartney/respark/commit/bf628a6d4a9c4fd9d9166e284697163061d15b3f))
+- nav rework ([292b1be](https://github.com/kevinmccartney/respark/commit/292b1bec54abea0f20cd3bb4fb3b709381ef6599))
+
 ## [0.5.0](https://github.com/kevinmccartney/respark/compare/v0.4.3...v0.5.0) (2026-09-27)
 
 ### Features
