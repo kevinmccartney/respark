@@ -43,7 +43,7 @@ type ChatSend = {
     deckId?: string | null;
     cardId?: string | null;
     view?: {
-      area: 'home' | 'search' | 'card' | 'deck' | 'new-deck' | 'other';
+      area: 'home' | 'decks' | 'search' | 'card' | 'deck' | 'new-deck' | 'other';
       deckId?: string;
       cardId?: string;
       scryfall?: string;

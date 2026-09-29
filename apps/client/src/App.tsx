@@ -1,11 +1,12 @@
 import { Show } from '@clerk/react';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 
-import { GuestOnly, RequireAuth } from '@respark-client/auth';
+import { RequireAuth } from '@respark-client/auth';
 import { CardDetailPage, SearchPage } from '@respark-client/cards';
 import { ChatSessionProvider, ChatToggle, GlobalChat } from '@respark-client/chat';
 import { AppShell, NotFoundPage, WelcomePage, type AppRouteHandle } from '@respark-client/core';
 import { DeckDetailPage, DeckListPage, NewDeckPage } from '@respark-client/decks';
+import { HomePage } from '@respark-client/home';
 import { LifeTrackerPage } from '@respark-client/life';
 
 const searchHandle = { hasPagination: true } satisfies AppRouteHandle;
@@ -30,13 +31,19 @@ export const router = createBrowserRouter([
       {
         path: '/',
         element: (
-          <GuestOnly>
-            <WelcomePage />
-          </GuestOnly>
+          <>
+            <Show when="signed-out">
+              <WelcomePage />
+            </Show>
+            <Show when="signed-in">
+              <HomePage />
+            </Show>
+          </>
         ),
       },
+      { path: '/home', element: <Navigate to="/" replace /> },
       {
-        path: '/home',
+        path: '/decks',
         element: (
           <RequireAuth>
             <DeckListPage />

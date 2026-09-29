@@ -10,7 +10,8 @@ const cardId = '00000000-0000-4000-8000-000000000002';
 
 describe('chatViewFromLocation', () => {
   it('maps signed-in routes', () => {
-    expect(chatViewFromLocation('/home')).toEqual({ area: 'home' });
+    expect(chatViewFromLocation('/')).toEqual({ area: 'home' });
+    expect(chatViewFromLocation('/decks')).toEqual({ area: 'decks' });
     expect(chatViewFromLocation('/search')).toEqual({ area: 'search' });
     expect(chatViewFromLocation('/search', '?scryfall=t:creature+id:g')).toEqual({
       area: 'search',

@@ -28,7 +28,7 @@ type NavSection = { label: string; items: NavItem[] };
 
 const NAV_SECTIONS: NavSection[] = [
   { label: 'Play', items: [{ label: 'Life tracker', to: '/life', match: ['/life'] }] },
-  { label: 'Brew', items: [{ label: 'Decks', to: '/home', match: ['/home', '/decks'] }] },
+  { label: 'Brew', items: [{ label: 'Decks', to: '/decks', match: ['/decks'] }] },
   { label: 'Catalog', items: [{ label: 'Cards', to: '/search', match: ['/search', '/cards'] }] },
 ];
 

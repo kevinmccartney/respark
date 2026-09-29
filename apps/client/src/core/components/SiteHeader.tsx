@@ -16,10 +16,7 @@ export const SiteHeader = ({ showAuthActions = true, headerExtra }: SiteHeaderPr
   <header className="flex items-center justify-between gap-4 border-b bg-card px-5 py-3">
     <div className="flex items-center gap-2 md:gap-4">
       <Show when="signed-in">
-        <Link
-          to="/home"
-          className="font-heading text-base font-semibold tracking-tight text-chart-1"
-        >
+        <Link to="/" className="font-heading text-base font-semibold tracking-tight text-chart-1">
           respark
         </Link>
         <DesktopNav />

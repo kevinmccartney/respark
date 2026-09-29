@@ -1,1 +1,1 @@
-export { GuestOnly, RequireAuth } from './components/gates';
+export { RequireAuth } from './components/gates';

@@ -21,6 +21,7 @@ export type {
   DeckViewMode,
 } from './types';
 export { useCreateDeck, useDeck, useDeckDetail, useDecks, useDeleteDeck } from './hooks';
+export { formatRelativeTime } from './lib/format';
 export { DeckDetailPage } from './pages/DeckDetailPage';
 export { DeckListPage } from './pages/DeckListPage';
 export { NewDeckPage } from './pages/NewDeckPage';

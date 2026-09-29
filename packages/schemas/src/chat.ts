@@ -15,7 +15,15 @@ export const LOOKUP_COMBOS_QUERY_CAP = 8;
 export const LOOKUP_COMBOS_DESCRIPTION_MAX = 400;
 export const LOOKUP_COMBOS_QUERY_MAX = 200;
 
-export const chatViewAreaSchema = z.enum(['home', 'search', 'card', 'deck', 'new-deck', 'other']);
+export const chatViewAreaSchema = z.enum([
+  'home',
+  'decks',
+  'search',
+  'card',
+  'deck',
+  'new-deck',
+  'other',
+]);
 
 export type ChatViewArea = z.infer<typeof chatViewAreaSchema>;
 
@@ -34,7 +42,8 @@ export const chatViewFromLocation = (pathname: string, search = ''): ChatView =>
   const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   const scryfallRaw = params.get('scryfall')?.trim();
   const scryfall = scryfallRaw ? scryfallRaw.slice(0, CARD_SEARCH_SCRYFALL_QUERY_MAX) : undefined;
-  if (pathname === '/home') return { area: 'home' };
+  if (pathname === '/') return { area: 'home' };
+  if (pathname === '/decks') return { area: 'decks' };
   if (pathname === '/search') return scryfall ? { area: 'search', scryfall } : { area: 'search' };
   if (pathname === '/decks/new') return { area: 'new-deck' };
   const deckMatch = /^\/decks\/([^/]+)$/.exec(pathname);

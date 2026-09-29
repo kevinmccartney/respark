@@ -4,106 +4,16 @@ import { useEffect, useState } from 'react';
 
 import { Button, Input } from '@respark/ui/lib';
 
-const STARTING_LIFE = 20;
-const PLAYER_COUNT = 2;
-
-const PLAYER_COLORS = ['colorless', 'white', 'blue', 'black', 'red', 'green'] as const;
-type PlayerColor = (typeof PLAYER_COLORS)[number];
-
-// Full class strings so Tailwind can see them.
-const COLOR_STYLES: Record<PlayerColor, { label: string; panel: string; swatch: string }> = {
-  colorless: { label: 'Colorless', panel: 'bg-card', swatch: 'bg-stone-300 dark:bg-stone-500' },
-  white: {
-    label: 'White',
-    panel:
-      'border-amber-200 bg-amber-50 text-stone-900 dark:border-amber-100/25 dark:bg-amber-50/15 dark:text-amber-50',
-    swatch: 'bg-amber-50',
-  },
-  blue: {
-    label: 'Blue',
-    panel: 'border-sky-300 bg-sky-100 dark:border-sky-800 dark:bg-sky-950/60',
-    swatch: 'bg-sky-500',
-  },
-  black: {
-    label: 'Black',
-    panel: 'border-zinc-700 bg-zinc-800 text-zinc-50 dark:bg-zinc-950',
-    swatch: 'bg-zinc-900',
-  },
-  red: {
-    label: 'Red',
-    panel: 'border-red-300 bg-red-100 dark:border-red-800 dark:bg-red-950/60',
-    swatch: 'bg-red-500',
-  },
-  green: {
-    label: 'Green',
-    panel: 'border-emerald-300 bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/60',
-    swatch: 'bg-emerald-500',
-  },
-};
-
-type Player = { name: string; life: number; color: PlayerColor };
-
-const defaultName = (index: number) => `Player ${index + 1}`;
-
-const STORAGE_KEY = 'respark.life-tracker';
-
-const initialPlayers = (): Player[] =>
-  Array.from({ length: PLAYER_COUNT }, (_, i) => ({
-    name: defaultName(i),
-    life: STARTING_LIFE,
-    color: 'colorless',
-  }));
-
-const isPlayerColor = (value: unknown): value is PlayerColor =>
-  PLAYER_COLORS.includes(value as PlayerColor);
-
-const isSavedPlayer = (value: unknown): value is Omit<Player, 'color'> & { color?: unknown } =>
-  typeof value === 'object' &&
-  value !== null &&
-  typeof (value as Player).name === 'string' &&
-  Number.isInteger((value as Player).life);
-
-type Game = { players: Player[]; fullscreen: boolean };
-
-const parsePlayers = (value: unknown): Player[] | null => {
-  if (!Array.isArray(value) || value.length !== PLAYER_COUNT || !value.every(isSavedPlayer)) {
-    return null;
-  }
-  return value.map(({ name, life, color }) => ({
-    name,
-    life,
-    color: isPlayerColor(color) ? color : 'colorless',
-  }));
-};
-
-/** Saved game if it is well-formed; anything else starts a new game. */
-const loadGame = (): Game => {
-  try {
-    const stored: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
-    // Older saves stored only the players array.
-    if (Array.isArray(stored)) {
-      return { players: parsePlayers(stored) ?? initialPlayers(), fullscreen: false };
-    }
-    if (typeof stored === 'object' && stored !== null) {
-      const { players, fullscreen } = stored as Partial<Record<keyof Game, unknown>>;
-      return {
-        players: parsePlayers(players) ?? initialPlayers(),
-        fullscreen: fullscreen === true,
-      };
-    }
-  } catch {
-    // ignore
-  }
-  return { players: initialPlayers(), fullscreen: false };
-};
-
-const saveGame = (game: Game) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(game));
-  } catch {
-    // ignore
-  }
-};
+import {
+  defaultName,
+  loadGame,
+  PLAYER_COLORS,
+  saveGame,
+  STARTING_LIFE,
+  type Player,
+  type PlayerColor,
+} from '../lib/game-storage';
+import { COLOR_STYLES } from '../lib/player-colors';
 
 type PlayerNameProps = {
   name: string;

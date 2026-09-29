@@ -137,7 +137,7 @@ export const DeckDetailPage = () => {
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-6 py-8 text-left">
       <div>
-        <BackButton fallbackTo="/home" />
+        <BackButton fallbackTo="/decks" />
       </div>
 
       {loading ? (
@@ -167,7 +167,7 @@ export const DeckDetailPage = () => {
               const ok = await remove();
               if (ok) {
                 if (stickyDeckId === id) setDeck(null);
-                navigate('/home');
+                navigate('/decks');
               }
               return ok;
             }}
