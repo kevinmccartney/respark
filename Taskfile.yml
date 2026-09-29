@@ -597,7 +597,6 @@ tasks:
         set -euo pipefail
         for dir in infra/envs/*/; do
           echo "terraform validate ${dir}"
-          terraform -chdir="$dir" init -backend=false -input=false
           terraform -chdir="$dir" validate
         done
 
