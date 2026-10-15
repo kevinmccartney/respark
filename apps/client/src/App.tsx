@@ -5,6 +5,7 @@ import { RequireAuth } from '@respark-client/auth';
 import { CardDetailPage, SearchPage } from '@respark-client/cards';
 import { ChatSessionProvider, ChatToggle, GlobalChat } from '@respark-client/chat';
 import { AppShell, NotFoundPage, WelcomePage, type AppRouteHandle } from '@respark-client/core';
+import { CostsPage } from '@respark-client/costs';
 import { DeckDetailPage, DeckListPage, NewDeckPage } from '@respark-client/decks';
 import { HomePage } from '@respark-client/home';
 import { LifeTrackerPage } from '@respark-client/life';
@@ -88,6 +89,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireAuth>
             <LifeTrackerPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: '/costs',
+        element: (
+          <RequireAuth>
+            <CostsPage />
           </RequireAuth>
         ),
       },

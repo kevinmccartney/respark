@@ -70,6 +70,12 @@
       "import": "./src/users.ts",
       "require": "./dist/users.js",
       "default": "./dist/users.js"
+    },
+    "./costs": {
+      "types": "./dist/costs.d.ts",
+      "import": "./src/costs.ts",
+      "require": "./dist/costs.js",
+      "default": "./dist/costs.js"
     }
   },
   "typesVersions": {
@@ -103,6 +109,9 @@
       ],
       "users": [
         "./dist/users.d.ts"
+      ],
+      "costs": [
+        "./dist/costs.d.ts"
       ]
     }
   },

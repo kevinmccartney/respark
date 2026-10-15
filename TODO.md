@@ -13,7 +13,7 @@ Writing down ideas for the future
 ### Features
 
 - cost management
-  - cost endpoint
+  - pooling costs between users
 - changelog for decks
 - bulk actions
 - stacks

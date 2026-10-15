@@ -8,3 +8,4 @@ export * from './chat.js';
 export * from './recommendations.js';
 export * from './platform.js';
 export * from './users.js';
+export * from './costs.js';

@@ -94,6 +94,15 @@ clerk webhooks listen --token "$(clerk webhooks token)" --forward-to http://loca
 
 Deployed containers run with **`RUN_MIGRATIONS=true`** and apply pending migrations on boot (the `drizzle/` folder ships in the image; `drizzle-orm` includes the migrator, so `drizzle-kit` is not installed at runtime). This is safe for the current single instance — revisit if the API ever scales out. The local cluster API sets the same flag; host-side `task api:dev` leaves it unset so `task db:migrate` stays the explicit step.
 
+## Server costs
+
+**`GET /costs`** (any signed-in user) returns monthly AWS costs for the last six months, grouped by service, for the client's "Server cost" page.
+
+- **Scope:** only costs tagged `Project=respark`. `ce:GetCostAndUsage` can't be limited to resources, so the task role can read the whole account; the filter is fixed in `CostsService` and the endpoint takes no parameters. Keep it that way.
+- **Caching:** each Cost Explorer request costs $0.01 and AWS refreshes data a few times a day, so results are cached in memory for 12 hours (per task, and refetched after a restart).
+- **Tag activation:** Cost Explorer only filters on `Project` after it is activated as a cost allocation tag (Billing console → Cost allocation tags). Untagged costs (Route53 zone, tax) and non-AWS services are not included.
+- **Local:** outside production, a failed Cost Explorer call returns fixture data so the page works without AWS access.
+
 ## VS Code debug
 
 **Cluster API:** set breakpoints and use **API: attach (port 9229)** — the local release already runs `start:debug` and publishes 9229 on localhost.

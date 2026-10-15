@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import type { AuthenticatedRequest } from './auth/clerk-auth.guard';
 import { CardsModule } from './cards/cards.module';
 import { ChatModule } from './chat/chat.module';
+import { CostsModule } from './costs/costs.module';
 import { DatabaseModule } from './db/database.module';
 import { DecksModule } from './decks/decks.module';
 import { HealthModule } from './health/health.module';
@@ -50,6 +51,7 @@ const isProduction = process.env.NODE_ENV === 'production';
     CardsModule,
     SetsModule,
     ChatModule,
+    CostsModule,
     WebhooksModule,
   ],
 })

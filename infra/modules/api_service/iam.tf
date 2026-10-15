@@ -49,8 +49,8 @@ resource "aws_iam_role_policy" "execution_secrets" {
   })
 }
 
-# Assumed by the containers: Bedrock for deck chat, ECS Exec for db:tunnel, and the
-# dns-updater's self-registration.
+# Assumed by the containers: Bedrock for deck chat, ECS Exec for db:tunnel, the
+# dns-updater's self-registration, and Cost Explorer for the server cost page.
 resource "aws_iam_role" "task" {
   name               = "${local.name_prefix}-task"
   assume_role_policy = data.aws_iam_policy_document.ecs_tasks_assume.json
@@ -112,6 +112,14 @@ resource "aws_iam_role_policy" "task" {
             "route53:ChangeResourceRecordSetsActions"               = ["UPSERT"]
           }
         }
+      },
+      {
+        # Cost Explorer has no resource-level permissions, so this reads the whole account;
+        # the API filters to Project=respark itself (apps/api/src/costs).
+        Sid      = "ReadProjectCosts"
+        Effect   = "Allow"
+        Action   = ["ce:GetCostAndUsage"]
+        Resource = "*"
       },
     ]
   })
