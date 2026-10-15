@@ -288,9 +288,15 @@ tasks:
 
   infra:ci:
     desc: Format-check and validate Terraform (plan stays in CI with OIDC)
-    deps:
-      - format:terraform:check
-      - infra:validate
+    cmds:
+      - task: format:terraform:check
+      # Fresh runners have no .terraform/; backend=false installs modules without AWS access.
+      - |
+        set -euo pipefail
+        for dir in infra/envs/*/; do
+          terraform -chdir="$dir" init -backend=false -input=false >/dev/null
+        done
+      - task: infra:validate
 
   shared:ci:
     desc: Format-check and lint repo-root, docs, and scripts
