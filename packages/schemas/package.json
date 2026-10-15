@@ -76,6 +76,12 @@
       "import": "./src/costs.ts",
       "require": "./dist/costs.js",
       "default": "./dist/costs.js"
+    },
+    "./deck-revisions": {
+      "types": "./dist/deck-revisions.d.ts",
+      "import": "./src/deck-revisions.ts",
+      "require": "./dist/deck-revisions.js",
+      "default": "./dist/deck-revisions.js"
     }
   },
   "typesVersions": {
@@ -112,6 +118,9 @@
       ],
       "costs": [
         "./dist/costs.d.ts"
+      ],
+      "deck-revisions": [
+        "./dist/deck-revisions.d.ts"
       ]
     }
   },

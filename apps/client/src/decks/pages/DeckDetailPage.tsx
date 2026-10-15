@@ -1,8 +1,18 @@
+import { CircleCheck, LucideX } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { BackButton } from '@respark/ui/back-button';
-import { Alert, AlertDescription } from '@respark/ui/lib';
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  Button,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@respark/ui/lib';
 
 import { PrintingPickerDialog } from '@respark-client/cards';
 import { useChatSession } from '@respark-client/chat';
@@ -10,16 +20,24 @@ import { NotFoundPage } from '@respark-client/core';
 
 import { DeckAddCardSearch } from '../components/DeckAddCardSearch';
 import { BoardSection, CardPreview, MobileCardPreviewOverlay } from '../components/DeckBoard';
+import { DeckChangelog } from '../components/DeckChangelog';
 import { DeckDetailsHeader } from '../components/DeckDetailsHeader';
 import { DeckImportDialog } from '../components/DeckImportDialog';
 import { DeckListToolbar } from '../components/DeckListToolbar';
-import { useDeckDetail } from '../hooks/useDeckDetail';
+import { DeckSaveBar } from '../components/DeckSaveBar';
+import { SAVED_NOTICE_MS, useDeckDetail } from '../hooks/useDeckDetail';
 import { commanderDeckGroup, groupDeckCards } from '../lib/deck-grouping';
 import type { DeckCard, DeckGroupMode, DeckSortMode, DeckViewMode } from '../types';
+
+type DeckTab = 'list' | 'changelog';
 
 export const DeckDetailPage = () => {
   const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab: DeckTab = searchParams.get('tab') === 'changelog' ? 'changelog' : 'list';
+  const selectTab = (next: DeckTab) =>
+    setSearchParams(next === 'list' ? {} : { tab: next }, { replace: true });
   const { deckId: stickyDeckId, setDeck } = useChatSession();
   const {
     detail,
@@ -33,6 +51,13 @@ export const DeckDetailPage = () => {
     toggleFoil,
     toggleSideboard,
     saveDetails,
+    pendingChanges,
+    pendingCount,
+    savedAt,
+    savedNotice,
+    dismissSavedNotice,
+    save,
+    discard,
     remove,
     clearActionError,
   } = useDeckDetail(id);
@@ -173,17 +198,57 @@ export const DeckDetailPage = () => {
             }}
           />
 
+          <DeckSaveBar
+            pendingChanges={pendingChanges}
+            pendingCount={pendingCount}
+            savedAt={savedAt}
+            onSave={save}
+            onDiscard={discard}
+          />
+
+          {savedNotice ? (
+            <Alert
+              key={savedNotice.at}
+              className="overflow-hidden border-emerald-600/40 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400"
+            >
+              <CircleCheck aria-hidden />
+              <AlertDescription className="text-current">{savedNotice.message}</AlertDescription>
+              <span
+                aria-hidden
+                className="notice-countdown absolute inset-x-0 bottom-0 h-0.5 bg-current opacity-60"
+                style={{ animationDuration: `${SAVED_NOTICE_MS}ms` }}
+              />
+              <AlertAction>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Dismiss"
+                  onClick={dismissSavedNotice}
+                >
+                  <LucideX />
+                </Button>
+              </AlertAction>
+            </Alert>
+          ) : null}
+
           {actionError ? (
             <Alert variant="destructive">
               <AlertDescription>{actionError}</AlertDescription>
             </Alert>
           ) : null}
 
-          <section className="space-y-4" aria-labelledby="deck-list-heading">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 id="deck-list-heading" className="font-heading text-xl">
+          <Tabs value={tab} onValueChange={(value: DeckTab) => selectTab(value)}>
+            <TabsList variant="line">
+              <TabsTrigger value="list" className="px-3 text-sm">
                 Deck list
-              </h2>
+              </TabsTrigger>
+              <TabsTrigger value="changelog" className="px-3 text-sm">
+                Changelog
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="list" className="space-y-4 pt-2 text-base">
               <div className="flex flex-wrap items-center justify-end gap-3">
                 <DeckAddCardSearch
                   format={detail.deck.format}
@@ -207,60 +272,64 @@ export const DeckDetailPage = () => {
                   />
                 ) : null}
               </div>
-            </div>
 
-            {detail.cards.length === 0 ? (
-              <p className="text-muted-foreground">
-                No cards yet — search by name above to add some.
-              </p>
-            ) : (
-              <div className="flex flex-col items-stretch gap-6 md:flex-row md:items-start">
-                <CardPreview
-                  card={previewCard}
-                  faceIndex={previewFaceIndex}
-                  onFlip={() => {
-                    if (previewCard) transformCard(previewCard.id);
-                  }}
-                />
-                <div className="min-w-0 flex-1 space-y-8">
-                  {mainboardCards.length > 0 ? (
-                    <BoardSection
-                      title="Mainboard"
-                      showTitle={sideboardCards.length > 0}
-                      groups={mainGroups}
-                      viewMode={viewMode}
-                      previewCardId={previewCard?.id ?? null}
-                      previewFaceIndex={previewFaceIndex}
-                      onPreview={previewCardById}
-                      onMobilePreview={mobilePreview}
-                      onTransform={transformCard}
-                      onPickPrinting={setPickingCard}
-                      onBump={bumpQuantity}
-                      onToggleFoil={toggleFoil}
-                      onToggleSideboard={toggleSideboard}
-                    />
-                  ) : null}
-                  {sideboardCards.length > 0 ? (
-                    <BoardSection
-                      title="Sideboard"
-                      showTitle
-                      groups={sideGroups}
-                      viewMode={viewMode}
-                      previewCardId={previewCard?.id ?? null}
-                      previewFaceIndex={previewFaceIndex}
-                      onPreview={previewCardById}
-                      onMobilePreview={mobilePreview}
-                      onTransform={transformCard}
-                      onPickPrinting={setPickingCard}
-                      onBump={bumpQuantity}
-                      onToggleFoil={toggleFoil}
-                      onToggleSideboard={toggleSideboard}
-                    />
-                  ) : null}
+              {detail.cards.length === 0 ? (
+                <p className="text-muted-foreground">
+                  No cards yet — search by name above to add some.
+                </p>
+              ) : (
+                <div className="flex flex-col items-stretch gap-6 md:flex-row md:items-start">
+                  <CardPreview
+                    card={previewCard}
+                    faceIndex={previewFaceIndex}
+                    onFlip={() => {
+                      if (previewCard) transformCard(previewCard.id);
+                    }}
+                  />
+                  <div className="min-w-0 flex-1 space-y-8">
+                    {mainboardCards.length > 0 ? (
+                      <BoardSection
+                        title="Mainboard"
+                        showTitle={sideboardCards.length > 0}
+                        groups={mainGroups}
+                        viewMode={viewMode}
+                        previewCardId={previewCard?.id ?? null}
+                        previewFaceIndex={previewFaceIndex}
+                        onPreview={previewCardById}
+                        onMobilePreview={mobilePreview}
+                        onTransform={transformCard}
+                        onPickPrinting={setPickingCard}
+                        onBump={bumpQuantity}
+                        onToggleFoil={toggleFoil}
+                        onToggleSideboard={toggleSideboard}
+                      />
+                    ) : null}
+                    {sideboardCards.length > 0 ? (
+                      <BoardSection
+                        title="Sideboard"
+                        showTitle
+                        groups={sideGroups}
+                        viewMode={viewMode}
+                        previewCardId={previewCard?.id ?? null}
+                        previewFaceIndex={previewFaceIndex}
+                        onPreview={previewCardById}
+                        onMobilePreview={mobilePreview}
+                        onTransform={transformCard}
+                        onPickPrinting={setPickingCard}
+                        onBump={bumpQuantity}
+                        onToggleFoil={toggleFoil}
+                        onToggleSideboard={toggleSideboard}
+                      />
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            )}
-          </section>
+              )}
+            </TabsContent>
+
+            <TabsContent value="changelog" className="pt-2 text-base">
+              <DeckChangelog deckId={detail.deck.id} />
+            </TabsContent>
+          </Tabs>
 
           <MobileCardPreviewOverlay
             card={previewCard}

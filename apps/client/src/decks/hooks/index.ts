@@ -3,6 +3,7 @@ export {
   useCreateDeck,
   useDeck,
   useDeckDetail,
+  useDeckRevisions,
   useDecks,
   useDeleteDeck,
   useImportDeckList,

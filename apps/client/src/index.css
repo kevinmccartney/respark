@@ -28,6 +28,20 @@
   animation: foil-sheen 4.5s ease-in-out infinite alternate;
 }
 
+@keyframes notice-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.notice-countdown {
+  transform-origin: left;
+  animation: notice-countdown linear forwards;
+}
+
 .foil-label {
   background-image: linear-gradient(
     90deg,

@@ -13,5 +13,6 @@ export * from './pagination.js';
 export * from './select.js';
 export * from './separator.js';
 export * from './table.js';
+export * from './tabs.js';
 export * from './textarea.js';
 export * from './use-scroll-visibility.js';

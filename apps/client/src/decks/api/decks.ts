@@ -1,4 +1,14 @@
 import {
+  deckRevisionResponseSchema,
+  deckRevisionsPageSchema,
+  deckSavedStateSchema,
+  saveDeckBodySchema,
+  type DeckRevision,
+  type DeckRevisionsPage,
+  type DeckSavedState,
+  type SaveDeckBody,
+} from '@respark/schemas/deck-revisions';
+import {
   addDeckCardBodySchema,
   createDeckBodySchema,
   deckCardResponseSchema,
@@ -95,3 +105,31 @@ export const removeDeckCard = (
   apiFetchJson(`/decks/${deckId}/cards/${deckCardId}`, getToken, okResponseSchema, {
     method: 'DELETE',
   }).then(() => undefined);
+
+export const fetchDeckSavedState = (
+  getToken: GetToken,
+  deckId: string,
+  init?: RequestInit,
+): Promise<DeckSavedState> =>
+  apiFetchJson(`/decks/${deckId}/revisions/latest`, getToken, deckSavedStateSchema, init);
+
+export const fetchDeckRevisions = (
+  getToken: GetToken,
+  deckId: string,
+  init?: RequestInit,
+): Promise<DeckRevisionsPage> =>
+  apiFetchJson(`/decks/${deckId}/revisions`, getToken, deckRevisionsPageSchema, init);
+
+export const saveDeck = (
+  getToken: GetToken,
+  deckId: string,
+  body: SaveDeckBody,
+): Promise<DeckRevision> =>
+  apiFetchJson(`/decks/${deckId}/save`, getToken, deckRevisionResponseSchema, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(saveDeckBodySchema.parse(body)),
+  }).then((res) => res.revision);
+
+export const discardDeckChanges = (getToken: GetToken, deckId: string): Promise<DeckDetail> =>
+  apiFetchJson(`/decks/${deckId}/discard`, getToken, deckDetailSchema, { method: 'POST' });

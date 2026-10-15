@@ -1,6 +1,7 @@
 export * from './users';
 export * from './decks';
 export * from './deck-cards';
+export * from './deck-revisions';
 export * from './chat';
 export * from './recommendation-goodstuff';
 export * from './pipeline-schemas';

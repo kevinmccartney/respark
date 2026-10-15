@@ -8,6 +8,11 @@ export const deckFormatSchema = z.enum(DECK_FORMATS);
 
 export type DeckFormat = z.infer<typeof deckFormatSchema>;
 
+/** Editable deck metadata, as opposed to its card list. */
+export const DECK_DETAIL_FIELDS = ['name', 'description', 'format', 'commander'] as const;
+
+export type DeckDetailField = (typeof DECK_DETAIL_FIELDS)[number];
+
 export const COLOR_IDENTITY_PIPS = ['W', 'U', 'B', 'R', 'G'] as const;
 
 export const colorIdentityPipSchema = z.enum(COLOR_IDENTITY_PIPS);

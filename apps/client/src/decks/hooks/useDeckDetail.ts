@@ -1,7 +1,13 @@
 import { useAuth } from '@clerk/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import {
+  countDeckChanges,
+  deckSnapshotFromDetail,
+  diffDeck,
+  type DeckChanges,
+} from '@respark/schemas/deck-revisions';
 import type { CreateDeckInput, DeckCard, DeckDetail } from '@respark/schemas/decks';
 import { uuidSchema } from '@respark/schemas/primitives';
 
@@ -11,20 +17,46 @@ import {
   addCardToDeck,
   createDeck,
   deleteDeck,
+  discardDeckChanges,
   fetchDeck,
+  fetchDeckRevisions,
+  fetchDeckSavedState,
   fetchDecks,
   importDeckList,
   patchDeckCard,
   removeDeckCard,
+  saveDeck,
   updateDeck,
 } from '../api/decks';
 import { upsertDeckCard, withDeckCards } from '../lib/deck-cards';
 import type { SaveDeckDetailsInput } from '../types';
 
+export const SAVED_NOTICE_MS = 10_000;
+
 export const deckKeys = {
   all: ['decks'] as const,
   list: () => [...deckKeys.all, 'list'] as const,
   detail: (id: string) => [...deckKeys.all, 'detail', id] as const,
+  saved: (id: string) => [...deckKeys.all, 'saved', id] as const,
+  revisions: (id: string) => [...deckKeys.all, 'revisions', id] as const,
+};
+
+export const useDeckRevisions = (id: string) => {
+  const { getToken } = useAuth();
+  return useQuery({
+    queryKey: deckKeys.revisions(id),
+    queryFn: ({ signal }) => fetchDeckRevisions(getToken, id, { signal }),
+    enabled: uuidSchema.safeParse(id).success,
+  });
+};
+
+const useDeckSavedState = (id: string) => {
+  const { getToken } = useAuth();
+  return useQuery({
+    queryKey: deckKeys.saved(id),
+    queryFn: ({ signal }) => fetchDeckSavedState(getToken, id, { signal }),
+    enabled: uuidSchema.safeParse(id).success,
+  });
 };
 
 export const useDecks = () => {
@@ -94,8 +126,18 @@ export const useDeckDetail = (id: string) => {
   const queryClient = useQueryClient();
   const query = useDeck(id);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [savedNotice, setSavedNotice] = useState<{ message: string; at: number } | null>(null);
+
+  useEffect(() => {
+    if (!savedNotice) return;
+    const timer = window.setTimeout(() => setSavedNotice(null), SAVED_NOTICE_MS);
+    return () => window.clearTimeout(timer);
+  }, [savedNotice]);
 
   const detail = query.data ?? null;
+  const savedState = useDeckSavedState(id).data;
+  const pendingChanges: DeckChanges | null =
+    detail && savedState ? diffDeck(savedState.snapshot, deckSnapshotFromDetail(detail)) : null;
   const notFound = Boolean(query.error && isNotFound(query.error));
   const error =
     query.error && !isNotFound(query.error)
@@ -193,9 +235,33 @@ export const useDeckDetail = (id: string) => {
       await updateDeck(getToken, current.deck.id, input);
       const next = await fetchDeck(getToken, current.deck.id);
       queryClient.setQueryData(deckKeys.detail(current.deck.id), next);
+      await queryClient.invalidateQueries({ queryKey: deckKeys.saved(current.deck.id) });
+      void queryClient.invalidateQueries({ queryKey: deckKeys.revisions(current.deck.id) });
       void queryClient.invalidateQueries({ queryKey: deckKeys.list() });
+      setSavedNotice({ message: 'Deck details saved.', at: Date.now() });
       return true;
     }, 'Could not save deck details');
+    return ok === true;
+  };
+
+  const save = async (note: string): Promise<boolean> => {
+    const ok = await runAction(async (current) => {
+      await saveDeck(getToken, current.deck.id, note.trim() ? { note: note.trim() } : {});
+      await queryClient.invalidateQueries({ queryKey: deckKeys.saved(current.deck.id) });
+      void queryClient.invalidateQueries({ queryKey: deckKeys.revisions(current.deck.id) });
+      setSavedNotice({ message: 'All changes saved.', at: Date.now() });
+      return true;
+    }, 'Could not save deck');
+    return ok === true;
+  };
+
+  const discard = async (): Promise<boolean> => {
+    const ok = await runAction(async (current) => {
+      const next = await discardDeckChanges(getToken, current.deck.id);
+      queryClient.setQueryData(deckKeys.detail(current.deck.id), next);
+      void queryClient.invalidateQueries({ queryKey: deckKeys.list() });
+      return true;
+    }, 'Could not discard changes');
     return ok === true;
   };
 
@@ -221,6 +287,13 @@ export const useDeckDetail = (id: string) => {
     toggleFoil,
     toggleSideboard,
     saveDetails,
+    pendingChanges,
+    pendingCount: pendingChanges ? countDeckChanges(pendingChanges) : 0,
+    savedAt: savedState?.savedAt ?? null,
+    savedNotice,
+    dismissSavedNotice: () => setSavedNotice(null),
+    save,
+    discard,
     remove,
     clearActionError: () => setActionError(null),
   };

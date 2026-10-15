@@ -248,7 +248,7 @@ export const DeckDetailsHeader = ({
               }
               onClick={() => void save()}
             >
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? 'Applying…' : 'Apply'}
             </Button>
           </div>
         </DialogContent>

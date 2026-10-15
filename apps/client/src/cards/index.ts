@@ -1,3 +1,4 @@
+export { CardDetailDialog } from './components/CardDetailDialog';
 export { ColorIdentity } from './components/ColorIdentity';
 export { FlippableCardImage } from './components/FlippableCardImage';
 export { FoilMark, PrintingFinishes } from './components/FoilMark';

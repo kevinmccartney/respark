@@ -12,7 +12,6 @@ Writing down ideas for the future
 
 ### Features
 
-- changelog for decks
 - bulk actions
 - stacks
 - collection
