@@ -57,17 +57,17 @@ task api:secrets:push ENV=production
 
 [`dorny/paths-filter`](https://github.com/dorny/paths-filter) maps the git diff to flags. `changes` depends only on `config` (not on format or release). Checkout SHA is `github.sha`.
 
-| Flag        | Paths                                                                                                                                                                             |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `shared`    | `docs/**`, root markdown, `.github/**`, `.husky/**`, `commitlint.config.mjs`, `docker-compose.yml`, `deploy/**`, `.prettierignore.shared`, `scripts/**` except API deploy scripts |
-| `toolchain` | root `package.json`, `package-lock.json`, `Taskfile.yml`, `tsconfig*.json`, `eslint.config.mjs`, `.prettierrc.json`, `.prettierignore`                                            |
-| `schemas`   | `packages/schemas/**`                                                                                                                                                             |
-| `ui`        | `packages/ui/**`                                                                                                                                                                  |
-| `etl`       | `apps/etl/**`                                                                                                                                                                     |
-| `api`       | `apps/api/**`, API deploy scripts                                                                                                                                                 |
-| `client`    | `apps/client/**`                                                                                                                                                                  |
-| `admin`     | `apps/admin/**`                                                                                                                                                                   |
-| `infra`     | `infra/**`, TF backend bootstrap script                                                                                                                                           |
+| Flag        | Paths                                                                                                                                                                |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shared`    | `docs/**`, root markdown, `.github/**`, `.husky/**`, `commitlint.config.mjs`, `docker-compose.yml`, `.prettierignore.shared`, `scripts/**` except API deploy scripts |
+| `toolchain` | root `package.json`, `package-lock.json`, `Taskfile.yml`, `tsconfig*.json`, `eslint.config.mjs`, `.prettierrc.json`, `.prettierignore`                               |
+| `schemas`   | `packages/schemas/**`                                                                                                                                                |
+| `ui`        | `packages/ui/**`                                                                                                                                                     |
+| `etl`       | `apps/etl/**`                                                                                                                                                        |
+| `api`       | `apps/api/**`, API deploy scripts                                                                                                                                    |
+| `client`    | `apps/client/**`                                                                                                                                                     |
+| `admin`     | `apps/admin/**`                                                                                                                                                      |
+| `infra`     | `infra/**`, TF backend bootstrap script                                                                                                                              |
 
 Job `if` (plus `workflow_dispatch` `force=true`, which sets every flag):
 
@@ -82,12 +82,12 @@ Job `if` (plus `workflow_dispatch` `force=true`, which sets every flag):
 | `admin`   | `admin` or `schemas` or `ui` or `toolchain`                                     |
 | `infra`   | `infra`                                                                         |
 
-`toolchain` fans out to every JS project so a lockfile or ESLint config change rebuilds consumers. `shared` does **not** fan out to apps; it runs `task shared:ci` (Prettier on `.` with [`.prettierignore.shared`](../.prettierignore.shared) skipping trees other `*:ci` jobs already check, plus ESLint on root/scripts, plus `task k8s:lint` — `helm lint` of every chart in `deploy/charts/` with its local values; Helm is preinstalled on `ubuntu-latest`).
+`toolchain` fans out to every JS project so a lockfile or ESLint config change rebuilds consumers. `shared` does **not** fan out to apps; it runs `task shared:ci` (Prettier on `.` with [`.prettierignore.shared`](../.prettierignore.shared) skipping trees other `*:ci` jobs already check, plus ESLint on root/scripts).
 
 Each project job is self-contained: checkout `changes.sha`, `task install`, `task <project>:ci`. Package jobs do not upload artifacts for app jobs — consumers still compile schemas/ui themselves. The package jobs still exist so a schemas-only lint failure fails the workflow even if a consumer `tsc` happens to pass.
 
 - **Plan / apply** run only when `infra` changed (or on force). Plan stays in the `infra` job (OIDC + `tfplan` artifact); `infra:ci` is fmt-check + validate only.
-- **Deploy** runs for the matching app; an `infra` change also redeploys API/client/admin (EC2 / CDN may have moved).
+- **Deploy** runs for the matching app; an `infra` change also redeploys API/client/admin (the ECS service / CDN may have moved). The API deploy is `task api:deploy` (image push + ECS rolling deploy); see [`current-architecture.md`](current-architecture.md).
 - A platform version bump also runs API CI and deploys the API so `GET /info` serves the new version. Client/admin keep fetching `/info` at runtime.
 - Skipped upstream jobs do not block later deploys (e.g. a client-only change skips plan/apply until release, then deploys API if the version bumped, plus client).
 - Client/admin still wait on API when API _is_ deploying.
@@ -219,12 +219,12 @@ Use one statement (or one role) per environment if you split roles. Jobs must se
 
 Alternatively, pin the exact `sub` from a debug JWT decode (includes `@ownerId` / `@repoId`).
 
-3. Attach permissions sufficient to run Terraform for that env (S3, CloudFront, ACM, Route53, EC2, ECR, RDS, SSM, IAM for instance profiles, CloudWatch Logs) plus ECR push and SSM `SendCommand` for API redeploy.
+3. Attach permissions sufficient to run Terraform for that env (S3, CloudFront, ACM, Route53, ECS, ECR, EFS, EC2 security groups, RDS, SSM, IAM roles, CloudWatch Logs) plus ECR push and `ecs:UpdateService` / `ecs:DescribeServices` for API deploys. Develop's role also needs to read the production RDS instance and add rules to its security group.
 4. Put the role ARN in the environment variable `AWS_ROLE_ARN` (you can use one role for both envs or separate roles with a single environment each).
 
 ## Notes
 
 - API images are built for **`linux/arm64`** (Graviton) and tagged with the git SHA and `latest`. The `deploy-api` job runs on **`ubuntu-24.04-arm`** so `npm ci` is native; do not reintroduce QEMU for this image (Node 22 on Alpine under amd64→arm64 emulation hits SIGILL).
-- Client/admin deploy tasks rebuild with `VITE_API_URL` from Terraform `api_url` and `VITE_CLERK_PUBLISHABLE_KEY` from the **GitHub Environment variable** of the same name (locally: `apps/client/.env.local` / `apps/admin/.env.local`). Client and admin share one Clerk app, so they share one publishable key. Production Vite builds fail if it is unset. Clerk **secret** keys stay in SSM.
+- Client/admin deploy tasks rebuild with `VITE_API_URL` from Terraform `api_url` and `VITE_CLERK_PUBLISHABLE_KEY` from the **GitHub Environment variable** of the same name (locally: the repo-root `.env.$ENV`, which the deploy tasks source and pass explicitly so it wins over Vite's own env files). Client and admin share one Clerk instance per environment, so they share one publishable key. Production Vite builds fail if it is unset. Clerk **secret** keys stay in SSM.
 - `terraform apply` uses the exact plan artifact from the matching `infra` job (`tfplan-<env>`).
 - Overlapping runs on the same ref + env are serialized via workflow concurrency; PR runs cancel superseded builds.

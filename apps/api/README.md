@@ -1,46 +1,31 @@
 # respark API (NestJS)
 
-## Local dev (Kubernetes)
+## Local dev (Docker Compose)
 
-Preferred path: Postgres + API + client + admin as Helm releases on Docker Desktop's built-in Kubernetes. Charts live in [`deploy/charts/`](../../deploy/charts/), local values in [`deploy/envs/local/`](../../deploy/envs/local/).
+Postgres + API + client + admin in watch mode via [`docker-compose.yml`](../../docker-compose.yml).
 
-Prerequisites (one-time): Docker Desktop → Settings → Kubernetes → **Enable Kubernetes** (default kubeadm cluster), `kubectl config use-context docker-desktop`, and `brew install helm`.
-
-1. Copy `apps/api/.env.example` → `apps/api/.env` and set `CLERK_SECRET_KEY` (and optionally `CLERK_WEBHOOK_SIGNING_SECRET`).
-2. Copy `apps/client/.env.example` → `apps/client/.env.local` and set `VITE_CLERK_PUBLISHABLE_KEY`.
-3. Copy `apps/admin/.env.example` → `apps/admin/.env.local` and use the same publishable key (admin users need `publicMetadata.role === "admin"`).
+All env lives in one gitignored file at the repo root. Copy [`.env.example`](../../.env.example) → `.env.local` and set the Clerk keys (`VITE_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, optionally `CLERK_WEBHOOK_SIGNING_SECRET`). Admin users need `publicMetadata.role === "admin"`.
 
 ```bash
 # from repo root
-task k8s:up      # Traefik ingress, dev images, Secrets from .env files, Postgres, API, client, admin
-task k8s:logs    # follow API + client + admin logs
-task k8s:ps      # pods, services, ingresses
+task docker:up     # build + start (Task passes --env-file .env.local)
+task docker:logs   # follow API + client + admin logs
+task docker:ps     # service status
+task docker:down   # stop, keep the Postgres volume
+task db:reset      # also delete the Postgres volume
 ```
 
 - Client: http://localhost:5173
 - Admin: http://localhost:4000
 - API: http://localhost:3000
 
-Docker Desktop publishes LoadBalancer Services on localhost, so the ports match the old Compose stack. The same apps are also routed through the Traefik ingress at http://respark.localhost, http://admin.respark.localhost, and http://api.respark.localhost, which is the path develop and production use.
+The API service reads `.env.local`, but Compose overrides `DATABASE_URL` to the `db` service and sets `RUN_MIGRATIONS=true`, so a fresh volume gets schema on first boot. The client and admin containers only receive `VITE_CLERK_PUBLISHABLE_KEY` (no secret keys) and `VITE_API_URL=http://localhost:3000`. API inspector is on **9229** (`start:debug`).
 
-`task k8s:up` fails fast unless kubectl's current context is `docker-desktop`, so it can never deploy to a remote cluster. The API release sets `DATABASE_URL` to the in-cluster `respark-postgres` Service and `RUN_MIGRATIONS=true`, so a fresh volume gets schema on first boot. Everything else comes from `apps/api/.env` and `.env.local` (`.env.local` wins), loaded into the `respark-api-env` Secret. The client and admin get `VITE_API_URL=http://localhost:3000` because the browser runs on your machine. API inspector is on **9229** (`start:debug`).
-
-Your working copy is `hostPath`-mounted into the pods (`devMounts` in [`deploy/envs/local/`](../../deploy/envs/local/)), so saving a file reloads like Compose did: `nest --watch` recompiles the API, and Vite hot-reloads the client and admin, including edits to `packages/ui`, `packages/schemas`, and `packages/scryfall-query` source. Rebuild when the change is outside those mounts — dependencies or `package-lock.json`, `.env` files, Dockerfiles, or shared packages the API loads compiled (`schemas`, `scryfall-query`, `etl`):
-
-```bash
-task k8s:sync    # rebuild images, refresh Secrets, roll out API + client + admin
-```
-
-```bash
-task k8s:down    # remove releases, keep the Postgres volume
-task db:reset    # also delete the Postgres volume
-```
-
-The old Compose stack (`task docker:up`) still works but is deprecated.
+Source folders are bind-mounted, so `nest --watch` and Vite reload on save. Re-run `task docker:up` after changing dependencies, `.env.local`, Dockerfiles, or the compiled shared packages the API loads (`schemas`, `scryfall-query`, `etl`).
 
 ## Local dev (Node on the host)
 
-Same env files as above. Run only Postgres in the local cluster, API with Nest on the host:
+Same root `.env.local` as above. Run only Postgres in Compose, API with Nest on the host:
 
 ```bash
 task db:up && task db:migrate
@@ -55,7 +40,7 @@ Logs are **JSON** in production (`NODE_ENV=production`). Local dev uses pretty-p
 
 ## Database (Postgres + Drizzle)
 
-Local Postgres is the `respark-postgres` Helm release (the `pgvector` image, so embeddings are possible later without swapping images), reachable from the host on `localhost:5432`. The API connects via **`DATABASE_URL`**.
+Local Postgres is the Compose `db` service (the `pgvector` image, so embeddings are possible later without swapping images), reachable from the host on `localhost:5432`. The API connects via **`DATABASE_URL`**.
 
 ```bash
 task db:up        # start Postgres only
@@ -68,7 +53,7 @@ Schema lives in `src/db/schema/` (one file per domain) and generated SQL in `dri
 
 ```bash
 task db:generate  # writes a new migration to drizzle/
-task db:migrate   # or `task k8s:sync` (the cluster API migrates on boot)
+task db:migrate   # or `task docker:up` (the Compose API migrates on boot)
 ```
 
 Current tables:
@@ -79,7 +64,7 @@ Current tables:
 - **`GET /cards/type-suggestions`** — legacy type-token autocomplete (unused by current catalog UI).
 - **`GET /cards/:id`** — card detail plus printings (set, collector number, images).
 - **`GET/POST /decks`**, **`GET/PATCH/DELETE /decks/:id`**, **`POST /decks/:id/import`**, **`POST/PATCH/DELETE /decks/:id/cards…`** — deck CRUD + Moxfield-style list import (incl. `SIDEBOARD:` / `SB:`; `COMMANDER:` and copies of the current commander are ignored) + card lines (`POST` accepts `cardId`; deck `PATCH` applies any provided fields — `name`, `description`, `format`; card `PATCH` accepts `quantity`, `printingId`, `foil`, and/or `sideboard`; `foil: true` is rejected when the printing’s `finishes` are known and lack `foil`/`etched`; etched and foil-only printings are always foil; `hasFoil` means the foil flag can be toggled; lines are unique per printing + foil + board).
-- **Chat** — player WebSocket `/chat/ws` (Clerk `?token=`) plus `GET /chat/conversations` (list), `/latest`, and `/:id` for thread reload. Sticky `deckId` is optional context (omit / set / clear). Tools call decks/cards services; the model is Bedrock. The local API authenticates as IAM user `respark-local-api` (`task api:local-aws:write`). Develop uses the API EC2 instance role. See [`docs/ai-chat.md`](../../docs/ai-chat.md).
+- **Chat** — player WebSocket `/chat/ws` (Clerk `?token=`) plus `GET /chat/conversations` (list), `/latest`, and `/:id` for thread reload. Sticky `deckId` is optional context (omit / set / clear). Tools call decks/cards services; the model is Bedrock. The local API authenticates as IAM user `respark-local-api` (`task api:local-aws:write`). Deployed envs use the ECS task role. See [`docs/ai-chat.md`](../../docs/ai-chat.md).
 - **Pipeline schemas** — `raw`, `catalog`, `market`, `ops`, plus `ops.etl_sync` / `ops.etl_job_run` for ETL sync tracking. Admin starts syncs in-process via the `etl` lib and streams events on `/admin/etl-syncs/ws`. See [`apps/etl/README.md`](../etl/README.md) and `task etl -- --help`.
 
 ## Clerk webhooks
@@ -115,16 +100,17 @@ Deployed containers run with **`RUN_MIGRATIONS=true`** and apply pending migrati
 
 **Host API:** **Run and Debug → API: debug (launch)**, or `task api:debug` then attach.
 
-## Deployed (EC2)
+## Deployed (ECS Fargate)
 
-See repo root Taskfile: `task api:deploy` (requires `apps/api/.env` with `CLERK_SECRET_KEY` for the redeploy script).
+See [`docs/current-architecture.md`](../../docs/current-architecture.md). `task api:deploy` builds the arm64 image, pushes it to ECR, and rolls the ECS service; Caddy in the task terminates TLS.
 
-Secrets live in **SSM Parameter Store** and are read by the instance role at deploy time, so nothing sensitive passes through your laptop:
+Secrets live in **SSM Parameter Store** and ECS injects them at task start, so nothing sensitive passes through your laptop:
 
-- **`/respark/develop/api/database-url`** — written by Terraform, which generates the password
-- **`/respark/develop/api/clerk-secret-key`** — pushed with `task api:secrets:push` from `apps/api/.env`, so it stays out of Terraform state
-- **`/respark/develop/api/clerk-webhook-signing-secret`** — same push, but optional: it only exists after you create the webhook endpoint in the Clerk dashboard. Until then `/webhooks/clerk` returns 503 and the rest of the API is unaffected.
-- **`/respark/develop/api/bedrock-model-id`** — written by Terraform (not a secret). Injected as `BEDROCK_MODEL_ID` so deck chat can ConverseStream. See [`docs/ai-chat.md`](../../docs/ai-chat.md).
+- **`/respark/<env>/api/database-url`** — written by Terraform, which generates the password
+- **`/respark/<env>/api/clerk-secret-key`** — pushed with `task api:secrets:push ENV=<env>` from the repo-root `.env.<env>`, so it stays out of Terraform state
+- **`/respark/<env>/api/clerk-webhook-signing-secret`** — same push. ECS requires the parameter to exist to start the task.
+
+`BEDROCK_MODEL_ID` is a plain environment variable in the task definition (see [`docs/ai-chat.md`](../../docs/ai-chat.md)).
 
 Run `task api:secrets:push` once (and again whenever a Clerk key rotates), then `task api:deploy`.
 
@@ -135,9 +121,9 @@ terraform -chdir=infra/envs/develop output -raw db_endpoint
 terraform -chdir=infra/envs/develop output -raw db_database_url_parameter
 ```
 
-Postgres is **not publicly accessible** — its security group only accepts 5432 from the API instance security group. For a local client, use **`task db:tunnel`** (SSM port-forward to `localhost:15432`; needs the Session Manager plugin and `ssm:StartSession`). User/database are both `respark`; the password is the Terraform-generated value inside the SSM `database-url` parameter. See the root README Task section for the full flow.
+Postgres is **not publicly accessible** — one RDS instance serves both envs (databases `respark` and `respark_develop`), and its security group only accepts 5432 from each env's API task. For a local client, use **`task db:tunnel`** (SSM port-forward to `localhost:15432` through the running task via ECS Exec; needs the Session Manager plugin and `ssm:StartSession`). User and password are inside the SSM `database-url` parameter (`task db:url`). See the root README Task section for the full flow.
 
-Container **stdout/stderr** (Pino JSON) goes to CloudWatch Logs via Docker’s **`awslogs`** driver.
+Container **stdout/stderr** (Pino JSON) goes to CloudWatch Logs via the ECS **`awslogs`** driver (stream prefixes `api`, `caddy`, `dns-updater`).
 
 ```bash
 # log group name (after terraform apply)

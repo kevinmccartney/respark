@@ -26,3 +26,5 @@ override.tf.json
 *_override.tf.json
 terraform.tfvars
 backend.hcl
+
+.passwords

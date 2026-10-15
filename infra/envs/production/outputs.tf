@@ -40,45 +40,55 @@ output "admin_deploy_command" {
 
 output "api_url" {
   description = "HTTPS URL for the API."
-  value       = module.api.api_url
+  value       = module.api_service.api_url
 }
 
 output "api_ecr_repository_url" {
   description = "ECR URL for API images."
-  value       = module.api.ecr_repository_url
+  value       = module.api_service.ecr_repository_url
 }
 
-output "api_instance_id" {
-  description = "EC2 instance ID for API redeploy via SSM."
-  value       = module.api.instance_id
+output "ecs_cluster_name" {
+  description = "ECS cluster running the API service."
+  value       = module.api_service.cluster_name
+}
+
+output "ecs_service_name" {
+  description = "ECS service for the API (task db:tunnel goes through its task)."
+  value       = module.api_service.service_name
 }
 
 output "api_cloudwatch_log_group" {
-  description = "CloudWatch Logs group for API container stdout."
-  value       = module.api.cloudwatch_log_group_name
-}
-
-output "api_cloudfront_distribution_id" {
-  description = "CloudFront distribution ID for the API."
-  value       = module.api.cloudfront_distribution_id
+  description = "CloudWatch Logs group for the API task's containers."
+  value       = module.api_service.log_group_name
 }
 
 output "db_endpoint" {
-  description = "Postgres endpoint (reachable only from the API security group)."
+  description = "Postgres endpoint (reachable only from the API task security groups)."
   value       = module.db.endpoint
 }
 
 output "db_database_url_parameter" {
-  description = "SSM parameter holding the API connection string."
+  description = "SSM parameter holding the API connection string (master user)."
   value       = module.db.database_url_parameter_name
 }
 
+output "db_security_group_id" {
+  description = "RDS security group; develop adds an ingress rule for its API task."
+  value       = module.db.security_group_id
+}
+
 output "api_runtime_role_arn" {
-  description = "IAM role the production API instance uses for Bedrock and other AWS APIs."
-  value       = module.api.runtime_role_arn
+  description = "IAM role the production API task uses for Bedrock and other AWS APIs."
+  value       = module.api_service.role_arn
 }
 
 output "api_runtime_role_name" {
-  description = "Name of the production API instance role."
-  value       = module.api.runtime_role_name
+  description = "Name of the production API task role."
+  value       = module.api_service.role_name
+}
+
+output "api_parameter_prefix" {
+  description = "SSM prefix holding API secrets (database-url, clerk-secret-key, …)."
+  value       = local.api_parameter_prefix
 }

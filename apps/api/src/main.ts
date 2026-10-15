@@ -1,5 +1,5 @@
 import { existsSync } from 'fs';
-import { resolve } from 'path';
+import { dirname, resolve } from 'path';
 
 import { NestFactory } from '@nestjs/core';
 import { WsAdapter } from '@nestjs/platform-ws';
@@ -8,12 +8,14 @@ import { Logger } from 'nestjs-pino';
 
 import { AppModule } from './app.module';
 
-const apiRoot = resolve(__dirname, '..');
-for (const file of ['.env', '.env.local']) {
-  const path = resolve(apiRoot, file);
-  if (existsSync(path)) {
-    config({ path, override: true });
-  }
+// Repo-root .env.local. Walk up because src/ and dist/src/ sit at different depths.
+let repoRoot = __dirname;
+while (repoRoot !== dirname(repoRoot) && !existsSync(resolve(repoRoot, 'package-lock.json'))) {
+  repoRoot = dirname(repoRoot);
+}
+const envLocal = resolve(repoRoot, '.env.local');
+if (existsSync(envLocal)) {
+  config({ path: envLocal, override: true });
 }
 
 const bootstrap = async () => {

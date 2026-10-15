@@ -11,6 +11,9 @@ data "aws_subnets" "default" {
 
 locals {
   name_prefix = "${var.project}-${var.environment}-db"
+  # The instance is shared by every environment, so its identifier carries no env.
+  # Subnet group and SG keep name_prefix: renaming those forces replacement.
+  instance_identifier = "${var.project}-db"
 
   common_tags = {
     Project     = var.project
@@ -29,18 +32,12 @@ resource "aws_db_subnet_group" "postgres" {
   })
 }
 
+# No inline rules: each env root adds its own aws_vpc_security_group_ingress_rule for
+# its API task, and inline rules would strip the other env's rule on every apply.
 resource "aws_security_group" "postgres" {
   name        = "${local.name_prefix}-sg"
   description = "Postgres reachable only from the API instances"
   vpc_id      = data.aws_vpc.default.id
-
-  ingress {
-    description     = "Postgres from the API security group"
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [var.api_security_group_id]
-  }
 
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-sg"
@@ -54,7 +51,7 @@ resource "random_password" "master" {
 }
 
 resource "aws_db_instance" "postgres" {
-  identifier     = local.name_prefix
+  identifier     = local.instance_identifier
   engine         = "postgres"
   engine_version = var.engine_version
   instance_class = var.instance_class
@@ -79,7 +76,7 @@ resource "aws_db_instance" "postgres" {
   apply_immediately   = true
   skip_final_snapshot = var.skip_final_snapshot
   # Required when skip_final_snapshot is false; ignored otherwise.
-  final_snapshot_identifier = var.skip_final_snapshot ? null : "${local.name_prefix}-final"
+  final_snapshot_identifier = var.skip_final_snapshot ? null : "${local.instance_identifier}-final"
 
   enabled_cloudwatch_logs_exports = ["postgresql"]
 

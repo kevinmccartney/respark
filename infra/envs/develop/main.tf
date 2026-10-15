@@ -1,10 +1,7 @@
 locals {
-  environment = "develop"
-
-  # Fixed path so the api module can grant access to it without depending on the
-  # db module, which in turn needs the api security group.
-  api_parameter_prefix        = "/${var.project}/${local.environment}/api"
-  database_url_parameter_name = "${local.api_parameter_prefix}/database-url"
+  environment          = "develop"
+  api_parameter_prefix = "/${var.project}/${local.environment}/api"
+  database_name        = "respark_develop"
 }
 
 module "ui" {
@@ -18,9 +15,8 @@ module "ui" {
   aws_region       = var.aws_region
   project          = var.project
   environment      = local.environment
-  component        = "web" # keep: part of the existing S3 bucket name
+  component        = "web" # keep: matches production's bucket naming
   app_dir          = "client"
-  bucket_name      = var.bucket_name
   hosted_zone_name = var.hosted_zone_name
   domain_name      = var.domain_name
 }
@@ -37,36 +33,68 @@ module "admin" {
   project          = var.project
   environment      = local.environment
   component        = "admin"
-  bucket_name      = var.admin_bucket_name
   hosted_zone_name = var.hosted_zone_name
   domain_name      = var.admin_domain_name
 }
 
-module "api" {
-  source = "../../modules/api"
-
-  providers = {
-    aws           = aws
-    aws.us_east_1 = aws.us_east_1
-  }
+module "api_service" {
+  source = "../../modules/api_service"
 
   aws_region       = var.aws_region
   project          = var.project
   environment      = local.environment
   hosted_zone_name = var.hosted_zone_name
   domain_name      = var.api_domain_name
-
   parameter_prefix = local.api_parameter_prefix
 }
 
-module "db" {
-  source = "../../modules/db"
+# Develop's database lives on the production RDS instance (managed by infra/envs/production).
+data "aws_db_instance" "shared" {
+  db_instance_identifier = "${var.project}-db"
+}
 
-  project     = var.project
-  environment = local.environment
+data "aws_security_group" "shared_db" {
+  name = "${var.project}-production-db-sg"
+}
 
-  api_security_group_id       = module.api.security_group_id
-  database_url_parameter_name = local.database_url_parameter_name
-  instance_class              = var.db_instance_class
-  allocated_storage           = var.db_allocated_storage
+resource "aws_vpc_security_group_ingress_rule" "db_from_api" {
+  security_group_id            = data.aws_security_group.shared_db.id
+  description                  = "Postgres from the develop API task"
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+  referenced_security_group_id = module.api_service.security_group_id
+}
+
+# Alphanumeric only: the password is embedded in a URL, so this avoids escaping.
+# scripts/db-create-env.sh creates the matching role and database on the instance.
+resource "random_password" "db" {
+  length  = 32
+  special = false
+}
+
+resource "aws_ssm_parameter" "database_url" {
+  name        = "${local.api_parameter_prefix}/database-url"
+  description = "Postgres connection string for the develop API (${local.database_name} on the shared RDS instance)."
+  type        = "SecureString"
+  value = format(
+    "postgres://%s:%s@%s:%s/%s",
+    local.database_name,
+    random_password.db.result,
+    data.aws_db_instance.shared.address,
+    data.aws_db_instance.shared.port,
+    local.database_name,
+  )
+
+  tags = {
+    Project     = var.project
+    Environment = local.environment
+    ManagedBy   = "terraform"
+    Component   = "database"
+  }
+}
+
+moved {
+  from = module.cluster.aws_ssm_parameter.database_url[0]
+  to   = aws_ssm_parameter.database_url
 }

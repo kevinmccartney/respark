@@ -1,0 +1,21 @@
+flowchart LR
+  browser[Browser]
+  subgraph web [Web per env]
+    cf[CloudFront + ACM] --> s3[S3 bucket]
+  end
+  subgraph task [Fargate task per env, public IP]
+    caddy["caddy :80/:443 (Let's Encrypt)"] --> api["api :3000"]
+    dnsUpdater["dns-updater (runs once)"]
+  end
+  efs[EFS: Caddy certs]
+  r53[Route53 A record]
+  subgraph rds [RDS, owned by the production root]
+    prodDb[(respark)]
+    devDb[(respark_develop)]
+  end
+  browser --> cf
+  browser -->|HTTPS| caddy
+  caddy --- efs
+  dnsUpdater -->|UPSERT own public IP| r53
+  api --> prodDb
+  api --> devDb

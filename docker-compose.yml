@@ -1,11 +1,10 @@
-# DEPRECATED — use `task k8s:up` (Helm on Docker Desktop Kubernetes). Kept as a
-# fallback; do not run it alongside the local cluster (same localhost ports).
-#
 # Local development stack — Postgres + API + client + admin (watch mode).
 #
 #   task docker:up      # build + start
 #   task docker:logs    # follow API + client + admin logs
 #   task docker:down    # stop (keeps the DB volume)
+#
+# Env comes from the repo-root .env.local (Task passes it with --env-file).
 #
 # HUSKY=0 on app services. Dockerfiles also set it: compose env is not
 # available during RUN npm ci, and workspace installs omit the husky binary.
@@ -37,21 +36,19 @@ services:
       # Nest --debug listens here; attach with VS Code "API: attach (port 9229)"
       - '9229:9229'
     env_file:
-      - path: apps/api/.env
-        required: false
-      - path: apps/api/.env.local
+      - path: .env.local
         required: false
     environment:
       PORT: '3000'
       NODE_ENV: development
       LOG_LEVEL: '${LOG_LEVEL:-debug}'
       HUSKY: '0'
-      # Compose network hostname — overrides localhost from apps/api/.env
+      # Compose network hostname — overrides localhost from .env.local
       DATABASE_URL: postgres://respark:respark@db:5432/respark
       # Apply drizzle/ on boot so a fresh volume is usable immediately
       RUN_MIGRATIONS: 'true'
       ETL_REPO_ROOT: /repo
-      # Bedrock via IAM user respark-local-api keys in apps/api/.env.local
+      # Bedrock via IAM user respark-local-api keys in .env.local
       # (`task api:local-aws:write`). Do not mount ~/.aws (that is the terraform user).
       CHAT_PROVIDER: ${CHAT_PROVIDER:-bedrock}
       BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-us.anthropic.claude-haiku-4-5-20251001-v1:0}
@@ -75,12 +72,9 @@ services:
       dockerfile: apps/client/Dockerfile.dev
     ports:
       - '${CLIENT_PORT:-5173}:5173'
-    env_file:
-      - path: apps/client/.env
-        required: false
-      - path: apps/client/.env.local
-        required: false
     environment:
+      # Only the publishable key; Clerk secret keys stay out of the frontend containers.
+      VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:-}
       # Browser talks to the published API port on the host, not the Compose service name.
       VITE_API_URL: http://localhost:${PORT:-3000}
       HUSKY: '0'
@@ -100,12 +94,9 @@ services:
       dockerfile: apps/admin/Dockerfile.dev
     ports:
       - '${ADMIN_PORT:-4000}:4000'
-    env_file:
-      - path: apps/admin/.env
-        required: false
-      - path: apps/admin/.env.local
-        required: false
     environment:
+      # Only the publishable key; Clerk secret keys stay out of the frontend containers.
+      VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:-}
       # Browser talks to the published API port on the host, not the Compose service name.
       VITE_API_URL: http://localhost:${PORT:-3000}
       HUSKY: '0'

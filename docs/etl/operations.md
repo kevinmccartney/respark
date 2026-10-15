@@ -3,12 +3,12 @@
 ## Prerequisites
 
 ```bash
-cp apps/etl/.env.example apps/etl/.env   # DATABASE_URL for CLI
+cp .env.example .env.local   # repo root; DATABASE_URL for the CLI
 task db:up
 task db:migrate
 ```
 
-API/admin syncs use the API’s `DATABASE_URL` (the local cluster release or `apps/api/.env`). The API loads the compiled `etl` package (`apps/etl/dist`). Nest `--watch` does not rebuild it — run `task etl:build` and restart a host API, or `task k8s:sync` to rebuild and roll the cluster API, after changing pipeline source. The CLI (`task etl -- …`) runs TypeScript via `tsx` and does not need that rebuild.
+API/admin syncs use the API’s `DATABASE_URL` (the Compose API or the root `.env.local`). The API loads the compiled `etl` package (`apps/etl/dist`). Nest `--watch` does not rebuild it — run `task etl:build` and restart a host API, or `task docker:up` to rebuild the Compose API, after changing pipeline source. The CLI (`task etl -- …`) runs TypeScript via `tsx` and does not need that rebuild.
 
 ## CLI (report / break-glass)
 
@@ -38,7 +38,7 @@ Useful flags (global): `--limit`, `--dry-run`, `--verbose`, `--store-raw` / `--n
 
 ## Admin UI
 
-1. Open the admin app (`http://localhost:4000` via `task k8s:up` or `task admin:dev`).
+1. Open the admin app (`http://localhost:4000` via `task docker:up` or `task admin:dev`).
 2. Ensure Clerk `publicMetadata.role === "admin"`.
 3. On **ETL syncs**, choose Catalog and/or Enrichment → **Start sync**.
 4. List and detail pages update live over WebSocket (see [streaming](streaming.md)).

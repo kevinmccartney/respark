@@ -1,17 +1,18 @@
 # Documentation
 
-| Doc                                   | Description                                                        |
-| ------------------------------------- | ------------------------------------------------------------------ |
-| [Domain model](domain.md)             | Business objects, system diagram, Mermaid ERDs                     |
-| [Admin catalog](admin-catalog.md)     | Read-only Cards/Sets browse (printings via drilldown)              |
-| [AI chat](ai-chat.md)                 | Global assistant: sticky context, tools, Bedrock, WebSocket        |
-| [Commander stats](commander-stats.md) | Layer A rank/salt vs future per-commander inclusion (Option B)     |
-| [CI / CD](ci-cd.md)                   | GitHub Actions, Task isomorphism, OIDC, change detection, releases |
-| [Deployments](deployments.md)         | Modules + Helm models (Pi → EC2 all-in-one → EC2+SaaS → ALB/EKS)   |
-| [ETL overview](etl/overview.md)       | Sync / stage / job model, architecture, sources of truth           |
-| [ETL data model](etl/data-model.md)   | Compact Postgres schema/table list                                 |
-| [ETL operations](etl/operations.md)   | Running syncs (CLI + admin), reports, env                          |
-| [ETL streaming](etl/streaming.md)     | In-process lib events and admin WebSocket                          |
+| Doc                                             | Description                                                        |
+| ----------------------------------------------- | ------------------------------------------------------------------ |
+| [Domain model](domain.md)                       | Business objects, system diagram, Mermaid ERDs                     |
+| [Admin catalog](admin-catalog.md)               | Read-only Cards/Sets browse (printings via drilldown)              |
+| [AI chat](ai-chat.md)                           | Global assistant: sticky context, tools, Bedrock, WebSocket        |
+| [Commander stats](commander-stats.md)           | Layer A rank/salt vs future per-commander inclusion (Option B)     |
+| [Current architecture](current-architecture.md) | Fargate API (TLS in task), shared RDS, S3 + CloudFront web         |
+| [CI / CD](ci-cd.md)                             | GitHub Actions, Task isomorphism, OIDC, change detection, releases |
+| [Deployments](deployments.md)                   | Modules + Helm models (Pi → EC2 all-in-one → EC2+SaaS → ALB/EKS)   |
+| [ETL overview](etl/overview.md)                 | Sync / stage / job model, architecture, sources of truth           |
+| [ETL data model](etl/data-model.md)             | Compact Postgres schema/table list                                 |
+| [ETL operations](etl/operations.md)             | Running syncs (CLI + admin), reports, env                          |
+| [ETL streaming](etl/streaming.md)               | In-process lib events and admin WebSocket                          |
 
 Agent standing orders (thin; point here for depth): [`.cursor/rules/`](../.cursor/rules/), [`AGENTS.md`](../AGENTS.md).
 

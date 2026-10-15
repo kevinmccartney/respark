@@ -105,11 +105,10 @@ jobs:
               - '.husky/**'
               - 'commitlint.config.mjs'
               - 'docker-compose.yml'
-              - 'deploy/**'
               - 'tech-debt-analysis-prompt.md'
               - '.prettierignore.shared'
               - 'scripts/**'
-              - '!scripts/redeploy-api-ec2.sh'
+              - '!scripts/api-deploy.sh'
               - '!scripts/push-api-secrets.sh'
             toolchain:
               - 'package.json'
@@ -127,7 +126,7 @@ jobs:
               - 'apps/etl/**'
             api:
               - 'apps/api/**'
-              - 'scripts/redeploy-api-ec2.sh'
+              - 'scripts/api-deploy.sh'
               - 'scripts/push-api-secrets.sh'
             client:
               - 'apps/client/**'
@@ -193,7 +192,7 @@ jobs:
             CLIENT=$(or "$F_CLIENT" "$F_SCHEMAS" "$F_UI" "$F_TOOLCHAIN")
             ADMIN=$(or "$F_ADMIN" "$F_SCHEMAS" "$F_UI" "$F_TOOLCHAIN")
             INFRA=$(true_if "$F_INFRA")
-            # Infra changes may replace EC2 / CDN; redeploy affected surfaces.
+            # Infra changes may replace the ECS service / CDN; redeploy affected surfaces.
             DEPLOY_API=$(or "$F_API" "$F_ETL" "$F_SCHEMAS" "$F_TOOLCHAIN" "$INFRA")
             DEPLOY_CLIENT=$(or "$CLIENT" "$INFRA")
             DEPLOY_ADMIN=$(or "$ADMIN" "$INFRA")
@@ -551,7 +550,7 @@ jobs:
         run: >
           task api:deploy
           ENV=${{ needs.config.outputs.environment }}
-          API_IMAGE_TAG=${{ needs.release.outputs.sha || needs.changes.outputs.sha }}
+          IMAGE_TAG=${{ needs.release.outputs.sha || needs.changes.outputs.sha }}
           DOCKER_BUILDX=1
 
   deploy-client:

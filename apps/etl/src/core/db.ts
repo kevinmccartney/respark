@@ -4,26 +4,22 @@ import { resolve } from 'node:path';
 import { config } from 'dotenv';
 import { Pool } from 'pg';
 
-const here = __dirname;
-const packageRoot = resolve(here, '../..');
+const envLocal = resolve(__dirname, '../../../..', '.env.local');
 
-/** Load env from this package only — ETL deploys separately from the API.
- * Existing process.env wins (override: false) so cluster/API-spawned jobs keep
- * their DATABASE_URL instead of apps/etl/.env pointing at localhost.
+/** Load the repo-root .env.local for the CLI.
+ * Existing process.env wins (override: false) so API-spawned jobs keep
+ * their DATABASE_URL instead of .env.local pointing at localhost.
  */
 export const loadEnv = () => {
-  for (const file of ['.env', '.env.local']) {
-    const path = resolve(packageRoot, file);
-    if (existsSync(path)) {
-      config({ path, override: false });
-    }
+  if (existsSync(envLocal)) {
+    config({ path: envLocal, override: false });
   }
 };
 
 export const createPool = (): Pool => {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    throw new Error('DATABASE_URL is required. Copy apps/etl/.env.example to apps/etl/.env.');
+    throw new Error('DATABASE_URL is required. Copy .env.example to .env.local at the repo root.');
   }
 
   // Present only in the deployed API image, where RDS requires verified TLS.

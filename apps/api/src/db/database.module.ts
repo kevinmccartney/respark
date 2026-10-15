@@ -28,7 +28,9 @@ export type Database = NodePgDatabase<typeof schema>;
       useFactory: () => {
         const connectionString = process.env.DATABASE_URL;
         if (!connectionString) {
-          throw new Error('DATABASE_URL is required. Copy apps/api/.env.example to apps/api/.env.');
+          throw new Error(
+            'DATABASE_URL is required. Copy .env.example to .env.local at the repo root.',
+          );
         }
 
         // Present only in the deployed image, where RDS requires verified TLS.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Delete digital-only catalog sets (set.digital / alchemy) and their printings.
-# Default: develop RDS through the SSM tunnel (task db:tunnel). Dry-run unless apply.
+# Default: develop Postgres through the SSM tunnel (task db:tunnel). Dry-run unless apply.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -63,7 +63,7 @@ else
     --query 'Parameter.Value' \
     --output text)"
   DATABASE_URL="$(rewrite_ssm_url_to_tunnel "$SSM_URL")"
-  TARGET="${ENV} RDS via 127.0.0.1:${LOCAL_PORT} (start \`task db:tunnel\` first)"
+  TARGET="${ENV} Postgres via 127.0.0.1:${LOCAL_PORT} (start \`task db:tunnel\` first)"
 fi
 
 echo "Target: ${TARGET}"

@@ -13,7 +13,7 @@
 -- Run:
 --   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v apply=0 -f scripts/purge-digital-sets.sql
 --   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v apply=1 -f scripts/purge-digital-sets.sql
--- Or via Task (tunnel first for develop RDS):
+-- Or via Task (tunnel first for develop):
 --   task db:purge-digital            # dry-run
 --   task db:purge-digital -- apply
 --   task db:purge-digital -- local   # local Postgres

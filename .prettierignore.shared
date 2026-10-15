@@ -5,5 +5,5 @@ apps/client/
 apps/etl/
 packages/schemas/
 packages/ui/
-scripts/redeploy-api-ec2.sh
+scripts/api-deploy.sh
 scripts/push-api-secrets.sh

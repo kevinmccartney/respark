@@ -11,7 +11,7 @@ import App from './App';
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 if (!publishableKey) {
-  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY. Run `clerk env pull` in apps/client.');
+  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY. Set it in the repo-root .env.local.');
 }
 
 const queryClient = new QueryClient({

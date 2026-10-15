@@ -1,20 +1,19 @@
 # develop environment
 
-Terraform root for the **develop** AWS environment (0.x): S3 origin, CloudFront, ACM (HTTPS), and Route53 for `dev.respark.kevinmccartney.is`. Production lives alongside in [`../production`](../production/) (same account, separate state key and tags).
+Terraform root for the **develop** AWS environment (0.x). Production lives alongside in [`../production`](../production/) (same account, separate state key and tags). Architecture overview: [`docs/current-architecture.md`](../../docs/current-architecture.md).
 
 ## Prerequisites
 
 - Route53 hosted zone for `kevinmccartney.is` in this AWS account
-- AWS credentials with permission to manage S3, CloudFront, ACM, Route53, EC2, ECR, **RDS**, and **SSM Parameter Store**
+- The production root applied first: develop's database lives on production's RDS instance
+- AWS credentials with permission to manage S3, CloudFront, ACM, Route53, ECS, ECR, EFS, EC2 security groups, IAM, and **SSM Parameter Store**
 
-## Modules
+## What it manages
 
-- **`ui`** — S3 + CloudFront + ACM + Route53 for the player client (`component = "web"` so the existing bucket name stays)
+- **`ui`** — S3 + CloudFront + ACM + Route53 for the player client (`component = "web"`)
 - **`admin`** — same `ui` module for the admin dashboard (`component = "admin"`)
-- **`api`** — ECR, EC2, CloudFront, ACM, DNS, CloudWatch Logs. Runtime identity is the EC2 instance role (Bedrock chat).
-- **`db`** — RDS Postgres, private to the API security group, with the connection string in SSM Parameter Store
-
-The `db` module takes the API security group as input, so the `api` module receives the SSM parameter **path** as a plain string (`local.database_url_parameter_name`) rather than referencing `module.db`. That keeps the two modules acyclic.
+- **`api_service`** — ECR, ECS Fargate service (api + Caddy TLS + DNS updater), EFS for certificates, CloudWatch Logs, and the `dev.api` A record. Runtime identity is the task role (Bedrock chat).
+- **Database access** — an ingress rule on the shared RDS security group, and the `respark_develop` connection string in SSM (`database-url`, password generated here). Create the role and database once with `task db:create-env` (below).
 
 ## Apply
 
@@ -35,9 +34,16 @@ Or apply infra and deploy API + client + admin in one shot locally:
 task deploy
 ```
 
-First apply may take several minutes while ACM DNS validation completes. Creating the RDS instance takes roughly 5-10 minutes.
+First apply may take several minutes while ACM DNS validation completes.
 
-Optional: copy `terraform.tfvars.example` to `terraform.tfvars` to override `domain_name`, `admin_domain_name`, `hosted_zone_name`, or bucket names.
+Optional: copy `terraform.tfvars.example` to `terraform.tfvars` to override hostnames.
+
+## Create the database (once)
+
+```bash
+task db:tunnel ENV=production      # leave running
+task db:create-env ENV=develop     # role + database respark_develop on the shared RDS
+```
 
 ## Deploy the API
 
@@ -46,11 +52,11 @@ task api:secrets:push   # once, and after any Clerk key rotation
 task api:deploy
 ```
 
-Terraform generates the database password and writes **`DATABASE_URL`** to SSM Parameter Store as a `SecureString`; `api:secrets:push` adds **`clerk-secret-key`** from `apps/api/.env` so it never lands in Terraform state. Terraform also writes **`bedrock-model-id`** (plain String). The instance role reads parameters during redeploy, so no secret passes through an operator's machine, and the container applies pending migrations on boot via `RUN_MIGRATIONS=true`. Deck chat uses the instance profile for Bedrock (`InvokeModel` / `InvokeModelWithResponseStream`); the container reaches IMDSv2 because the hop limit is 2. That EC2 role is the **develop** API principal (`api_runtime_role_arn`). The laptop API uses a separate IAM user from [`local/README.md`](../local/README.md).
+Terraform writes **`database-url`** to SSM; `api:secrets:push` adds **`clerk-secret-key`** and **`clerk-webhook-signing-secret`** from the repo-root `.env.develop` so they never land in Terraform state. ECS injects them at task start, and the api container applies pending migrations on boot (`RUN_MIGRATIONS=true`). The task role is the **develop** API principal for Bedrock (`api_runtime_role_arn`). The laptop API uses a separate IAM user from [`local/README.md`](../local/README.md).
 
-`infra:apply` replaces the EC2 instance whenever `user_data` changes. The redeploy script waits for cloud-init to finish installing `/usr/local/bin/respark-deploy-api.sh`, so running `task api:deploy` immediately afterwards is safe.
+`task api:deploy` pushes `:<tag>` and `:latest`, forces a new ECS deployment, and waits for it to be stable. The new task points `dev.api` at its own public IP once healthy; clients may reach the old IP for up to a minute.
 
-`task api:deploy` needs **`ssm:SendCommand`** on the instance, and Postgres is only reachable from the API security group — use SSM port forwarding through the EC2 box for psql access.
+For psql access: `task db:tunnel` (SSM port-forward through the running task via ECS Exec), then `task db:url`.
 
 ## Deploy the client
 

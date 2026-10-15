@@ -9,11 +9,6 @@ variable "environment" {
   type        = string
 }
 
-variable "api_security_group_id" {
-  description = "Security group of the API instances allowed to reach Postgres."
-  type        = string
-}
-
 variable "database_url_parameter_name" {
   description = "SSM Parameter Store path holding the API connection string."
   type        = string

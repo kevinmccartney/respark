@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pushes API secrets from apps/api/.env into SSM Parameter Store.
+# Pushes API secrets from the repo-root .env.<ENV> into SSM Parameter Store.
 # Terraform owns database-url; this covers secrets it should never see.
 set -euo pipefail
 
@@ -12,21 +12,22 @@ else
 fi
 AWS_REGION="${AWS_REGION:-us-east-1}"
 
-if [[ -f "${ROOT}/apps/api/.env" ]]; then
-  set -a
-  # shellcheck disable=SC1091
-  source "${ROOT}/apps/api/.env"
-  set +a
+ENV_FILE="${ROOT}/.env.${ENV}"
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo "Missing ${ENV_FILE}. Copy .env.example and fill in the ${ENV} Clerk keys." >&2
+  exit 1
 fi
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
 
 if [[ -z "${CLERK_SECRET_KEY:-}" ]]; then
-  echo "Set CLERK_SECRET_KEY in apps/api/.env (see .env.example) first." >&2
+  echo "Set CLERK_SECRET_KEY in ${ENV_FILE} first." >&2
   exit 1
 fi
 
-# Derive the prefix from the parameter Terraform already manages.
-DATABASE_URL_PARAM="$(terraform -chdir="$TF_DIR" output -raw db_database_url_parameter)"
-PREFIX="${DATABASE_URL_PARAM%/database-url}"
+PREFIX="$(terraform -chdir="$TF_DIR" output -raw api_parameter_prefix)"
 
 put_secret() {
   aws ssm put-parameter \
@@ -43,11 +44,11 @@ put_secret() {
 
 put_secret clerk-secret-key "Clerk secret key for the API" "$CLERK_SECRET_KEY"
 
-# Optional: only exists once the webhook endpoint is created in the Clerk dashboard.
+# Only exists once the webhook endpoint is created in the Clerk dashboard.
 if [[ -n "${CLERK_WEBHOOK_SIGNING_SECRET:-}" ]]; then
   put_secret clerk-webhook-signing-secret "Clerk webhook signing secret" "$CLERK_WEBHOOK_SIGNING_SECRET"
 else
-  echo "Skipped clerk-webhook-signing-secret (unset in apps/api/.env); /webhooks/clerk will 503."
+  echo "Skipped clerk-webhook-signing-secret (unset in ${ENV_FILE}). ECS needs the parameter to exist to start the task."
 fi
 
-echo "Run 'task api:deploy' to restart the container with it."
+echo "Run 'task api:deploy ENV=${ENV}' to roll the API onto it."

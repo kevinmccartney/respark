@@ -1,5 +1,5 @@
 ---
-description: NestJS API, Drizzle, Clerk backend, and local Kubernetes conventions
+description: NestJS API, Drizzle, Clerk backend, and local stack conventions
 globs: apps/api/**
 alwaysApply: false
 ---
@@ -17,11 +17,12 @@ Package README: [`apps/api/README.md`](../../apps/api/README.md). ETL that the A
 
 - Dev: `task api:dev` / `task api:debug`
 - Build: `task api:build` (depends on `etl:build`)
-- Local stack: `task k8s:up` (Helm on Docker Desktop Kubernetes; `task k8s:sync` after code changes). Compose is deprecated.
+- Local stack: `task docker:up` (Docker Compose; env from the repo-root `.env.local`).
+- Env files live at the repo root: `.env.local` (local), `.env.develop` / `.env.production` (per-env Clerk keys). Template: `.env.example`.
 - Deployed DB: `task db:tunnel` + `task db:url` (never open RDS publicly)
 
 ## Conventions
 
 - Keep Clerk **secret** keys out of client/admin bundles and Terraform state; use env / SSM.
 - Prefer extending existing Nest modules (`decks`, etc.) over new top-level packages.
-- API Docker image is `linux/arm64` (Graviton) for EC2.
+- API Docker image is `linux/arm64` (Graviton) for ECS Fargate; see `docs/current-architecture.md`.

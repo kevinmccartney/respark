@@ -23,10 +23,8 @@ respark/
 │   ├── envs/production/        # Terraform root (production, same account)
 │   ├── envs/local/             # Laptop API IAM (Bedrock)
 │   └── modules/ui/             # S3 + CloudFront + HTTPS UI module
-├── deploy/
-│   ├── charts/                 # Helm charts: respark-api, respark-web, respark-postgres
-│   └── envs/local/             # Helm values for local Kubernetes (Docker Desktop)
-├── docker-compose.yml          # Deprecated local stack (use task k8s:up)
+├── docker-compose.yml          # Local stack (task docker:up)
+├── .env.example                # Template for .env.local / .env.develop / .env.production
 ├── package.json                # npm workspaces root
 ├── Taskfile.yml                # [Task](https://taskfile.dev/) runner
 └── README.md
@@ -43,11 +41,12 @@ npm run dev
 
 Open the URL shown in the terminal (default `http://localhost:5173`).
 
-Authentication uses [Clerk](https://clerk.com/) in `apps/client` and `apps/admin` (same Clerk application). After cloning:
+Authentication uses [Clerk](https://clerk.com/), one Clerk instance per environment shared by the client, admin, and API. Env files live at the repo root (all gitignored; template: [`.env.example`](.env.example)):
 
-- **Client:** copy `apps/client/.env.example` → `apps/client/.env.local` and set `VITE_CLERK_PUBLISHABLE_KEY` (`clerk env pull` from `apps/client` fills this; do not use the secret key in the client).
-- **Admin:** copy `apps/admin/.env.example` → `apps/admin/.env.local` and use the same publishable key. Grant access by setting the Clerk user's public metadata to `{ "role": "admin" }` (see [`apps/admin/README.md`](apps/admin/README.md)).
-- **API:** copy `apps/api/.env.example` → `apps/api/.env` and set `CLERK_SECRET_KEY` (copy from Dashboard or from client `.env.local` after `clerk env pull` — keep it out of the Vite bundle).
+- **`.env.local`** — local development (API, ETL CLI, Vite dev, Docker Compose). Copy `.env.example` and set the Clerk keys (`VITE_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SIGNING_SECRET`).
+- **`.env.develop`** / **`.env.production`** — the Clerk keys for that environment. `task api:secrets:push`, `task client:deploy`, and `task admin:deploy` read `.env.$ENV`.
+
+Only `VITE_*` keys reach the browser bundle. Admin access: set the Clerk user's public metadata to `{ "role": "admin" }` (see [`apps/admin/README.md`](apps/admin/README.md)).
 
 | Command             | Description                                         |
 | ------------------- | --------------------------------------------------- |
@@ -83,11 +82,10 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 | `task client:build`          | Production build of the player client                                                                          |
 | `task admin:build`           | Production build of the admin app                                                                              |
 | `task api:build`             | Compile the NestJS API (runs `etl:build` first)                                                                |
-| `task k8s:up`                | Local Kubernetes: ingress, images, Secrets, Postgres, API, client, admin                                       |
-| `task k8s:sync`              | Rebuild images, refresh Secrets, roll out API + client + admin                                                 |
-| `task k8s:down`              | Remove local releases (keeps the Postgres volume)                                                              |
-| `task k8s:logs`              | Follow local API + client + admin pod logs                                                                     |
-| `task k8s:ps`                | Local pods, services, and ingresses                                                                            |
+| `task docker:up`             | Local stack via Docker Compose: Postgres, API, client, admin (watch mode)                                      |
+| `task docker:down`           | Stop the local stack (keeps the Postgres volume)                                                               |
+| `task docker:logs`           | Follow local API + client + admin logs                                                                         |
+| `task docker:ps`             | Local Compose services                                                                                         |
 | `task api:dev`               | API watch mode on the host (`PORT`, default 3000)                                                              |
 | `task admin:dev`             | Admin Vite app on port 4000                                                                                    |
 | `task api:debug`             | Host API watch + inspector on 9229                                                                             |
@@ -95,24 +93,24 @@ Common workflows use [Task](https://taskfile.dev/) from the repository root (ins
 | `task infra:plan`            | `terraform` fmt/validate/plan in `infra/envs/$ENV` (default develop)                                           |
 | `task infra:apply`           | Apply plan file if present, else interactive apply (`ENV=…`)                                                   |
 | `task deploy`                | Apply Terraform, deploy API, then client+admin in parallel (`ENV=…`)                                           |
-| `task db:up`                 | Start local Postgres only (Helm release)                                                                       |
+| `task db:up`                 | Start local Postgres only (Compose `db` service)                                                               |
 | `task db:migrate`            | Apply Drizzle migrations                                                                                       |
 | `task etl -- <cmd>`          | MTG ETL CLI — see [`docs/etl/operations.md`](docs/etl/operations.md)                                           |
 | `task db:tunnel`             | SSM tunnel to RDS for `$ENV` (`localhost:15432`)                                                               |
 | `task db:url`                | Print `$ENV` `DATABASE_URL` from SSM (has password)                                                            |
 | `task db:purge-non-playable` | Dry-run delete of catalog extras (tokens, art, planes, …) on `$ENV` RDS (`-- apply` to run)                    |
-| `task api:secrets:push`      | Push `CLERK_SECRET_KEY` to SSM for `$ENV`                                                                      |
-| `task api:deploy`            | Build/push the API image and restart it on EC2 (`ENV=…`)                                                       |
+| `task api:secrets:push`      | Push the Clerk secrets from `.env.$ENV` to SSM                                                                 |
+| `task api:deploy`            | Build/push the API image and roll the ECS Fargate service (`ENV=…`)                                            |
 | `task client:deploy`         | Build against the deployed API, sync to S3, invalidate CloudFront                                              |
 | `task admin:deploy`          | Same for the admin dashboard                                                                                   |
 
 Pass `ENV=production` (or `ENV=develop`) on any infra/deploy task; CI uses the same commands. List all tasks with `task --list`.
 
-Local stack: `task k8s:up` deploys Postgres, API (:3000), client (:5173), and admin (:4000) to Docker Desktop's built-in Kubernetes with Helm. It needs Docker Desktop with Kubernetes enabled (kubectl context `docker-desktop`) and [Helm](https://helm.sh/) (`brew install helm`). Details in [`apps/api/README.md`](apps/api/README.md). The Compose stack (`task docker:up`) is deprecated.
+Local stack: `task docker:up` runs Postgres, API (:3000), client (:5173), and admin (:4000) with Docker Compose, using the root `.env.local`. Details in [`apps/api/README.md`](apps/api/README.md).
 
 #### Connect a local Postgres client to develop RDS
 
-RDS is **not** public. Use `task db:tunnel` — it opens an SSM port-forward through the API EC2 instance so `127.0.0.1:15432` reaches Postgres without opening the security group.
+RDS is **not** public. Use `task db:tunnel` — it opens an SSM port-forward through the running API task (ECS Exec) so `127.0.0.1:15432` reaches Postgres without opening the security group.
 
 Requires the [Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) and `ssm:StartSession` on your IAM user.
 
@@ -120,16 +118,16 @@ Requires the [Session Manager plugin](https://docs.aws.amazon.com/systems-manage
 
 | Field    | Value                                                                                  |
 | -------- | -------------------------------------------------------------------------------------- |
-| User     | `respark`                                                                              |
-| Database | `respark`                                                                              |
+| User     | `respark_develop` (production: `respark`)                                              |
+| Database | `respark_develop` (production: `respark`)                                              |
 | Password | Random, generated by Terraform — read from SSM (`…/api/database-url`), never committed |
 
 ```bash
 task db:tunnel   # leave running
-task db:url      # postgres://respark:<password>@<rds-host>:5432/respark
+task db:url      # postgres://respark_develop:<password>@<rds-host>:5432/respark_develop
 ```
 
-For a GUI client: host `127.0.0.1`, port `15432`, user `respark`, SSL require, password from `task db:url`.
+For a GUI client: host `127.0.0.1`, port `15432`, SSL require, user and password from `task db:url`. Architecture: [`docs/current-architecture.md`](docs/current-architecture.md).
 
 ### AWS hosting (Terraform)
 

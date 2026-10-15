@@ -9,10 +9,12 @@ infra/
 │   ├── production/   # Prod (respark / admin.respark / api.respark)
 │   └── local/        # Laptop API IAM only
 └── modules/
-    ├── api/
-    ├── db/
-    ├── ui/
+    ├── api_service/  # ECS Fargate API (Caddy TLS in the task)
+    ├── db/           # RDS, owned by production; also hosts develop's database
+    ├── ui/           # S3 + CloudFront
     └── bedrock_invoke/
 ```
+
+Architecture overview: [`docs/current-architecture.md`](../docs/current-architecture.md).
 
 Use `ENV=develop` (default) or `ENV=production` with Task (`task infra:plan`, `task deploy`, …). Production deploys are intentional — see [`envs/production/README.md`](envs/production/README.md) and [`docs/ci-cd.md`](../docs/ci-cd.md).

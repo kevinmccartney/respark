@@ -13,13 +13,13 @@ State key: `envs/production/terraform.tfstate` in the shared `respark-tfstate` b
 ## Prerequisites
 
 - Route53 hosted zone for `kevinmccartney.is` in this AWS account
-- AWS credentials with permission to manage S3, CloudFront, ACM, Route53, EC2, ECR, **RDS**, and **SSM Parameter Store**
+- AWS credentials with permission to manage S3, CloudFront, ACM, Route53, ECS, ECR, EFS, EC2 security groups, IAM, **RDS**, and **SSM Parameter Store**
 - GitHub Environment **`production`** with `AWS_ROLE_ARN`, `VITE_CLERK_PUBLISHABLE_KEY` (prod Clerk instance), and `COMPILE_CHECK_API_URL=https://api.respark.kevinmccartney.is`
 - Separate Clerk **production** application (not the develop publishable key)
 
 ## Modules
 
-Same wiring as develop: `ui` (client), `admin`, `api`, `db`. Production enables RDS `deletion_protection` and takes a final snapshot on destroy (`skip_final_snapshot = false`).
+Same wiring as develop: `ui` (client), `admin`, `api_service` (Fargate, TLS in the task), plus `db`. The RDS instance is shared: it also hosts develop's `respark_develop` database, and develop's root adds its own ingress rule to the security group. Production enables RDS `deletion_protection` and takes a final snapshot on destroy (`skip_final_snapshot = false`). See [`docs/current-architecture.md`](../../docs/current-architecture.md).
 
 ## First bring-up
 

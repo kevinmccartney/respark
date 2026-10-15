@@ -10,22 +10,10 @@ variable "project" {
   default     = "respark"
 }
 
-variable "bucket_name" {
-  description = "Optional fixed S3 bucket name for the player client (globally unique)."
-  type        = string
-  default     = null
-}
-
 variable "domain_name" {
   description = "Public hostname for the develop player client (0.x pre-prod)."
   type        = string
   default     = "dev.respark.kevinmccartney.is"
-}
-
-variable "admin_bucket_name" {
-  description = "Optional fixed S3 bucket name for the admin UI (globally unique)."
-  type        = string
-  default     = null
 }
 
 variable "admin_domain_name" {
@@ -44,16 +32,4 @@ variable "api_domain_name" {
   description = "Public hostname for the develop API."
   type        = string
   default     = "dev.api.respark.kevinmccartney.is"
-}
-
-variable "db_instance_class" {
-  description = "RDS instance class for the develop database."
-  type        = string
-  default     = "db.t4g.micro"
-}
-
-variable "db_allocated_storage" {
-  description = "Allocated storage in GiB for the develop database."
-  type        = number
-  default     = 20
 }

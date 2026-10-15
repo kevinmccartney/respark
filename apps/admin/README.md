@@ -4,13 +4,9 @@ Local ops dashboard for ETL syncs. Uses the same Clerk application as `apps/clie
 
 ## Setup
 
-1. Copy env:
+1. Env comes from the repo-root `.env.local` (copy [`.env.example`](../../.env.example)). Set `VITE_CLERK_PUBLISHABLE_KEY`; the client and API use the same Clerk instance.
 
-```bash
-cp apps/admin/.env.example apps/admin/.env.local
-```
-
-2. Set `VITE_CLERK_PUBLISHABLE_KEY` to the same value as `apps/client/.env.local` (or run `clerk env pull` against that Clerk app from `apps/admin`).
+2. Deploys read the publishable key from `.env.develop` / `.env.production` (or the GitHub Environment variable in CI).
 
 3. In the [Clerk Dashboard](https://dashboard.clerk.com/), open your user → **Public metadata** and set:
 
@@ -18,14 +14,14 @@ cp apps/admin/.env.example apps/admin/.env.local
 { "role": "admin" }
 ```
 
-4. Ensure the API is running with `CLERK_SECRET_KEY` and `DATABASE_URL` configured (`task api:dev` or the local cluster).
+4. Ensure the API is running with `CLERK_SECRET_KEY` and `DATABASE_URL` configured (`task api:dev` or `task docker:up`).
 
 ## Run
 
-Via local Kubernetes (with the rest of the stack):
+Via Docker Compose (with the rest of the stack):
 
 ```bash
-task k8s:up
+task docker:up
 ```
 
 Or on the host only:

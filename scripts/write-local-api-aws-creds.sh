@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Create (or rotate) access keys for the local API IAM user and write them to
-# gitignored apps/api/.env.local. Keys stay out of Terraform state.
+# the gitignored repo-root .env.local. Keys stay out of Terraform state.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TF_DIR="${TF_DIR:-$ROOT/infra/envs/local}"
-ENV_LOCAL="${ENV_LOCAL:-$ROOT/apps/api/.env.local}"
+ENV_LOCAL="${ENV_LOCAL:-$ROOT/.env.local}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 ROTATE=0
 
@@ -82,4 +82,4 @@ path.write_text(text)
 PY
 
 echo "Wrote AWS keys for $USER_NAME to $ENV_LOCAL"
-echo "Load them into the local cluster: task k8s:sync"
+echo "Restart the local stack to pick them up: task docker:up"
