@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/kevinmccartney/respark/compare/v0.6.0...v0.7.0) (2026-10-15)
+
+### Features
+
+- **admin:** homepage ([8f20eb7](https://github.com/kevinmccartney/respark/commit/8f20eb705e89879368d768fe7dee44045869950a))
+- cost page ([6368383](https://github.com/kevinmccartney/respark/commit/6368383375a3d6c4e8aa53743f6f7e4fcfde9997))
+
 ## [0.6.0](https://github.com/kevinmccartney/respark/compare/v0.5.0...v0.6.0) (2026-09-29)
 
 ### Features
