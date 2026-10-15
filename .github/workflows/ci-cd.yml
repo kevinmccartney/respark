@@ -443,6 +443,8 @@ jobs:
           ref: ${{ needs.changes.outputs.sha }}
           fetch-depth: 0
           persist-credentials: true
+          # Write deploy key: the only bypass actor allowed to push to main (.github/rulesets/main.json).
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
 
       - uses: ./.github/actions/setup-js
         with:

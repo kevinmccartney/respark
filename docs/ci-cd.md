@@ -60,7 +60,11 @@ task api:secrets:push ENV=production
 - **PR required, squash only.** No approvals are required (a solo maintainer can't approve their own PR); the squash commit takes the commitlint-checked PR title.
 - **Required check: `CI`.** One gate job that needs every build job and fails if any failed or was cancelled; skipped jobs count as passing. Pinned to the GitHub Actions app so nothing else can post a `CI` status.
 - **No force-push or deletion** of `main`.
-- **Bypass:** GitHub Actions (always), so the `release` job can push its `chore(release):` commit and tag; repository admins only when merging a PR (e.g. merge before `CI` finishes), never by direct push.
+- **Bypass:**
+  - **Deploy keys (always).** The `release` job checks out with the write deploy key in the `RELEASE_DEPLOY_KEY` repo secret so it can push its `chore(release):` commit and tag. GitHub Actions itself can't be a bypass actor on a personal-account repo. That commit carries `[skip ci]`, because deploy-key pushes (unlike `GITHUB_TOKEN`) start new workflow runs. Keep this the only write deploy key; any write deploy key can bypass.
+  - **Repository admins (PR merges only)**, e.g. to merge before `CI` finishes; never by direct push.
+
+To rotate the release key: generate a new ed25519 key, `gh repo deploy-key add <key>.pub --allow-write`, `gh secret set RELEASE_DEPLOY_KEY < <key>`, then delete the old deploy key and the local files.
 
 ## Change detection
 
@@ -144,7 +148,7 @@ Release (CI `release` job on push to `main` after every project job succeeds or 
 2. Otherwise: `conventional-recommended-bump` + `conventional-changelog` (`conventionalcommits` preset) via `task release` ([`scripts/release.mjs`](../scripts/release.mjs)): bump root `package.json` / lockfile, prepend [`CHANGELOG.md`](../CHANGELOG.md) (Prettier-formatted), commit `chore(release): vX.Y.Z`, tag, push, `gh release create`.
 3. Later jobs check out that SHA. Locally: `task release -- --dry-run` (does not tag or push).
 
-The release push to `main` works because GitHub Actions is a bypass actor on the `main` ruleset (see [Branch policy](#branch-policy)).
+The release push to `main` uses a write deploy key, the ruleset's bypass actor (see [Branch policy](#branch-policy)).
 
 Running APIs expose the version on public **`GET /info`** `{ "version": "0.1.0" }` (read from root `package.json`, or `APP_VERSION`). **`GET /healthz`** stays `{ "status": "ok" }` for load balancers. Client and admin footers fetch `/info` next to `/healthz`.
 
