@@ -53,6 +53,19 @@ task api:secrets:push ENV=production
 4. Deploy apps: **Run workflow → `production`**, or `task deploy ENV=production`.
 5. Confirm `site_url` / `admin_site_url` / `api_url` outputs, `/healthz` + `/info`, and sign-in. Prod DB starts empty — catalog ETL/sync is a follow-on.
 
+## Branch policy
+
+`main` only changes through pull requests. The repository ruleset lives in [`.github/rulesets/main.json`](../.github/rulesets/main.json); apply edits with `task github:ruleset` (needs `gh`, signed in as a repo admin).
+
+- **PR required, squash only.** No approvals are required (a solo maintainer can't approve their own PR); the squash commit takes the commitlint-checked PR title.
+- **Required check: `CI`.** One gate job that needs every build job and fails if any failed or was cancelled; skipped jobs count as passing. Pinned to the GitHub Actions app so nothing else can post a `CI` status.
+- **No force-push or deletion** of `main`.
+- **Bypass:**
+  - **Deploy keys (always).** The `release` job checks out with the write deploy key in the `RELEASE_DEPLOY_KEY` repo secret so it can push its `chore(release):` commit and tag. GitHub Actions itself can't be a bypass actor on a personal-account repo. That commit carries `[skip ci]`, because deploy-key pushes (unlike `GITHUB_TOKEN`) start new workflow runs. Keep this the only write deploy key; any write deploy key can bypass.
+  - **Repository admins (PR merges only)**, e.g. to merge before `CI` finishes; never by direct push.
+
+To rotate the release key: generate a new ed25519 key, `gh repo deploy-key add <key>.pub --allow-write`, `gh secret set RELEASE_DEPLOY_KEY < <key>`, then delete the old deploy key and the local files.
+
 ## Change detection
 
 [`dorny/paths-filter`](https://github.com/dorny/paths-filter) maps the git diff to flags. `changes` depends only on `config` (not on format or release). Checkout SHA is `github.sha`.
@@ -127,7 +140,7 @@ Authoring:
 
 - husky **commit-msg** runs commitlint (`@commitlint/config-conventional`).
 - `task commit` runs Commitizen (`cz-conventional-changelog`). Do not use a `prepare-commit-msg` hook — `git commit -m` must keep working.
-- PRs: CI lints the **PR title** and every commit on the branch. **Squash-merge** (or rebase) with a conventional title; a default “Merge pull request #N” commit is not a bump signal.
+- PRs: CI lints the **PR title** and every commit on the branch. **Squash-merge** (the only method the ruleset allows) with a conventional title; a default “Merge pull request #N” commit is not a bump signal.
 
 Release (CI `release` job on push to `main` after every project job succeeds or is skipped; skipped for `chore(release):` commits):
 
@@ -135,7 +148,7 @@ Release (CI `release` job on push to `main` after every project job succeeds or 
 2. Otherwise: `conventional-recommended-bump` + `conventional-changelog` (`conventionalcommits` preset) via `task release` ([`scripts/release.mjs`](../scripts/release.mjs)): bump root `package.json` / lockfile, prepend [`CHANGELOG.md`](../CHANGELOG.md) (Prettier-formatted), commit `chore(release): vX.Y.Z`, tag, push, `gh release create`.
 3. Later jobs check out that SHA. Locally: `task release -- --dry-run` (does not tag or push).
 
-If `main` is protected, allow GitHub Actions to push so the job can tag.
+The release push to `main` uses a write deploy key, the ruleset's bypass actor (see [Branch policy](#branch-policy)).
 
 Running APIs expose the version on public **`GET /info`** `{ "version": "0.1.0" }` (read from root `package.json`, or `APP_VERSION`). **`GET /healthz`** stays `{ "status": "ok" }` for load balancers. Client and admin footers fetch `/info` next to `/healthz`.
 

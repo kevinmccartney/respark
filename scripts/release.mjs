@@ -159,7 +159,8 @@ const bumpRelease = async () => {
 
   configureGitIdentity();
   run('git', ['add', 'package.json', 'package-lock.json', 'CHANGELOG.md']);
-  run('git', ['commit', '-m', `chore(release): ${tag}`]);
+  // The push uses the release deploy key, which (unlike GITHUB_TOKEN) starts a new workflow run.
+  run('git', ['commit', '-m', `chore(release): ${tag}`, '-m', '[skip ci]']);
   run('git', ['tag', tag]);
   const branch = process.env.GITHUB_REF_NAME || 'main';
   run('git', ['push', 'origin', `HEAD:${branch}`]);

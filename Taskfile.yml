@@ -114,6 +114,11 @@ tasks:
     cmds:
       - node scripts/release.mjs {{.CLI_ARGS}}
 
+  github:ruleset:
+    desc: Create or update the main branch ruleset from .github/rulesets/main.json (needs gh, repo admin)
+    cmds:
+      - bash scripts/github-ruleset.sh
+
   build:
     desc: Production build etl, API, client, and admin
     deps:

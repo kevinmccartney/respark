@@ -399,6 +399,20 @@ jobs:
           if-no-files-found: error
           retention-days: 5
 
+  # The one required status check for main (.github/rulesets/main.json). Build jobs skip
+  # when their paths are untouched, and skipped counts as passing here.
+  ci:
+    name: CI
+    if: always()
+    needs: [config, changes, shared, schemas, ui, etl, api, client, admin, infra]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any build job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "One or more CI jobs failed or were cancelled." >&2
+          exit 1
+
   release:
     name: Version & changelog
     if: |
@@ -429,6 +443,8 @@ jobs:
           ref: ${{ needs.changes.outputs.sha }}
           fetch-depth: 0
           persist-credentials: true
+          # Write deploy key: the only bypass actor allowed to push to main (.github/rulesets/main.json).
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
 
       - uses: ./.github/actions/setup-js
         with:
