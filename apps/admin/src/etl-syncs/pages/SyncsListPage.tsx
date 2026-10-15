@@ -206,7 +206,7 @@ export const SyncsListPage = () => {
                       className="cursor-pointer"
                       tabIndex={0}
                       role="link"
-                      onClick={() => navigate(`/etl-syncs/${sync.id}`)}
+                      onClick={() => navigate(`/operations/etl-syncs/${sync.id}`)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
