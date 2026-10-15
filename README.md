@@ -145,7 +145,7 @@ Both deploy tasks inject **`VITE_API_URL`** from the Terraform `api_url` output 
 
 ## Contributing
 
-Contribution guidelines and development workflow will be documented as the codebase grows.
+`main` is protected: branch off it, open a pull request with a Conventional Commit title, and squash-merge once the `CI` check passes. See [Branch policy](docs/ci-cd.md#branch-policy).
 
 ## License
 
